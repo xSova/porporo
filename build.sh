@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # format code
-# clang-format -i src/porporo.c
+# clang-format -i src/porporo.c src/devices/*
 
 SRC="src/uxn.c src/devices/system.c src/devices/screen.c src/porporo.c"
 

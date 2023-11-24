@@ -53,9 +53,6 @@ typedef struct Program {
 	Screen screen;
 } Program;
 
-
-
-
 /* required functions */
 
 extern Uint8 emu_dei(Uxn *u, Uint8 addr);

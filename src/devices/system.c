@@ -39,8 +39,8 @@ system_print(Stack *s, char *name)
 	fprintf(stderr, "%s ", name);
 	for(i = 0; i < 9; i++) {
 		Uint8 pos = s->ptr - 4 + i;
-		fprintf(stderr, !pos ? "[%02x]" : i == 4 ? "<%02x>"
-												 : " %02x ",
+		fprintf(stderr, !pos ? "[%02x]" : i == 4 ? "<%02x>" :
+                                                   " %02x ",
 			s->dat[pos]);
 	}
 	fprintf(stderr, "\n");
