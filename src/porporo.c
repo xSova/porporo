@@ -19,7 +19,6 @@ WITH REGARD TO THIS SOFTWARE.
 
 typedef unsigned char Uint8;
 
-#define GATEMAX 128
 #define WIREMAX 256
 #define WIREPTMAX 128
 #define PORTMAX 32
@@ -33,10 +32,8 @@ typedef struct Connection {
 
 typedef struct Program {
 	char *name;
-	int x, y, w, h;
-	int clen;
+	int x, y, w, h, clen;
 	Connection out[0x100];
-	struct Program *input, *output;
 } Program;
 
 typedef enum { INPUT,
@@ -53,19 +50,9 @@ typedef struct Wire {
 	Point2d points[WIREPTMAX];
 } Wire;
 
-typedef struct Gate {
-	int id, polarity, locked, inlen, outlen, channel, note, sharp;
-	Point2d pos;
-	GateType type;
-	Wire *inputs[PORTMAX], *outputs[PORTMAX];
-} Gate;
-
 typedef struct Noton {
-	int alive, frame, channel, octave, glen, wlen;
+	int alive, frame;
 	unsigned int speed;
-	Gate gates[GATEMAX];
-	Wire wires[WIREMAX];
-	Gate *inputs[INPUTMAX], *outputs[OUTPUTMAX];
 } Noton;
 
 typedef struct Brush {
@@ -202,35 +189,9 @@ connectports(Program *a, Program *b, unsigned char ap, unsigned char bp)
 	Connection *c = &a->out[a->clen++];
 	c->ap = ap, c->bp = bp;
 	c->a = a, c->b = b;
-	a->output = b;
-	b->input = a;
 }
 
 #pragma mark - Generics
-
-static Gate *
-nearestgate(Noton *n, Point2d pos)
-{
-	int i;
-	for(i = 0; i < n->glen; ++i) {
-		Gate *g = &n->gates[i];
-		if(distance(pos, g->pos) < 50)
-			return g;
-	}
-	return NULL;
-}
-
-static Gate *
-gateat(Noton *n, Point2d pos)
-{
-	int i;
-	for(i = 0; i < n->glen; ++i) {
-		Gate *g = &n->gates[i];
-		if(pos.x == g->pos.x && pos.y == g->pos.y)
-			return g;
-	}
-	return NULL;
-}
 
 static void
 flex(Wire *w)
@@ -251,29 +212,6 @@ flex(Wire *w)
 #pragma mark - Options
 
 static void
-selchan(Noton *n, int channel)
-{
-	n->channel = channel;
-	printf("Select channel #%d\n", n->channel);
-}
-
-static void
-modoct(Noton *n, int mod)
-{
-	if((n->octave > 0 && mod < 0) || (n->octave < 8 && mod > 0))
-		n->octave += mod;
-	printf("Select octave #%d\n", n->octave);
-}
-
-static void
-modspeed(Noton *n, int mod)
-{
-	if((n->speed > 10 && mod < 0) || (n->speed < 100 && mod > 0))
-		n->speed += mod;
-	printf("Select speed #%d\n", n->speed);
-}
-
-static void
 pause(Noton *n)
 {
 	n->alive = !n->alive;
@@ -283,111 +221,9 @@ pause(Noton *n)
 static void
 reset(Noton *n)
 {
-	int i, locked = 0;
-	for(i = 0; i < n->wlen; i++)
-		n->wires[i].len = 0;
-	for(i = 0; i < n->glen; i++) {
-		n->gates[i].inlen = 0;
-		n->gates[i].outlen = 0;
-		if(n->gates[i].locked)
-			locked++;
-	}
-	n->wlen = 0;
-	n->glen = locked;
-	n->alive = 1;
 }
 
 /* Add/Remove */
-
-static Wire *
-addwire(Noton *n, Wire *temp, Gate *from, Gate *to)
-{
-	int i;
-	Wire *w = &n->wires[n->wlen];
-	w->id = n->wlen++;
-	w->polarity = -1;
-	w->a = from->id;
-	w->b = to->id;
-	w->len = 0;
-	w->flex = 4;
-	for(i = 0; i < temp->len; i++)
-		setpt2d(&w->points[w->len++], temp->points[i].x, temp->points[i].y);
-	printf("Add wire #%d(#%d->#%d) \n", w->id, from->id, to->id);
-	return w;
-}
-
-static Gate *
-addgate(Noton *n, GateType type, int polarity, Point2d pos)
-{
-	Gate *g = &n->gates[n->glen];
-	g->id = n->glen++;
-	g->polarity = polarity;
-	g->channel = 0;
-	g->note = 0;
-	g->sharp = 0;
-	g->inlen = 0;
-	g->outlen = 0;
-	g->type = type;
-	setpt2d(&g->pos, pos.x, pos.y);
-	printf("Add gate #%d \n", g->id);
-	return g;
-}
-
-/* Wiring */
-
-static int
-extendwire(Brush *b)
-{
-	if(b->wire.len >= WIREPTMAX)
-		return 0;
-	if(distance(b->wire.points[b->wire.len - 1], b->pos) < 20)
-		return 0;
-	setpt2d(&b->wire.points[b->wire.len++], b->pos.x, b->pos.y);
-	return 1;
-}
-
-static int
-beginwire(Brush *b)
-{
-	Gate *gate = nearestgate(&noton, b->pos);
-	Point2d *p = gate ? &gate->pos : &b->pos;
-	b->wire.polarity = gate ? gate->polarity : -1;
-	b->wire.len = 0;
-	setpt2d(&b->wire.points[b->wire.len++], p->x + 4, p->y + 4);
-	return 1;
-}
-
-static int
-abandon(Brush *b)
-{
-	b->wire.len = 0;
-	return 1;
-}
-
-static int
-endwire(Brush *b)
-{
-	Wire *newwire;
-	Gate *gatefrom, *gateto;
-	if(b->wire.len < 1)
-		return abandon(b);
-	gatefrom = nearestgate(&noton, b->wire.points[0]);
-	if(!gatefrom || gatefrom->outlen >= PORTMAX)
-		return abandon(b);
-	if(gatefrom->type == OUTPUT)
-		return abandon(b);
-	gateto = nearestgate(&noton, b->pos);
-	if(!gateto || gateto->inlen >= PORTMAX)
-		return abandon(b);
-	if(gateto->type == INPUT || gatefrom == gateto)
-		return abandon(b);
-	setpt2d(&b->pos, gateto->pos.x + 4, gateto->pos.y + 4);
-	extendwire(b);
-	newwire = addwire(&noton, &b->wire, gatefrom, gateto);
-	gatefrom->outputs[gatefrom->outlen++] = newwire;
-	gateto->inputs[gateto->inlen++] = newwire;
-	return abandon(b);
-}
 
 #pragma mark - Draw
 
@@ -536,8 +372,6 @@ redraw(Uint32 *dst)
 	clear(dst);
 	if(GUIDES)
 		drawguides(dst);
-	for(i = 0; i < noton.wlen; i++)
-		drawwire(dst, &noton.wires[i], 2);
 	drawwire(dst, &brush.wire, 3);
 
 	for(i = 0; i < plen; i++)
@@ -575,9 +409,6 @@ selectoption(int option)
 static void
 run(Noton *n)
 {
-	int i;
-	for(i = 0; i < n->wlen; ++i)
-		flex(&n->wires[i]);
 	n->frame++;
 }
 
@@ -628,16 +459,10 @@ domouse(SDL_Event *event, Brush *b)
 		if(event->button.button == SDL_BUTTON_RIGHT)
 			break;
 		b->down = 1;
-		if(beginwire(b))
-			redraw(pixels);
 		break;
 	case SDL_MOUSEMOTION:
 		if(event->button.button == SDL_BUTTON_RIGHT)
 			break;
-		if(b->down) {
-			if(extendwire(b))
-				redraw(pixels);
-		}
 		break;
 	case SDL_MOUSEBUTTONUP:
 		if(event->button.button == SDL_BUTTON_RIGHT) {
@@ -645,14 +470,10 @@ domouse(SDL_Event *event, Brush *b)
 				return;
 			if(b->pos.x > HOR * 8 || b->pos.y > VER * 8)
 				return;
-			if(!gateat(&noton, *clamp2d(&b->pos, 8)))
-				addgate(&noton, BASIC, -1, *clamp2d(&b->pos, 8));
 			redraw(pixels);
 			break;
 		}
 		b->down = 0;
-		if(endwire(b))
-			redraw(pixels);
 		break;
 	}
 }
@@ -674,45 +495,6 @@ dokey(Noton *n, SDL_Event *event)
 		break;
 	case SDLK_SPACE:
 		pause(n);
-		break;
-	case SDLK_UP:
-		modoct(n, 1);
-		break;
-	case SDLK_DOWN:
-		modoct(n, -1);
-		break;
-	case SDLK_LEFT:
-		modspeed(n, 5);
-		break;
-	case SDLK_RIGHT:
-		modspeed(n, -5);
-		break;
-	case SDLK_1:
-		selchan(n, 0);
-		break;
-	case SDLK_2:
-		selchan(n, 1);
-		break;
-	case SDLK_3:
-		selchan(n, 2);
-		break;
-	case SDLK_4:
-		selchan(n, 3);
-		break;
-	case SDLK_5:
-		selchan(n, 4);
-		break;
-	case SDLK_6:
-		selchan(n, 5);
-		break;
-	case SDLK_7:
-		selchan(n, 6);
-		break;
-	case SDLK_8:
-		selchan(n, 7);
-		break;
-	case SDLK_9:
-		selchan(n, 8);
 		break;
 	}
 }
@@ -750,8 +532,6 @@ main(int argc, char **argv)
 
 	noton.alive = 1;
 	noton.speed = 40;
-	noton.channel = 0;
-	noton.octave = 2;
 
 	if(!init())
 		return error("Init", "Failure");
