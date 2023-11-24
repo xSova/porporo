@@ -56,6 +56,7 @@ static int HEIGHT = 8 * (VER + 2) + 8 * PAD * 2;
 static int ZOOM = 1, GUIDES = 1;
 
 static Program programs[0x10];
+static Program *porporo;
 static int plen;
 
 static Noton noton;
@@ -165,7 +166,11 @@ Pt2d(int x, int y)
 	return p;
 }
 
-#pragma mark - Options
+static char
+nibble(Uint8 v)
+{
+	return v > 0x9 ? 'a' + v - 10 : '0' + v;
+}
 
 static void
 pause(Noton *n)
@@ -274,12 +279,6 @@ drawtext(Uint32 *dst, int x, int y, char *t, int color)
 	x -= 8;
 	while((c = *t++))
 		drawicn(dst, x += 8, y, &font[(c - 0x20) << 3], color);
-}
-
-static char
-nibble(Uint8 v)
-{
-	return v > 0x9 ? 'a' + v - 10 : '0' + v;
 }
 
 static void
@@ -497,7 +496,7 @@ emu_dei(Uxn *u, Uint8 addr)
 {
 	Program *prg = &programs[u->id];
 	switch(addr & 0xf0) {
-	case 0x10: printf("<< %s\n", prg->rom); break;
+	case 0x10: break;
 	}
 	return u->dev[addr];
 }
@@ -509,10 +508,6 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	Program *prg = &programs[u->id];
 	u->dev[addr] = value;
 
-	if(!u->id) {
-		printf("PORPORO\n");
-	}
-
 	switch(d) {
 	case 0x10: {
 		Program *tprg = prg->out[0].b;
@@ -520,8 +515,10 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 			Uint16 vector = (tprg->u.dev[0x10] << 8) | tprg->u.dev[0x11];
 			tprg->u.dev[0x12] = value;
 			if(vector) {
-				printf(">> %s to %s [%04x]\n", prg->rom, tprg->rom, vector);
 				uxn_eval(&tprg->u, vector);
+			} else {
+				if(tprg == porporo)
+					printf("%c", value);
 			}
 		}
 	} break;
@@ -534,7 +531,7 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *a, *listen, *c, *d, *hello, *f, *porporo;
+	Program *a, *listen, *c, *d, *prg_hello, *prg_screenpixel;
 	(void)argc;
 	(void)argv;
 
@@ -547,21 +544,16 @@ main(int argc, char **argv)
 		return error("Init", "Failure");
 
 	porporo = addprogram(550, 350, 200, 30, "bin/porporo.rom");
-
-	a = addprogram(150, 30, 120, 120, "console.rom");
 	listen = addprogram(520, 140, 200, 30, "bin/listen.rom");
-	c = addprogram(10, 130, 100, 70, "keyb.rom");
-	d = addprogram(190, 170, 100, 80, "debug.rom");
-	hello = addprogram(300, 300, 200, 30, "bin/hello.rom");
+	prg_hello = addprogram(300, 300, 200, 30, "bin/hello.rom");
+	
+	prg_screenpixel = addprogram(20, 30, 200, 200, "bin/screen.pixel.rom");
 
-	connectports(hello, listen, 0x12, 0x18);
-	connectports(c, a, 0x12, 0x18);
-
+	connectports(prg_hello, listen, 0x12, 0x18);
 	connectports(listen, porporo, 0x12, 0x18);
 
-	uxn_eval(&hello->u, 0x100);
-
-	printf("%c\n", nibble(0xe));
+	uxn_eval(&prg_hello->u, 0x100);
+	fflush(stdout);
 
 	while(1) {
 		SDL_Event event;
