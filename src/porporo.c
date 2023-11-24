@@ -17,7 +17,7 @@ WITH REGARD TO THIS SOFTWARE.
 */
 
 #define HOR 100
-#define VER 70
+#define VER 50
 #define PAD 2
 #define SZ (HOR * VER * 16)
 
@@ -160,6 +160,18 @@ putpixel(Uint32 *dst, int x, int y, int color)
 }
 
 static void
+drawscreen(Uint32 *dst, Screen *scr, int x1, int y1)
+{
+	int x, y, x2 = x1 + scr->w, y2 = y1 + scr->h;
+	for(y = y1; y < y2; y++) {
+		for(x = x1; x < x2; x++) {
+			int index = (x - x1) + (y - y1) * scr->w;
+			dst[(y + PAD * 8) * WIDTH + (x + PAD * 8)] = scr->pixels[index];
+		}
+	}
+}
+
+static void
 line(Uint32 *dst, int ax, int ay, int bx, int by, int color)
 {
 	int dx = abs(bx - ax), sx = ax < bx ? 1 : -1;
@@ -222,14 +234,13 @@ linerect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
 {
 	int x, y;
 	for(y = y1 - 1; y < y2 + 1; y++) {
-		putpixel(dst, x1, y, color), putpixel(dst, x2, y, color);
+		putpixel(dst, x1 - 2, y, color), putpixel(dst, x2, y, color);
 		putpixel(dst, x1 - 1, y, color), putpixel(dst, x2 + 1, y, color);
 	}
-	for(x = x1 - 1; x < x2 + 1; x++) {
-		putpixel(dst, x, y1, color), putpixel(dst, x, y2, color);
+	for(x = x1 - 2; x < x2 + 2; x++) {
+		putpixel(dst, x, y1 - 2, color), putpixel(dst, x, y2, color);
 		putpixel(dst, x, y1 - 1, color), putpixel(dst, x, y2 + 1, color);
 	}
-	putpixel(dst, x2 + 1, y2 + 1, color);
 }
 
 static void
@@ -270,11 +281,11 @@ drawprogram(Uint32 *dst, Program *p)
 {
 	drawrect(dst, p->x, p->y, p->x + p->w, p->y + p->h, 4);
 	linerect(dst, p->x, p->y, p->x + p->w, p->y + p->h, 3);
-	drawtext(dst, p->x + 2, p->y + 2, p->rom, 3);
+	drawtext(dst, p->x + 2, p->y - 12, p->rom, 3);
 	/* ports */
 	drawicn(dst, p->x - 8, p->y, icons[0], 1);
 	drawicn(dst, p->x + p->w, p->y, icons[0], 2);
-	drawbyte(dst, p->x - 8, p->y - 9, 0x12, 3);
+	drawbyte(dst, p->x - 32, p->y - 12, 0x12, 3);
 	drawbyte(dst, p->x + p->w - 8, p->y - 9, 0x18, 3);
 	drawpage(dst, p->x, p->y + 0x10, &p->u.ram[0x100]);
 }
@@ -292,6 +303,7 @@ static void
 redraw(Uint32 *dst)
 {
 	int i;
+	Program *p1 = &programs[3], *p2 = &programs[4];
 	clear(dst);
 
 	if(GUIDES)
@@ -300,6 +312,11 @@ redraw(Uint32 *dst)
 		drawprogram(dst, &programs[i]);
 	for(i = 0; i < plen; i++)
 		drawconnection(dst, &programs[i], 3);
+
+	screen_redraw(&p1->screen);
+	drawscreen(pixels, &p1->screen, p1->x, p1->y);
+	screen_redraw(&p2->screen);
+	drawscreen(pixels, &p2->screen, p2->x, p2->y);
 
 	drawui(dst);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
@@ -456,6 +473,7 @@ emu_dei(Uxn *u, Uint8 addr)
 {
 	Program *prg = &programs[u->id];
 	switch(addr & 0xf0) {
+	case 0x00: break;
 	case 0x10: break;
 	case 0x20: break;
 	}
@@ -469,6 +487,9 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	Program *prg = &programs[u->id];
 	u->dev[addr] = value;
 	switch(d) {
+	case 0x00:
+		if(p > 0x7 && p < 0xe) screen_palette(&prg->screen, &u->dev[0x8]);
+		break;
 	case 0x10: {
 		Program *tprg = prg->out[0].b;
 		if(tprg) {
@@ -498,7 +519,7 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *prg_listen, *prg_hello, *prg_screenpixel;
+	Program *prg_listen, *prg_hello, *prg_screenpixel, *prg_catclock;
 	(void)argc;
 	(void)argv;
 
@@ -511,6 +532,7 @@ main(int argc, char **argv)
 	prg_listen = addprogram(520, 140, 200, 30, "bin/listen.rom");
 	prg_hello = addprogram(300, 300, 200, 30, "bin/hello.rom");
 	prg_screenpixel = addprogram(20, 30, 200, 200, "bin/screen.pixel.rom");
+	prg_catclock = addprogram(270, 80, 200, 200, "bin/catclock.rom");
 
 	connectports(prg_hello, prg_listen, 0x12, 0x18);
 	connectports(prg_listen, porporo, 0x12, 0x18);

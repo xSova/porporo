@@ -125,23 +125,21 @@ screen_resize(Screen *scr, Uint16 width, Uint16 height)
 }
 
 void
-screen_redraw(Uxn *u)
+screen_redraw(Screen *scr)
 {
-	/*
 	int i, j, o, y;
-	Uint8 *fg = uxn_screen.fg, *bg = uxn_screen.bg;
-	Uint16 w = uxn_screen.width, h = uxn_screen.height;
-	Uint16 x1 = uxn_screen.x1, y1 = uxn_screen.y1;
-	Uint16 x2 = uxn_screen.x2 > w ? w : uxn_screen.x2, y2 = uxn_screen.y2 > h ? h : uxn_screen.y2;
-	Uint32 palette[16], *pixels = uxn_screen.pixels;
-	uxn_screen.x1 = uxn_screen.y1 = 0xffff;
-	uxn_screen.x2 = uxn_screen.y2 = 0;
+	Uint8 *fg = scr->fg, *bg = scr->bg;
+	Uint16 w = scr->w, h = scr->h;
+	Uint16 x1 = scr->x1, y1 = scr->y1;
+	Uint16 x2 = scr->x2 > w ? w : scr->x2, y2 = scr->y2 > h ? h : scr->y2;
+	Uint32 palette[16], *pixels = scr->pixels;
+	scr->x1 = scr->y1 = 0xffff;
+	scr->x2 = scr->y2 = 0;
 	for(i = 0; i < 16; i++)
-		palette[i] = uxn_screen.palette[(i >> 2) ? (i >> 2) : (i & 3)];
+		palette[i] = scr->palette[(i >> 2) ? (i >> 2) : (i & 3)];
 	for(y = y1; y < y2; y++)
 		for(o = y * w, i = x1 + o, j = x2 + o; i < j; i++)
 			pixels[i] = palette[fg[i] << 2 | bg[i]];
-			*/
 }
 
 Uint8

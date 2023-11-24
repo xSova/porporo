@@ -20,6 +20,7 @@ cc src/uxnasm.c -o bin/uxnasm
 bin/uxnasm etc/hello.tal bin/hello.rom
 bin/uxnasm etc/listen.tal bin/listen.rom
 bin/uxnasm etc/screen.pixel.tal bin/screen.pixel.rom
+bin/uxnasm etc/catclock.tal bin/catclock.rom
 
 # run
 ./bin/porporo
