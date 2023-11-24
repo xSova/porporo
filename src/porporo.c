@@ -12,7 +12,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 WITH REGARD TO THIS SOFTWARE.
 */
 
-#define HOR 32
+#define HOR 60
 #define VER 32
 #define PAD 2
 #define SZ (HOR * VER * 16)
@@ -71,19 +71,19 @@ typedef struct Brush {
 	Wire wire;
 } Brush;
 
-int WIDTH = 8 * HOR + 8 * PAD * 2;
-int HEIGHT = 8 * (VER + 2) + 8 * PAD * 2;
-int ZOOM = 2, GUIDES = 1;
+static int WIDTH = 8 * HOR + 8 * PAD * 2;
+static int HEIGHT = 8 * (VER + 2) + 8 * PAD * 2;
+static int ZOOM = 2, GUIDES = 1;
 
-Program programs[0x10];
-int plen;
+static Program programs[0x10];
+static int plen;
 
-Noton noton;
-Brush brush;
+static Noton noton;
+static Brush brush;
 
 /* clang-format off */
 
-Uint32 theme[] = {0x000000, 0xffb545, 0x72DEC2, 0xffffff, 0x222222};
+static Uint32 theme[] = {0x000000, 0xffb545, 0x72DEC2, 0xffffff, 0x222222};
 
 Uint8 icons[][8] = {
     {0x38, 0x7c, 0xee, 0xd6, 0xee, 0x7c, 0x38, 0x00}, /* gate:input */
@@ -96,7 +96,7 @@ Uint8 icons[][8] = {
     {0x10, 0x54, 0x28, 0xc6, 0x28, 0x54, 0x10, 0x00}  /* unsaved */
 };
 
-unsigned char font[] = {
+static unsigned char font[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x08, 0x08, 0x08, 0x08, 0x00, 0x08, 
 	0x00, 0x14, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x22, 0x7f, 0x22, 0x22, 0x22, 0x7f, 0x22, 
 	0x00, 0x08, 0x7f, 0x40, 0x3e, 0x01, 0x7f, 0x08, 0x00, 0x21, 0x52, 0x24, 0x08, 0x12, 0x25, 0x42, 
@@ -149,20 +149,20 @@ unsigned char font[] = {
 
 /* clang-format on */
 
-SDL_Window *gWindow = NULL;
-SDL_Renderer *gRenderer = NULL;
-SDL_Texture *gTexture = NULL;
-Uint32 *pixels;
+static SDL_Window *gWindow = NULL;
+static SDL_Renderer *gRenderer = NULL;
+static SDL_Texture *gTexture = NULL;
+static Uint32 *pixels;
 
 #pragma mark - Helpers
 
-int
+static int
 distance(Point2d a, Point2d b)
 {
 	return (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y);
 }
 
-Point2d *
+static Point2d *
 setpt2d(Point2d *p, int x, int y)
 {
 	p->x = x;
@@ -170,13 +170,13 @@ setpt2d(Point2d *p, int x, int y)
 	return p;
 }
 
-Point2d *
+static Point2d *
 clamp2d(Point2d *p, int step)
 {
 	return setpt2d(p, p->x / step * step, p->y / step * step);
 }
 
-Point2d
+static Point2d
 Pt2d(int x, int y)
 {
 	Point2d p;
@@ -184,21 +184,9 @@ Pt2d(int x, int y)
 	return p;
 }
 
-#pragma mark - Midi
-
-void
-initmidi(void)
-{
-}
-
-void
-playmidi(int channel, int octave, int note, int z)
-{
-}
-
 #pragma mark - Generics
 
-Gate *
+static Gate *
 nearestgate(Noton *n, Point2d pos)
 {
 	int i;
@@ -210,7 +198,7 @@ nearestgate(Noton *n, Point2d pos)
 	return NULL;
 }
 
-Gate *
+static Gate *
 gateat(Noton *n, Point2d pos)
 {
 	int i;
@@ -222,50 +210,7 @@ gateat(Noton *n, Point2d pos)
 	return NULL;
 }
 
-int
-getpolarity(Gate *g)
-{
-	int i;
-	if(g->inlen < 1)
-		return -1;
-	if(g->inlen == 1)
-		return g->inputs[0]->polarity;
-	for(i = 0; i < g->inlen; i++)
-		if(g->inputs[i]->polarity != g->inputs[0]->polarity)
-			return 0;
-	return 1;
-}
-
-void
-polarize(Gate *g)
-{
-	int i;
-	if(g->type == OUTPUT) {
-		int newpolarity = getpolarity(g);
-		if(newpolarity != -1 && g->polarity != newpolarity)
-			playmidi(noton.channel + g->channel, noton.octave, g->note, newpolarity);
-		g->polarity = newpolarity;
-	} else if(g->type == BASIC)
-		g->polarity = getpolarity(g);
-	for(i = 0; i < g->outlen; ++i)
-		g->outputs[i]->polarity = g->polarity;
-}
-
-void
-bang(Gate *g, int depth)
-{
-	int i, d = depth - 1;
-	if(d && g) {
-		polarize(g);
-		if(g->type != OUTPUT)
-			return;
-		for(i = 0; i < g->outlen; ++i)
-			if(&noton.gates[g->outputs[i]->b])
-				bang(&noton.gates[g->outputs[i]->b], d);
-	}
-}
-
-void
+static void
 flex(Wire *w)
 {
 	int i;
@@ -283,14 +228,14 @@ flex(Wire *w)
 
 #pragma mark - Options
 
-void
+static void
 selchan(Noton *n, int channel)
 {
 	n->channel = channel;
 	printf("Select channel #%d\n", n->channel);
 }
 
-void
+static void
 modoct(Noton *n, int mod)
 {
 	if((n->octave > 0 && mod < 0) || (n->octave < 8 && mod > 0))
@@ -298,7 +243,7 @@ modoct(Noton *n, int mod)
 	printf("Select octave #%d\n", n->octave);
 }
 
-void
+static void
 modspeed(Noton *n, int mod)
 {
 	if((n->speed > 10 && mod < 0) || (n->speed < 100 && mod > 0))
@@ -306,14 +251,14 @@ modspeed(Noton *n, int mod)
 	printf("Select speed #%d\n", n->speed);
 }
 
-void
+static void
 pause(Noton *n)
 {
 	n->alive = !n->alive;
 	printf("%s\n", n->alive ? "Playing.." : "Paused.");
 }
 
-void
+static void
 reset(Noton *n)
 {
 	int i, locked = 0;
@@ -332,7 +277,7 @@ reset(Noton *n)
 
 /* Add/Remove */
 
-Wire *
+static Wire *
 addwire(Noton *n, Wire *temp, Gate *from, Gate *to)
 {
 	int i;
@@ -349,7 +294,7 @@ addwire(Noton *n, Wire *temp, Gate *from, Gate *to)
 	return w;
 }
 
-Gate *
+static Gate *
 addgate(Noton *n, GateType type, int polarity, Point2d pos)
 {
 	Gate *g = &n->gates[n->glen];
@@ -368,7 +313,7 @@ addgate(Noton *n, GateType type, int polarity, Point2d pos)
 
 /* Wiring */
 
-int
+static int
 extendwire(Brush *b)
 {
 	if(b->wire.len >= WIREPTMAX)
@@ -379,7 +324,7 @@ extendwire(Brush *b)
 	return 1;
 }
 
-int
+static int
 beginwire(Brush *b)
 {
 	Gate *gate = nearestgate(&noton, b->pos);
@@ -390,14 +335,14 @@ beginwire(Brush *b)
 	return 1;
 }
 
-int
+static int
 abandon(Brush *b)
 {
 	b->wire.len = 0;
 	return 1;
 }
 
-int
+static int
 endwire(Brush *b)
 {
 	Wire *newwire;
@@ -424,14 +369,14 @@ endwire(Brush *b)
 
 #pragma mark - Draw
 
-void
+static void
 putpixel(Uint32 *dst, int x, int y, int color)
 {
 	if(x >= 0 && x < WIDTH - 8 && y >= 0 && y < HEIGHT - 8)
 		dst[(y + PAD * 8) * WIDTH + (x + PAD * 8)] = theme[color];
 }
 
-void
+static void
 line(Uint32 *dst, int ax, int ay, int bx, int by, int color)
 {
 	int dx = abs(bx - ax), sx = ax < bx ? 1 : -1;
@@ -453,7 +398,7 @@ line(Uint32 *dst, int ax, int ay, int bx, int by, int color)
 	}
 }
 
-void
+static void
 drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int fg, int bg)
 {
 	int v, h;
@@ -464,7 +409,7 @@ drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int fg, int bg)
 		}
 }
 
-void
+static void
 drawgate(Uint32 *dst, Gate *g)
 {
 	switch(g->type) {
@@ -483,7 +428,7 @@ drawgate(Uint32 *dst, Gate *g)
 	}
 }
 
-void
+static void
 drawwire(Uint32 *dst, Wire *w, int color)
 {
 	int i;
@@ -496,7 +441,7 @@ drawwire(Uint32 *dst, Wire *w, int color)
 	}
 }
 
-void
+static void
 drawguides(Uint32 *dst)
 {
 	int x, y;
@@ -505,14 +450,14 @@ drawguides(Uint32 *dst)
 			drawicn(dst, x * 8, y * 8, icons[4], 4, 0);
 }
 
-void
+static void
 drawui(Uint32 *dst)
 {
 	int bottom = VER * 8 + 8;
 	drawicn(dst, 0 * 8, bottom, icons[GUIDES ? 6 : 5], GUIDES ? 1 : 2, 0);
 }
 
-void
+static void
 drawrect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
 {
 	int x, y;
@@ -523,7 +468,7 @@ drawrect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
 	}
 }
 
-void
+static void
 drawtext(Uint32 *dst, int x, int y, char *t, int color)
 {
 	char c;
@@ -533,14 +478,14 @@ drawtext(Uint32 *dst, int x, int y, char *t, int color)
 	}
 }
 
-void
+static void
 drawprogram(Uint32 *dst, Program *p)
 {
 	drawrect(dst, p->x, p->y, p->x + p->w, p->y + p->h, 2);
 	drawtext(dst, p->x, p->y, p->name, 0);
 }
 
-void
+static void
 clear(Uint32 *dst)
 {
 	int i, j;
@@ -549,7 +494,7 @@ clear(Uint32 *dst)
 			dst[i * WIDTH + j] = theme[0];
 }
 
-void
+static void
 redraw(Uint32 *dst)
 {
 	int i;
@@ -572,14 +517,14 @@ redraw(Uint32 *dst)
 
 /* operation */
 
-void
+static void
 savemode(int *i, int v)
 {
 	*i = v;
 	redraw(pixels);
 }
 
-void
+static void
 selectoption(int option)
 {
 	switch(option) {
@@ -589,63 +534,31 @@ selectoption(int option)
 	}
 }
 
-void
+static void
 run(Noton *n)
 {
 	int i;
-	n->inputs[0]->polarity = (n->frame >> 2) % 2 == 0;
-	n->inputs[2]->polarity = (n->frame >> 3) % 2 == 0;
-	n->inputs[4]->polarity = (n->frame >> 4) % 2 == 0;
-	n->inputs[6]->polarity = (n->frame >> 5) % 2 == 0;
-	n->inputs[8]->polarity = (n->frame >> 6) % 2 == 0;
-	n->inputs[10]->polarity = (n->frame >> 7) % 2 == 0;
-	n->inputs[1]->polarity = (n->frame >> 3) % 4 == 0;
-	n->inputs[3]->polarity = (n->frame >> 3) % 4 == 1;
-	n->inputs[5]->polarity = (n->frame >> 3) % 4 == 2;
-	n->inputs[7]->polarity = (n->frame >> 3) % 4 == 3;
-	n->inputs[9]->polarity = 1;
-	n->inputs[11]->polarity = 0;
-	for(i = 0; i < n->glen; ++i)
-		bang(&n->gates[i], 10);
 	for(i = 0; i < n->wlen; ++i)
 		flex(&n->wires[i]);
 	n->frame++;
 }
 
-void
+static void
 setup(Noton *n)
 {
-	int i, j;
-	int sharps[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
-	for(i = 0; i < INPUTMAX; ++i) {
-		int x = i % 2 == 0 ? 16 : 8;
-		n->inputs[i] = addgate(n, INPUT, 0, Pt2d(x, 16 + i * 8));
-		n->inputs[i]->locked = 1;
-	}
-	for(i = 0; i < CHANNELS; ++i) {
-		for(j = 0; j < OUTPUTMAX; ++j) {
-			int x = HOR * 8 - (j % 2 == 0 ? 24 : 16) - (i * 16);
-			n->outputs[j] = addgate(n, OUTPUT, 0, Pt2d(x, 16 + j * 8));
-			n->outputs[j]->locked = 1;
-			n->outputs[j]->note = j + ((i % 3) * 24);
-			n->outputs[j]->channel = i;
-			n->outputs[j]->sharp = sharps[abs(n->outputs[j]->note) % 12];
-		}
-	}
-	n->inputs[9]->type = POOL;
-	n->inputs[11]->type = POOL;
+	
 }
 
 /* options */
 
-int
+static int
 error(char *msg, const char *err)
 {
 	printf("Error %s: %s\n", msg, err);
 	return 0;
 }
 
-void
+static void
 modzoom(int mod)
 {
 	if((mod > 0 && ZOOM < 4) || (mod < 0 && ZOOM > 1)) {
@@ -654,7 +567,7 @@ modzoom(int mod)
 	}
 }
 
-void
+static void
 quit(void)
 {
 	free(pixels);
@@ -670,7 +583,7 @@ quit(void)
 
 #pragma mark - Triggers
 
-void
+static void
 domouse(SDL_Event *event, Brush *b)
 {
 	setpt2d(&b->pos, (event->motion.x - (PAD * 8 * ZOOM)) / ZOOM, (event->motion.y - (PAD * 8 * ZOOM)) / ZOOM);
@@ -712,7 +625,7 @@ domouse(SDL_Event *event, Brush *b)
 	}
 }
 
-void
+static void
 dokey(Noton *n, SDL_Event *event)
 {
 	switch(event->key.keysym.sym) {
@@ -772,7 +685,7 @@ dokey(Noton *n, SDL_Event *event)
 	}
 }
 
-int
+static int
 init(void)
 {
 	if(SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -790,11 +703,10 @@ init(void)
 	if(pixels == NULL)
 		return error("Pixels", "Failed to allocate memory");
 	clear(pixels);
-	initmidi();
 	return 1;
 }
 
-void
+static void
 addprogram(int x, int y, int w, int h, char *n)
 {
 	Program *p = &programs[plen++];
@@ -807,6 +719,8 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
+	(void)argc;
+	(void)argv;
 
 	noton.alive = 1;
 	noton.speed = 40;
@@ -827,15 +741,12 @@ main(int argc, char **argv)
 			begintime = SDL_GetTicks();
 		else
 			delta = endtime - begintime;
-
 		if(delta < noton.speed)
 			SDL_Delay(noton.speed - delta);
-
 		if(noton.alive) {
 			run(&noton);
 			redraw(pixels);
 		}
-
 		while(SDL_PollEvent(&event) != 0) {
 			if(event.type == SDL_QUIT)
 				quit();
@@ -849,12 +760,9 @@ main(int argc, char **argv)
 				if(event.window.event == SDL_WINDOWEVENT_EXPOSED)
 					redraw(pixels);
 		}
-
 		begintime = endtime;
 		endtime = SDL_GetTicks();
 	}
 	quit();
-	(void)argc;
-	(void)argv;
 	return 0;
 }
