@@ -468,7 +468,6 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	Uint8 p = addr & 0x0f, d = addr & 0xf0;
 	Program *prg = &programs[u->id];
 	u->dev[addr] = value;
-
 	switch(d) {
 	case 0x10: {
 		Program *tprg = prg->out[0].b;

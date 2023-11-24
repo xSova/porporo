@@ -41,7 +41,7 @@ typedef struct Connection {
 
 typedef struct Screen {
 	int w, h, x1, y1, x2, y2;
-	Uint32 palette[4];
+	Uint32 palette[4], *pixels;
 	Uint8 *fg, *bg;
 } Screen;
 

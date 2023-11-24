@@ -157,23 +157,20 @@ screen_resize(Screen *scr, Uint16 width, Uint16 height)
 {
 	Uint8 *bg, *fg;
 	Uint32 *pixels = NULL;
-	if(width < 0x8 || height < 0x8 || width >= 0x800 || height >= 0x800)
-		return;
-	if(uxn_screen.width == width && uxn_screen.height == height)
+	if(scr->w == width && scr->h == height)
 		return;
 	bg = malloc(width * height), fg = malloc(width * height);
 	if(bg && fg)
-		pixels = realloc(uxn_screen.pixels, width * height * sizeof(Uint32));
+		pixels = realloc(scr->pixels, width * height * sizeof(Uint32));
 	if(!bg || !fg || !pixels) {
 		free(bg), free(fg);
 		return;
 	}
-	free(uxn_screen.bg), free(uxn_screen.fg);
-	uxn_screen.bg = bg, uxn_screen.fg = fg;
-	uxn_screen.pixels = pixels;
-	uxn_screen.width = width, uxn_screen.height = height;
-	screen_fill(uxn_screen.bg, 0), screen_fill(uxn_screen.fg, 0);
-	emu_resize(width, height);
+	free(scr->bg), free(scr->fg);
+	scr->bg = bg, scr->fg = fg;
+	scr->pixels = pixels;
+	scr->w = width, scr->h = height;
+	screen_fill(scr->bg, 0), screen_fill(scr->fg, 0);
 	screen_change(0, 0, width, height);
 }
 
@@ -198,13 +195,14 @@ screen_redraw(Uxn *u)
 }
 
 Uint8
-screen_dei(Uxn *u, Uint8 addr)
+screen_dei(Program *prg, Uxn *u, Uint8 addr)
 {
+	Screen *scr = &prg->screen;
 	switch(addr) {
-	case 0x22: return uxn_screen.width >> 8;
-	case 0x23: return uxn_screen.width;
-	case 0x24: return uxn_screen.height >> 8;
-	case 0x25: return uxn_screen.height;
+	case 0x22: return scr->w >> 8;
+	case 0x23: return scr->w;
+	case 0x24: return scr->h >> 8;
+	case 0x25: return scr->h;
 	default: return u->dev[addr];
 	}
 }
@@ -217,25 +215,26 @@ screen_deo(Program *prg, Uint8 *ram, Uint8 *d, Uint8 port)
 	switch(port) {
 	case 0x3: {
 		Uint8 *port_width = d + 0x2;
-		screen_resize(&prg->screen, PEEK2(port_width), uxn_screen.height);
+		screen_resize(&prg->screen, PEEK2(port_width), prg->screen.h);
 	} break;
 	case 0x5: {
 		Uint8 *port_height = d + 0x4;
-		screen_resize(&prg->screen, uxn_screen.width, PEEK2(port_height));
+		screen_resize(&prg->screen, prg->screen.w, PEEK2(port_height));
 	} break;
 	case 0xe: {
+		Screen *scr = &prg->screen;
 		Uint8 ctrl = d[0xe];
 		Uint8 color = ctrl & 0x3;
-		Uint8 *layer = (ctrl & 0x40) ? uxn_screen.fg : uxn_screen.bg;
+		Uint8 *layer = (ctrl & 0x40) ? scr->fg : scr->bg;
 		port_x = d + 0x8, port_y = d + 0xa;
 		x = PEEK2(port_x);
 		y = PEEK2(port_y);
 		/* fill mode */
 		if(ctrl & 0x80) {
-			Uint16 x2 = uxn_screen.width, y2 = uxn_screen.height;
+			Uint16 x2 = scr->w, y2 = scr->h;
 			if(ctrl & 0x10) x2 = x, x = 0;
 			if(ctrl & 0x20) y2 = y, y = 0;
-			if(!x && !y && x2 == uxn_screen.width && y2 == uxn_screen.height)
+			if(!x && !y && x2 == scr->w && y2 == scr->h)
 				screen_fill(layer, color);
 			else
 				screen_rect(layer, x, y, x2, y2, color);
@@ -243,7 +242,7 @@ screen_deo(Program *prg, Uint8 *ram, Uint8 *d, Uint8 port)
 		}
 		/* pixel mode */
 		else {
-			Uint16 w = uxn_screen.width, h = uxn_screen.height;
+			Uint16 w = scr->w, h = scr->h;
 			if(x < w && y < h)
 				layer[x + y * w] = color;
 			screen_change(x, y, x + 1, y + 1);
@@ -253,12 +252,13 @@ screen_deo(Program *prg, Uint8 *ram, Uint8 *d, Uint8 port)
 		break;
 	}
 	case 0xf: {
+		Screen *scr = &prg->screen;
 		Uint8 i;
 		Uint8 ctrl = d[0xf];
 		Uint8 move = d[0x6];
 		Uint8 length = move >> 4;
 		Uint8 twobpp = !!(ctrl & 0x80);
-		Uint8 *layer = (ctrl & 0x40) ? uxn_screen.fg : uxn_screen.bg;
+		Uint8 *layer = (ctrl & 0x40) ? scr->fg : scr->bg;
 		Uint8 color = ctrl & 0xf;
 		int flipx = (ctrl & 0x10), fx = flipx ? -1 : 1;
 		int flipy = (ctrl & 0x20), fy = flipy ? -1 : 1;
