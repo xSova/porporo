@@ -31,6 +31,7 @@ typedef struct {
 typedef struct Uxn {
 	Uint8 *ram, dev[0x100];
 	Stack wst, rst;
+	Uint16 id;
 } Uxn;
 
 /* required functions */

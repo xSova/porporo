@@ -18,7 +18,7 @@ cc -std=c89 -DDEBUG -Wall -Wno-unknown-pragmas -Wpedantic -Wshadow -Wextra -Werr
 # roms
 cc src/uxnasm.c -o bin/uxnasm
 bin/uxnasm etc/hello.tal bin/hello.rom
-
+bin/uxnasm etc/listen.tal bin/listen.rom
 
 # run
 ./bin/porporo

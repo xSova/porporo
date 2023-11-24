@@ -20,8 +20,6 @@ WITH REGARD TO THIS SOFTWARE.
 #define PAD 2
 #define SZ (HOR * VER * 16)
 
-typedef unsigned char Uint8;
-
 typedef struct Connection {
 	Uint8 ap, bp;
 	struct Program *a, *b;
@@ -139,13 +137,13 @@ static Uint32 *pixels;
 
 #pragma mark - Helpers
 
-static int
+int
 distance(Point2d a, Point2d b)
 {
 	return (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y);
 }
 
-static Point2d *
+Point2d *
 setpt2d(Point2d *p, int x, int y)
 {
 	p->x = x;
@@ -153,13 +151,13 @@ setpt2d(Point2d *p, int x, int y)
 	return p;
 }
 
-static Point2d *
+Point2d *
 clamp2d(Point2d *p, int step)
 {
 	return setpt2d(p, p->x / step * step, p->y / step * step);
 }
 
-static Point2d
+Point2d
 Pt2d(int x, int y)
 {
 	Point2d p;
@@ -278,13 +276,25 @@ drawtext(Uint32 *dst, int x, int y, char *t, int color)
 		drawicn(dst, x += 8, y, &font[(c - 0x20) << 3], color);
 }
 
+static char
+nibble(Uint8 v)
+{
+	return v > 0x9 ? 'a' + v - 10 : '0' + v;
+}
+
 static void
 drawbyte(Uint32 *dst, int x, int y, Uint8 byte, int color)
 {
-	int hb = '0' - 0x20 + (byte >> 0x4);
-	int lb = '0' - 0x20 + (byte & 0xf);
-	drawicn(dst, x += 8, y, &font[hb << 3], color);
-	drawicn(dst, x += 8, y, &font[lb << 3], color);
+	drawicn(dst, x += 8, y, &font[(nibble(byte >> 4) - 0x20) << 3], color);
+	drawicn(dst, x += 8, y, &font[(nibble(byte & 0xf) - 0x20) << 3], color);
+}
+
+static void
+drawpage(Uint32 *dst, int x, int y, Uint8 *r)
+{
+	int i;
+	for(i = 0; i < 0x8; i++)
+		drawbyte(dst, x + (i * 0x18), y, r[i], 3);
 }
 
 static void
@@ -298,6 +308,7 @@ drawprogram(Uint32 *dst, Program *p)
 	drawicn(dst, p->x + p->w, p->y, icons[0], 2);
 	drawbyte(dst, p->x - 8, p->y - 9, 0x12, 3);
 	drawbyte(dst, p->x + p->w - 8, p->y - 9, 0x18, 3);
+	drawpage(dst, p->x, p->y + 0x10, &p->u.ram[0x100]);
 }
 
 static void
@@ -467,7 +478,9 @@ addprogram(int x, int y, int w, int h, char *rom)
 	Program *p = &programs[plen++];
 	p->x = x, p->y = y, p->w = w, p->h = h, p->rom = rom;
 	p->u.ram = ram + (plen - 1) * 0x10000;
+	p->u.id = plen - 1;
 	system_init(&p->u, ram, rom);
+	uxn_eval(&p->u, 0x100);
 	return p;
 }
 
@@ -479,13 +492,13 @@ connectports(Program *a, Program *b, Uint8 ap, Uint8 bp)
 	c->a = a, c->b = b;
 }
 
-Program *currentprogram;
-
 Uint8
 emu_dei(Uxn *u, Uint8 addr)
 {
+	Program *prg = &programs[u->id];
+	printf("?????\n");
 	switch(addr & 0xf0) {
-	case 0x10: printf("!! input from %s\n", currentprogram->rom); break;
+	case 0x10: printf("<< %s\n", prg->rom); break;
 	}
 	return u->dev[addr];
 }
@@ -494,9 +507,25 @@ void
 emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 {
 	Uint8 p = addr & 0x0f, d = addr & 0xf0;
+	Program *prg = &programs[u->id];
 	u->dev[addr] = value;
+
+	if(!u->id) {
+		printf("PORPORO\n");
+	}
+
 	switch(d) {
-	case 0x10: printf("!! output from %s\n", currentprogram->rom); break;
+	case 0x10: {
+		Program *tprg = prg->out[0].b;
+		if(tprg) {
+			Uint16 vector = (tprg->u.dev[0x10] << 8) | tprg->u.dev[0x11];
+			tprg->u.dev[0x12] = value;
+			if(vector) {
+				printf(">> %s to %s [%04x]\n", prg->rom, tprg->rom, vector);
+				uxn_eval(&tprg->u, vector);
+			}
+		}
+	} break;
 	}
 }
 
@@ -506,7 +535,7 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *a, *b, *c, *d, *e;
+	Program *a, *listen, *c, *d, *hello, *f, *porporo;
 	(void)argc;
 	(void)argv;
 
@@ -518,21 +547,22 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 
+	porporo = addprogram(550, 350, 140, 20, "bin/porporo.rom");
+
 	a = addprogram(150, 30, 120, 120, "console.rom");
-	b = addprogram(320, 120, 120, 120, "print.rom");
+	listen = addprogram(520, 120, 140, 140, "bin/listen.rom");
 	c = addprogram(10, 130, 100, 70, "keyb.rom");
 	d = addprogram(190, 170, 100, 80, "debug.rom");
+	hello = addprogram(300, 300, 140, 140, "bin/hello.rom");
 
-	e = addprogram(300, 300, 160, 160, "bin/hello.rom");
-
-	connectports(a, b, 0x12, 0x18);
+	connectports(hello, listen, 0x12, 0x18);
 	connectports(c, a, 0x12, 0x18);
-	connectports(d, b, 0x12, 0x18);
-	
-	/* eval program */
-	currentprogram = e;
-	uxn_eval(&e->u, 0x100);
-	
+
+	connectports(listen, porporo, 0x12, 0x18);
+
+	uxn_eval(&hello->u, 0x100);
+
+	printf("%c\n", nibble(0xe));
 
 	while(1) {
 		SDL_Event event;
