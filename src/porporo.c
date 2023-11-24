@@ -26,9 +26,16 @@ typedef unsigned char Uint8;
 #define INPUTMAX 12
 #define OUTPUTMAX 12
 
+typedef struct Connection {
+	unsigned char ap, bp;
+	struct Program *a, *b;
+} Connection;
+
 typedef struct Program {
-	int x, y, w, h;
 	char *name;
+	int x, y, w, h;
+	int clen;
+	Connection out[0x100];
 	struct Program *input, *output;
 } Program;
 
@@ -190,8 +197,11 @@ addprogram(int x, int y, int w, int h, char *n)
 }
 
 static void
-connectports(Program *a, Program *b, int ap, int bp)
+connectports(Program *a, Program *b, unsigned char ap, unsigned char bp)
 {
+	Connection *c = &a->out[a->clen++];
+	c->ap = ap, c->bp = bp;
+	c->a = a, c->b = b;
 	a->output = b;
 	b->input = a;
 }
@@ -438,10 +448,16 @@ drawwire(Uint32 *dst, Wire *w, int color)
 static void
 drawconnection(Uint32 *dst, Program *p, int color)
 {
+	int i;
 	if(p->output) {
 		int x1 = p->x + p->w + 3, y1 = p->y + 3;
 		int x2 = p->output->x - 5, y2 = p->output->y + 3;
 		line(dst, x1, y1, x2, y2, 3);
+	}
+	// TODO
+	for(i = 0; i < p->clen; i++) {
+		Connection *c = &p->out[i];
+		printf("%s[%02x]->%s[%02x]\n", c->a->name, c->ap, c->b->name, c->bp);
 	}
 }
 
@@ -759,9 +775,9 @@ main(int argc, char **argv)
 	c = addprogram(10, 130, 100, 70, "keyb.rom");
 	d = addprogram(190, 170, 100, 80, "debug.rom");
 
-	connectports(a, b, 12, 18);
-	connectports(c, a, 12, 18);
-	connectports(d, b, 12, 18);
+	connectports(a, b, 0x12, 0x18);
+	connectports(c, a, 0x12, 0x18);
+	connectports(d, b, 0x12, 0x18);
 
 	while(1) {
 		SDL_Event event;
