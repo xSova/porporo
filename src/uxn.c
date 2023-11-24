@@ -39,12 +39,10 @@ uxn_eval(Uxn *u, Uint16 pc)
 {
 	Uint16 t, n, l, r;
 	Uint8 *ram = u->ram, *rr;
-	printf("eval: %04x\n", pc);
 	if(!pc || u->dev[0x0f]) return 0;
 	for(;;) {
 		Uint8 ins = ram[pc++];
 		Stack *s = ins & 0x40 ? &u->rst : &u->wst;
-		printf("- %02x\n", ins);
 		switch(ins & 0x3f) {
 		/* IMM */
 		case 0x00: case 0x20:

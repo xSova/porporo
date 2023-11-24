@@ -479,7 +479,7 @@ addprogram(int x, int y, int w, int h, char *rom)
 	p->x = x, p->y = y, p->w = w, p->h = h, p->rom = rom;
 	p->u.ram = ram + (plen - 1) * 0x10000;
 	p->u.id = plen - 1;
-	system_init(&p->u, ram, rom);
+	system_init(&p->u, p->u.ram, rom);
 	uxn_eval(&p->u, 0x100);
 	return p;
 }
@@ -496,7 +496,6 @@ Uint8
 emu_dei(Uxn *u, Uint8 addr)
 {
 	Program *prg = &programs[u->id];
-	printf("?????\n");
 	switch(addr & 0xf0) {
 	case 0x10: printf("<< %s\n", prg->rom); break;
 	}
@@ -547,13 +546,13 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 
-	porporo = addprogram(550, 350, 140, 20, "bin/porporo.rom");
+	porporo = addprogram(550, 350, 200, 30, "bin/porporo.rom");
 
 	a = addprogram(150, 30, 120, 120, "console.rom");
-	listen = addprogram(520, 120, 140, 140, "bin/listen.rom");
+	listen = addprogram(520, 140, 200, 30, "bin/listen.rom");
 	c = addprogram(10, 130, 100, 70, "keyb.rom");
 	d = addprogram(190, 170, 100, 80, "debug.rom");
-	hello = addprogram(300, 300, 140, 140, "bin/hello.rom");
+	hello = addprogram(300, 300, 200, 30, "bin/hello.rom");
 
 	connectports(hello, listen, 0x12, 0x18);
 	connectports(c, a, 0x12, 0x18);
