@@ -176,11 +176,6 @@ pause(Noton *n)
 	printf("%s\n", n->alive ? "Playing.." : "Paused.");
 }
 
-static void
-reset(Noton *n)
-{
-}
-
 /* Add/Remove */
 
 #pragma mark - Draw
@@ -230,7 +225,7 @@ drawconnection(Uint32 *dst, Program *p, int color)
 		Connection *c = &p->out[i];
 		int x1 = p->x + p->w + 3, y1 = p->y + 3;
 		int x2 = c->b->x - 5, y2 = c->b->y + 3;
-		line(dst, x1, y1, x2, y2, 3);
+		line(dst, x1, y1, x2, y2, color);
 	}
 }
 
@@ -438,7 +433,6 @@ dokey(Noton *n, SDL_Event *event)
 		modzoom(-1);
 		break;
 	case SDLK_BACKSPACE:
-		reset(n);
 		break;
 	case SDLK_SPACE:
 		pause(n);
@@ -485,12 +479,13 @@ connectports(Program *a, Program *b, Uint8 ap, Uint8 bp)
 	c->a = a, c->b = b;
 }
 
+Program *currentprogram;
+
 Uint8
 emu_dei(Uxn *u, Uint8 addr)
 {
 	switch(addr & 0xf0) {
-	case 0x00:
-	case 0xc0:
+	case 0x10: printf("!! input from %s\n", currentprogram->rom); break;
 	}
 	return u->dev[addr];
 }
@@ -501,10 +496,7 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	Uint8 p = addr & 0x0f, d = addr & 0xf0;
 	u->dev[addr] = value;
 	switch(d) {
-	case 0x00: break;
-	case 0x10: break;
-	case 0xa0: break;
-	case 0xb0: break;
+	case 0x10: printf("!! output from %s\n", currentprogram->rom); break;
 	}
 }
 
@@ -536,6 +528,11 @@ main(int argc, char **argv)
 	connectports(a, b, 0x12, 0x18);
 	connectports(c, a, 0x12, 0x18);
 	connectports(d, b, 0x12, 0x18);
+	
+	/* eval program */
+	currentprogram = e;
+	uxn_eval(&e->u, 0x100);
+	
 
 	while(1) {
 		SDL_Event event;
