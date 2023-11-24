@@ -21,19 +21,6 @@ WITH REGARD TO THIS SOFTWARE.
 #define PAD 2
 #define SZ (HOR * VER * 16)
 
-typedef struct Connection {
-	Uint8 ap, bp;
-	struct Program *a, *b;
-} Connection;
-
-typedef struct Program {
-	char *rom;
-	int x, y, w, h, clen;
-	Connection out[0x100];
-	Uxn u;
-	Screen screen;
-} Program;
-
 typedef struct {
 	int x, y;
 } Point2d;
@@ -495,7 +482,7 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 		}
 	} break;
 	case 0x20:
-		screen_deo(u->ram, &u->dev[d], p);
+		screen_deo(prg, u->ram, &u->dev[d], p);
 		break;
 	}
 }

@@ -34,6 +34,28 @@ typedef struct Uxn {
 	Uint16 id;
 } Uxn;
 
+typedef struct Connection {
+	Uint8 ap, bp;
+	struct Program *a, *b;
+} Connection;
+
+typedef struct Screen {
+	int w, h, x1, y1, x2, y2;
+	Uint32 palette[4];
+	Uint8 *fg, *bg;
+} Screen;
+
+typedef struct Program {
+	char *rom;
+	int x, y, w, h, clen;
+	Connection out[0x100];
+	Uxn u;
+	Screen screen;
+} Program;
+
+
+
+
 /* required functions */
 
 extern Uint8 emu_dei(Uxn *u, Uint8 addr);

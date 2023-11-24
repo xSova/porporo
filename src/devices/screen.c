@@ -153,7 +153,7 @@ screen_palette(Uint8 *addr)
 }
 
 void
-screen_resize(Uint16 width, Uint16 height)
+screen_resize(Screen *scr, Uint16 width, Uint16 height)
 {
 	Uint8 *bg, *fg;
 	Uint32 *pixels = NULL;
@@ -210,18 +210,18 @@ screen_dei(Uxn *u, Uint8 addr)
 }
 
 void
-screen_deo(Uint8 *ram, Uint8 *d, Uint8 port)
+screen_deo(Program *prg, Uint8 *ram, Uint8 *d, Uint8 port)
 {
 	Uint8 *port_x, *port_y, *port_addr;
 	Uint16 x, y, dx, dy, dxy, dyx, addr, addr_incr;
 	switch(port) {
 	case 0x3: {
 		Uint8 *port_width = d + 0x2;
-		screen_resize(PEEK2(port_width), uxn_screen.height);
+		screen_resize(&prg->screen, PEEK2(port_width), uxn_screen.height);
 	} break;
 	case 0x5: {
 		Uint8 *port_height = d + 0x4;
-		screen_resize(uxn_screen.width, PEEK2(port_height));
+		screen_resize(&prg->screen, uxn_screen.width, PEEK2(port_height));
 	} break;
 	case 0xe: {
 		Uint8 ctrl = d[0xe];
