@@ -3,6 +3,7 @@
 
 #include "uxn.h"
 #include "devices/system.h"
+#include "devices/screen.h"
 
 /*
 Copyright (c) 2023 Devine Lu Linvega
@@ -30,21 +31,12 @@ typedef struct Program {
 	int x, y, w, h, clen;
 	Connection out[0x100];
 	Uxn u;
+	Screen screen;
 } Program;
-
-typedef enum { INPUT,
-	OUTPUT,
-	POOL,
-	BASIC } GateType;
 
 typedef struct {
 	int x, y;
 } Point2d;
-
-typedef struct Noton {
-	int alive, frame;
-	unsigned int speed;
-} Noton;
 
 typedef struct Brush {
 	int down;
@@ -54,12 +46,9 @@ typedef struct Brush {
 static int WIDTH = 8 * HOR + 8 * PAD * 2;
 static int HEIGHT = 8 * (VER + 2) + 8 * PAD * 2;
 static int ZOOM = 1, GUIDES = 1;
-
 static Program programs[0x10];
 static Program *porporo;
 static int plen;
-
-static Noton noton;
 static Brush brush;
 static Uint8 *ram;
 
@@ -170,13 +159,6 @@ static char
 nibble(Uint8 v)
 {
 	return v > 0x9 ? 'a' + v - 10 : '0' + v;
-}
-
-static void
-pause(Noton *n)
-{
-	n->alive = !n->alive;
-	printf("%s\n", n->alive ? "Playing.." : "Paused.");
 }
 
 /* Add/Remove */
@@ -358,12 +340,6 @@ selectoption(int option)
 	}
 }
 
-static void
-run(Noton *n)
-{
-	n->frame++;
-}
-
 /* options */
 
 static int
@@ -431,7 +407,7 @@ domouse(SDL_Event *event, Brush *b)
 }
 
 static void
-dokey(Noton *n, SDL_Event *event)
+dokey(SDL_Event *event)
 {
 	switch(event->key.keysym.sym) {
 	case SDLK_EQUALS:
@@ -444,9 +420,6 @@ dokey(Noton *n, SDL_Event *event)
 		break;
 	case SDLK_BACKSPACE:
 		break;
-	case SDLK_SPACE:
-		pause(n);
-		break;
 	}
 }
 
@@ -455,7 +428,7 @@ init(void)
 {
 	if(SDL_Init(SDL_INIT_VIDEO) < 0)
 		return error("Init", SDL_GetError());
-	gWindow = SDL_CreateWindow("Noton", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH * ZOOM, HEIGHT * ZOOM, SDL_WINDOW_SHOWN);
+	gWindow = SDL_CreateWindow("Porporo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH * ZOOM, HEIGHT * ZOOM, SDL_WINDOW_SHOWN);
 	if(gWindow == NULL)
 		return error("Window", SDL_GetError());
 	gRenderer = SDL_CreateRenderer(gWindow, -1, 0);
@@ -497,6 +470,7 @@ emu_dei(Uxn *u, Uint8 addr)
 	Program *prg = &programs[u->id];
 	switch(addr & 0xf0) {
 	case 0x10: break;
+	case 0x20: break;
 	}
 	return u->dev[addr];
 }
@@ -516,13 +490,20 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 			tprg->u.dev[0x12] = value;
 			if(vector) {
 				uxn_eval(&tprg->u, vector);
-			} else {
-				if(tprg == porporo)
-					printf("%c", value);
-			}
+			} else if(tprg == porporo)
+				printf("%c", value);
 		}
 	} break;
+	case 0x20:
+		screen_deo(u->ram, &u->dev[d], p);
+		break;
 	}
+}
+
+int
+emu_resize(int width, int height)
+{
+	return 1;
 }
 
 int
@@ -531,26 +512,22 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *a, *listen, *c, *d, *prg_hello, *prg_screenpixel;
+	Program *prg_listen, *prg_hello, *prg_screenpixel;
 	(void)argc;
 	(void)argv;
 
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
 
-	noton.alive = 1;
-	noton.speed = 40;
-
 	if(!init())
 		return error("Init", "Failure");
 
 	porporo = addprogram(550, 350, 200, 30, "bin/porporo.rom");
-	listen = addprogram(520, 140, 200, 30, "bin/listen.rom");
+	prg_listen = addprogram(520, 140, 200, 30, "bin/listen.rom");
 	prg_hello = addprogram(300, 300, 200, 30, "bin/hello.rom");
-	
 	prg_screenpixel = addprogram(20, 30, 200, 200, "bin/screen.pixel.rom");
 
-	connectports(prg_hello, listen, 0x12, 0x18);
-	connectports(listen, porporo, 0x12, 0x18);
+	connectports(prg_hello, prg_listen, 0x12, 0x18);
+	connectports(prg_listen, porporo, 0x12, 0x18);
 
 	uxn_eval(&prg_hello->u, 0x100);
 	fflush(stdout);
@@ -561,12 +538,11 @@ main(int argc, char **argv)
 			begintime = SDL_GetTicks();
 		else
 			delta = endtime - begintime;
-		if(delta < noton.speed)
-			SDL_Delay(noton.speed - delta);
-		if(noton.alive) {
-			run(&noton);
-			/* redraw(pixels); */
-		}
+		if(delta < 40)
+			SDL_Delay(40 - delta);
+
+		/* redraw(pixels); */
+
 		while(SDL_PollEvent(&event) != 0) {
 			if(event.type == SDL_QUIT)
 				quit();
@@ -575,7 +551,7 @@ main(int argc, char **argv)
 				event.type == SDL_MOUSEMOTION) {
 				domouse(&event, &brush);
 			} else if(event.type == SDL_KEYDOWN)
-				dokey(&noton, &event);
+				dokey(&event);
 			else if(event.type == SDL_WINDOWEVENT)
 				if(event.window.event == SDL_WINDOWEVENT_EXPOSED)
 					redraw(pixels);
