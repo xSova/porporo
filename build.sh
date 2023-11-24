@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # format code
-# clang-format -i main.c
+# clang-format -i src/porporo.c
 
 # remove old
 rm -f bin/porporo

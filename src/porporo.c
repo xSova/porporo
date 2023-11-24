@@ -26,14 +26,10 @@ typedef unsigned char Uint8;
 #define INPUTMAX 12
 #define OUTPUTMAX 12
 
-#define CHANNELS 6
-#define DEVICE 0
-
-/* new */
-
-typedef struct {
+typedef struct Program {
 	int x, y, w, h;
 	char *name;
+	struct Program *input, *output;
 } Program;
 
 typedef enum { INPUT,
@@ -83,7 +79,7 @@ static Brush brush;
 
 /* clang-format off */
 
-static Uint32 theme[] = {0x000000, 0xffb545, 0x72DEC2, 0xffffff, 0x222222};
+static Uint32 theme[] = {0xffffff, 0xffb545, 0x72DEC2, 0x000000, 0xeeeeee};
 
 Uint8 icons[][8] = {
     {0x38, 0x7c, 0xee, 0xd6, 0xee, 0x7c, 0x38, 0x00}, /* gate:input */
@@ -182,6 +178,22 @@ Pt2d(int x, int y)
 	Point2d p;
 	setpt2d(&p, x, y);
 	return p;
+}
+
+static Program *
+addprogram(int x, int y, int w, int h, char *n)
+{
+	Program *p = &programs[plen++];
+	p->x = x, p->y = y, p->w = w, p->h = h, p->name = n;
+
+	return p;
+}
+
+static void
+connectports(Program *a, Program *b, int ap, int bp)
+{
+	a->output = b;
+	b->input = a;
 }
 
 #pragma mark - Generics
@@ -399,33 +411,15 @@ line(Uint32 *dst, int ax, int ay, int bx, int by, int color)
 }
 
 static void
-drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int fg, int bg)
+drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int fg)
 {
 	int v, h;
 	for(v = 0; v < 8; v++)
 		for(h = 0; h < 8; h++) {
 			int ch1 = (sprite[v] >> (7 - h)) & 0x1;
-			putpixel(dst, x + h, y + v, ch1 ? fg : bg);
+			if(ch1)
+				putpixel(dst, x + h, y + v, fg);
 		}
-}
-
-static void
-drawgate(Uint32 *dst, Gate *g)
-{
-	switch(g->type) {
-	case OUTPUT:
-		drawicn(dst, g->pos.x, g->pos.y, icons[1 + g->sharp], g->polarity + 1 + g->sharp + 1, 0);
-		break;
-	case INPUT:
-		drawicn(dst, g->pos.x, g->pos.y, icons[0], g->polarity + 1, 0);
-		break;
-	case POOL:
-		drawicn(dst, g->pos.x, g->pos.y, icons[3], 1, 0);
-		break;
-	case BASIC:
-		drawicn(dst, g->pos.x, g->pos.y, icons[3], g->polarity < 0 ? 3 : g->polarity + 1, 0);
-		break;
-	}
 }
 
 static void
@@ -442,19 +436,44 @@ drawwire(Uint32 *dst, Wire *w, int color)
 }
 
 static void
+drawconnection(Uint32 *dst, Program *p, int color)
+{
+	if(p->output) {
+		int x1 = p->x + p->w + 3, y1 = p->y + 3;
+		int x2 = p->output->x - 5, y2 = p->output->y + 3;
+		line(dst, x1, y1, x2, y2, 3);
+	}
+}
+
+static void
 drawguides(Uint32 *dst)
 {
 	int x, y;
 	for(x = 0; x < HOR; x++)
 		for(y = 0; y < VER; y++)
-			drawicn(dst, x * 8, y * 8, icons[4], 4, 0);
+			drawicn(dst, x * 8, y * 8, icons[4], 4);
 }
 
 static void
 drawui(Uint32 *dst)
 {
 	int bottom = VER * 8 + 8;
-	drawicn(dst, 0 * 8, bottom, icons[GUIDES ? 6 : 5], GUIDES ? 1 : 2, 0);
+	drawicn(dst, 0 * 8, bottom, icons[GUIDES ? 6 : 5], GUIDES ? 1 : 2);
+}
+
+static void
+linerect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
+{
+	int x, y;
+	for(y = y1; y < y2; y++) {
+		putpixel(dst, x1, y, color);
+		putpixel(dst, x2, y, color);
+	}
+	for(x = x1; x < x2; x++) {
+		putpixel(dst, x, y1, color);
+		putpixel(dst, x, y2, color);
+	}
+	putpixel(dst, x2, y2, color);
 }
 
 static void
@@ -473,16 +492,30 @@ drawtext(Uint32 *dst, int x, int y, char *t, int color)
 {
 	char c;
 	x -= 8;
-	while((c = *t++)) {
-		drawicn(dst, x += 8, y, &font[(c - 0x20) << 3], color, 2);
-	}
+	while((c = *t++))
+		drawicn(dst, x += 8, y, &font[(c - 0x20) << 3], color);
+}
+
+static void
+drawbyte(Uint32 *dst, int x, int y, unsigned char byte, int color)
+{
+	int hb = '0' - 0x20 + (byte >> 0x4);
+	int lb = '0' - 0x20 + (byte & 0xf);
+	drawicn(dst, x += 8, y, &font[hb << 3], color);
+	drawicn(dst, x += 8, y, &font[lb << 3], color);
 }
 
 static void
 drawprogram(Uint32 *dst, Program *p)
 {
-	drawrect(dst, p->x, p->y, p->x + p->w, p->y + p->h, 2);
-	drawtext(dst, p->x, p->y, p->name, 0);
+	drawrect(dst, p->x, p->y, p->x + p->w, p->y + p->h, 4);
+	linerect(dst, p->x, p->y, p->x + p->w, p->y + p->h, 3);
+	drawtext(dst, p->x + 2, p->y + 2, p->name, 3);
+	/* ports */
+	drawicn(dst, p->x - 8, p->y, icons[0], 1);
+	drawicn(dst, p->x + p->w, p->y, icons[0], 2);
+	drawbyte(dst, p->x - 8, p->y - 9, 0x12, 3);
+	drawbyte(dst, p->x + p->w - 8, p->y - 9, 0x18, 3);
 }
 
 static void
@@ -501,13 +534,16 @@ redraw(Uint32 *dst)
 	clear(dst);
 	if(GUIDES)
 		drawguides(dst);
-	for(i = 0; i < noton.glen; i++)
-		drawgate(dst, &noton.gates[i]);
 	for(i = 0; i < noton.wlen; i++)
 		drawwire(dst, &noton.wires[i], 2);
 	drawwire(dst, &brush.wire, 3);
+
 	for(i = 0; i < plen; i++)
 		drawprogram(dst, &programs[i]);
+
+	for(i = 0; i < plen; i++)
+		drawconnection(dst, &programs[i], 3);
+
 	drawui(dst);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
@@ -541,12 +577,6 @@ run(Noton *n)
 	for(i = 0; i < n->wlen; ++i)
 		flex(&n->wires[i]);
 	n->frame++;
-}
-
-static void
-setup(Noton *n)
-{
-	
 }
 
 /* options */
@@ -706,19 +736,13 @@ init(void)
 	return 1;
 }
 
-static void
-addprogram(int x, int y, int w, int h, char *n)
-{
-	Program *p = &programs[plen++];
-	p->x = x, p->y = y, p->w = w, p->h = h, p->name = n;
-}
-
 int
 main(int argc, char **argv)
 {
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
+	Program *a, *b, *c, *d;
 	(void)argc;
 	(void)argv;
 
@@ -730,10 +754,14 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 
-	setup(&noton);
-	addprogram(50, 30, 150, 20, "console.rom");
-	addprogram(120, 80, 120, 120, "debug.rom");
-	addprogram(20, 120, 70, 30, "keyb.rom");
+	a = addprogram(150, 30, 120, 120, "console.rom");
+	b = addprogram(320, 120, 120, 120, "print.rom");
+	c = addprogram(10, 130, 100, 70, "keyb.rom");
+	d = addprogram(190, 170, 100, 80, "debug.rom");
+
+	connectports(a, b, 12, 18);
+	connectports(c, a, 12, 18);
+	connectports(d, b, 12, 18);
 
 	while(1) {
 		SDL_Event event;
