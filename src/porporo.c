@@ -409,14 +409,10 @@ line(Uint32 *dst, int ax, int ay, int bx, int by, int color)
 		if(ax == bx && ay == by)
 			break;
 		e2 = 2 * err;
-		if(e2 >= dy) {
-			err += dy;
-			ax += sx;
-		}
-		if(e2 <= dx) {
-			err += dx;
-			ay += sy;
-		}
+		if(e2 >= dy)
+			err += dy, ax += sx;
+		if(e2 <= dx)
+			err += dx, ay += sy;
 	}
 }
 
@@ -449,15 +445,11 @@ static void
 drawconnection(Uint32 *dst, Program *p, int color)
 {
 	int i;
-	if(p->output) {
-		int x1 = p->x + p->w + 3, y1 = p->y + 3;
-		int x2 = p->output->x - 5, y2 = p->output->y + 3;
-		line(dst, x1, y1, x2, y2, 3);
-	}
-	// TODO
 	for(i = 0; i < p->clen; i++) {
 		Connection *c = &p->out[i];
-		printf("%s[%02x]->%s[%02x]\n", c->a->name, c->ap, c->b->name, c->bp);
+		int x1 = p->x + p->w + 3, y1 = p->y + 3;
+		int x2 = c->b->x - 5, y2 = c->b->y + 3;
+		line(dst, x1, y1, x2, y2, 3);
 	}
 }
 
@@ -481,14 +473,10 @@ static void
 linerect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
 {
 	int x, y;
-	for(y = y1; y < y2; y++) {
-		putpixel(dst, x1, y, color);
-		putpixel(dst, x2, y, color);
-	}
-	for(x = x1; x < x2; x++) {
-		putpixel(dst, x, y1, color);
-		putpixel(dst, x, y2, color);
-	}
+	for(y = y1; y < y2; y++)
+		putpixel(dst, x1, y, color), putpixel(dst, x2, y, color);
+	for(x = x1; x < x2; x++)
+		putpixel(dst, x, y1, color), putpixel(dst, x, y2, color);
 	putpixel(dst, x2, y2, color);
 }
 
@@ -496,11 +484,9 @@ static void
 drawrect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
 {
 	int x, y;
-	for(y = y1; y < y2; y++) {
-		for(x = x1; x < x2; x++) {
+	for(y = y1; y < y2; y++)
+		for(x = x1; x < x2; x++)
 			putpixel(dst, x, y, color);
-		}
-	}
 }
 
 static void
