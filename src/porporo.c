@@ -1,8 +1,11 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 
+#include "uxn.h"
+#include "devices/system.h"
+
 /*
-Copyright (c) 2020 Devine Lu Linvega
+Copyright (c) 2023 Devine Lu Linvega
 
 Permission to use, copy, modify, and distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -12,28 +15,23 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 WITH REGARD TO THIS SOFTWARE.
 */
 
-#define HOR 60
-#define VER 32
+#define HOR 100
+#define VER 70
 #define PAD 2
 #define SZ (HOR * VER * 16)
 
 typedef unsigned char Uint8;
 
-#define WIREMAX 256
-#define WIREPTMAX 128
-#define PORTMAX 32
-#define INPUTMAX 12
-#define OUTPUTMAX 12
-
 typedef struct Connection {
-	unsigned char ap, bp;
+	Uint8 ap, bp;
 	struct Program *a, *b;
 } Connection;
 
 typedef struct Program {
-	char *name;
+	char *rom;
 	int x, y, w, h, clen;
 	Connection out[0x100];
+	Uxn u;
 } Program;
 
 typedef enum { INPUT,
@@ -45,11 +43,6 @@ typedef struct {
 	int x, y;
 } Point2d;
 
-typedef struct Wire {
-	int id, polarity, a, b, len, flex;
-	Point2d points[WIREPTMAX];
-} Wire;
-
 typedef struct Noton {
 	int alive, frame;
 	unsigned int speed;
@@ -58,18 +51,18 @@ typedef struct Noton {
 typedef struct Brush {
 	int down;
 	Point2d pos;
-	Wire wire;
 } Brush;
 
 static int WIDTH = 8 * HOR + 8 * PAD * 2;
 static int HEIGHT = 8 * (VER + 2) + 8 * PAD * 2;
-static int ZOOM = 2, GUIDES = 1;
+static int ZOOM = 1, GUIDES = 1;
 
 static Program programs[0x10];
 static int plen;
 
 static Noton noton;
 static Brush brush;
+static Uint8 *ram;
 
 /* clang-format off */
 
@@ -86,7 +79,7 @@ Uint8 icons[][8] = {
     {0x10, 0x54, 0x28, 0xc6, 0x28, 0x54, 0x10, 0x00}  /* unsaved */
 };
 
-static unsigned char font[] = {
+static Uint8 font[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x08, 0x08, 0x08, 0x08, 0x00, 0x08, 
 	0x00, 0x14, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x22, 0x7f, 0x22, 0x22, 0x22, 0x7f, 0x22, 
 	0x00, 0x08, 0x7f, 0x40, 0x3e, 0x01, 0x7f, 0x08, 0x00, 0x21, 0x52, 0x24, 0x08, 0x12, 0x25, 0x42, 
@@ -174,41 +167,6 @@ Pt2d(int x, int y)
 	return p;
 }
 
-static Program *
-addprogram(int x, int y, int w, int h, char *n)
-{
-	Program *p = &programs[plen++];
-	p->x = x, p->y = y, p->w = w, p->h = h, p->name = n;
-
-	return p;
-}
-
-static void
-connectports(Program *a, Program *b, unsigned char ap, unsigned char bp)
-{
-	Connection *c = &a->out[a->clen++];
-	c->ap = ap, c->bp = bp;
-	c->a = a, c->b = b;
-}
-
-#pragma mark - Generics
-
-static void
-flex(Wire *w)
-{
-	int i;
-	if(w->len < 3 || !w->flex || noton.frame % 15 != 0)
-		return;
-	for(i = 1; i < w->len - 1; ++i) {
-		Point2d *a = &w->points[i - 1];
-		Point2d *b = &w->points[i];
-		Point2d *c = &w->points[i + 1];
-		b->x = (a->x + b->x + c->x) / 3;
-		b->y = (a->y + b->y + c->y) / 3;
-	}
-	w->flex--;
-}
-
 #pragma mark - Options
 
 static void
@@ -265,19 +223,6 @@ drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int fg)
 }
 
 static void
-drawwire(Uint32 *dst, Wire *w, int color)
-{
-	int i;
-	if(w->len < 2)
-		return;
-	for(i = 0; i < w->len - 1; i++) {
-		Point2d *p1 = &w->points[i];
-		Point2d *p2 = &w->points[i + 1];
-		line(dst, p1->x, p1->y, p2->x, p2->y, (int)(noton.frame / 3) % w->len != i ? w->polarity + 1 : color);
-	}
-}
-
-static void
 drawconnection(Uint32 *dst, Program *p, int color)
 {
 	int i;
@@ -309,11 +254,15 @@ static void
 linerect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
 {
 	int x, y;
-	for(y = y1; y < y2; y++)
+	for(y = y1 - 1; y < y2 + 1; y++) {
 		putpixel(dst, x1, y, color), putpixel(dst, x2, y, color);
-	for(x = x1; x < x2; x++)
+		putpixel(dst, x1 - 1, y, color), putpixel(dst, x2 + 1, y, color);
+	}
+	for(x = x1 - 1; x < x2 + 1; x++) {
 		putpixel(dst, x, y1, color), putpixel(dst, x, y2, color);
-	putpixel(dst, x2, y2, color);
+		putpixel(dst, x, y1 - 1, color), putpixel(dst, x, y2 + 1, color);
+	}
+	putpixel(dst, x2 + 1, y2 + 1, color);
 }
 
 static void
@@ -335,7 +284,7 @@ drawtext(Uint32 *dst, int x, int y, char *t, int color)
 }
 
 static void
-drawbyte(Uint32 *dst, int x, int y, unsigned char byte, int color)
+drawbyte(Uint32 *dst, int x, int y, Uint8 byte, int color)
 {
 	int hb = '0' - 0x20 + (byte >> 0x4);
 	int lb = '0' - 0x20 + (byte & 0xf);
@@ -348,7 +297,7 @@ drawprogram(Uint32 *dst, Program *p)
 {
 	drawrect(dst, p->x, p->y, p->x + p->w, p->y + p->h, 4);
 	linerect(dst, p->x, p->y, p->x + p->w, p->y + p->h, 3);
-	drawtext(dst, p->x + 2, p->y + 2, p->name, 3);
+	drawtext(dst, p->x + 2, p->y + 2, p->rom, 3);
 	/* ports */
 	drawicn(dst, p->x - 8, p->y, icons[0], 1);
 	drawicn(dst, p->x + p->w, p->y, icons[0], 2);
@@ -370,13 +319,11 @@ redraw(Uint32 *dst)
 {
 	int i;
 	clear(dst);
+
 	if(GUIDES)
 		drawguides(dst);
-	drawwire(dst, &brush.wire, 3);
-
 	for(i = 0; i < plen; i++)
 		drawprogram(dst, &programs[i]);
-
 	for(i = 0; i < plen; i++)
 		drawconnection(dst, &programs[i], 3);
 
@@ -520,15 +467,58 @@ init(void)
 	return 1;
 }
 
+static Program *
+addprogram(int x, int y, int w, int h, char *rom)
+{
+	Program *p = &programs[plen++];
+	p->x = x, p->y = y, p->w = w, p->h = h, p->rom = rom;
+	p->u.ram = ram + (plen - 1) * 0x10000;
+	system_init(&p->u, ram, rom);
+	return p;
+}
+
+static void
+connectports(Program *a, Program *b, Uint8 ap, Uint8 bp)
+{
+	Connection *c = &a->out[a->clen++];
+	c->ap = ap, c->bp = bp;
+	c->a = a, c->b = b;
+}
+
+Uint8
+emu_dei(Uxn *u, Uint8 addr)
+{
+	switch(addr & 0xf0) {
+	case 0x00:
+	case 0xc0:
+	}
+	return u->dev[addr];
+}
+
+void
+emu_deo(Uxn *u, Uint8 addr, Uint8 value)
+{
+	Uint8 p = addr & 0x0f, d = addr & 0xf0;
+	u->dev[addr] = value;
+	switch(d) {
+	case 0x00: break;
+	case 0x10: break;
+	case 0xa0: break;
+	case 0xb0: break;
+	}
+}
+
 int
 main(int argc, char **argv)
 {
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *a, *b, *c, *d;
+	Program *a, *b, *c, *d, *e;
 	(void)argc;
 	(void)argv;
+
+	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
 
 	noton.alive = 1;
 	noton.speed = 40;
@@ -540,6 +530,8 @@ main(int argc, char **argv)
 	b = addprogram(320, 120, 120, 120, "print.rom");
 	c = addprogram(10, 130, 100, 70, "keyb.rom");
 	d = addprogram(190, 170, 100, 80, "debug.rom");
+
+	e = addprogram(300, 300, 160, 160, "bin/hello.rom");
 
 	connectports(a, b, 0x12, 0x18);
 	connectports(c, a, 0x12, 0x18);
@@ -555,7 +547,7 @@ main(int argc, char **argv)
 			SDL_Delay(noton.speed - delta);
 		if(noton.alive) {
 			run(&noton);
-			redraw(pixels);
+			/* redraw(pixels); */
 		}
 		while(SDL_PollEvent(&event) != 0) {
 			if(event.type == SDL_QUIT)
