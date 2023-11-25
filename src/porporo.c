@@ -354,10 +354,6 @@ static void
 handle_mouse(SDL_Event *event)
 {
 	int i, desk = 1, x = event->motion.x - camerax, y = event->motion.y - cameray;
-	if(event->type == SDL_MOUSEWHEEL) {
-		mouse_scroll(&focused->u, &focused->u.dev[0x90], event->wheel.x, event->wheel.y);
-		return;
-	}
 	for(i = plen - 1; i; i--) {
 		Program *p = &programs[i];
 		if(withinprogram(p, x, y)) {
@@ -454,6 +450,13 @@ dokey(SDL_Event *event)
 	case SDLK_BACKSPACE:
 		break;
 	}
+}
+
+static void
+on_mouse_wheel(int x, int y)
+{
+	Uxn *u = &focused->u;
+	mouse_scroll(u, &u->dev[0x90], x, y);
 }
 
 static int
@@ -575,7 +578,7 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 
-	porporo = addprogram(950, 350, "bin/porporo.rom");
+	porporo = addprogram(150, 150, "bin/porporo.rom");
 	prg_listen = addprogram(920, 140, "bin/listen.rom");
 	prg_hello = addprogram(700, 300, "bin/hello.rom");
 
@@ -588,6 +591,7 @@ main(int argc, char **argv)
 	connectports(prg_listen, porporo, 0x12, 0x18);
 
 	uxn_eval(&prg_hello->u, 0x100);
+
 	fflush(stdout);
 
 	while(1) {
@@ -606,7 +610,7 @@ main(int argc, char **argv)
 		while(SDL_PollEvent(&event) != 0) {
 			switch(event.type) {
 			case SDL_QUIT: quit(); break;
-			case SDL_MOUSEWHEEL:
+			case SDL_MOUSEWHEEL: on_mouse_wheel(event.wheel.x, event.wheel.y); break;
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEMOTION:
