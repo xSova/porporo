@@ -30,9 +30,9 @@ static Program programs[0x10], *porporo, *focused;
 static Uint8 *ram;
 static int plen;
 
-static int reqdraw = 0;
-static int dragx, dragy;
-static int camerax = 0, cameray = 0;
+static int reqdraw;
+static int dragx, dragy, movemode = 1;
+static int camerax, cameray;
 
 static SDL_Window *gWindow = NULL;
 static SDL_Renderer *gRenderer = NULL;
@@ -227,7 +227,7 @@ drawprogram(Uint32 *dst, Program *p)
 {
 	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
 	/* drawrect(dst, p->x, p->y, p->x + w, p->y + h, 4); */
-	linerect(dst, x, y, x + w, y + h, 3);
+	linerect(dst, x, y, x + w, y + h, 2 + !movemode);
 	drawtext(dst, x + 2, y - 12, p->rom, 3);
 	/* ports */
 	drawicn(dst, x - 8, y, icons[0], 1);
@@ -320,24 +320,63 @@ drag_end(void)
 	dragx = dragy = 0;
 }
 
+int dragprgx, dragprgy;
+
+static void
+drag_prg_start(int x, int y)
+{
+	dragprgx = x, dragprgy = y;
+}
+
+static void
+drag_prg_move(int x, int y)
+{
+	focused->x += x - dragprgx, focused->y += y - dragprgy;
+	dragprgx = x, dragprgy = y;
+	clear(pixels);
+	reqdraw = 1;
+}
+
+static void
+drag_prg_end(void)
+{
+	dragprgx = dragprgy = 0;
+}
+
+static int
+withinprogram(Program *p, int x, int y)
+{
+	return x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h;
+}
+
 static void
 handle_mouse(SDL_Event *event)
 {
-	int i, desk = 1, x = event->motion.x - camerax, y = event->motion.y - cameray, xx, yy;
+	int i, desk = 1, x = event->motion.x - camerax, y = event->motion.y - cameray;
 	for(i = plen - 1; i; i--) {
 		Program *p = &programs[i];
-		if(x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h) {
-			xx = x - p->x, yy = y - p->y, desk = 0;
+		if(withinprogram(p, x, y)) {
 			focused = p;
-			if(event->type == SDL_MOUSEMOTION)
-				mouse_pos(&p->u, &p->u.dev[0x90], xx, yy);
-			else if(event->type == SDL_MOUSEBUTTONDOWN)
-				mouse_down(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
-			else if(event->type == SDL_MOUSEBUTTONUP)
-				mouse_up(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
-			else if(event->type == SDL_MOUSEWHEEL)
-				mouse_scroll(&p->u, &p->u.dev[0x90], event->wheel.x, event->wheel.y);
-			break;
+			if(movemode) {
+				if(event->type == SDL_MOUSEBUTTONDOWN)
+					drag_prg_start(event->motion.x, event->motion.y);
+				if(event->type == SDL_MOUSEMOTION && event->button.button)
+					drag_prg_move(event->motion.x, event->motion.y);
+				if(event->type == SDL_MOUSEBUTTONUP)
+					drag_prg_end();
+				return;
+			} else {
+				int xx = x - p->x, yy = y - p->y, desk = 0;
+				if(event->type == SDL_MOUSEMOTION)
+					mouse_pos(&p->u, &p->u.dev[0x90], xx, yy);
+				else if(event->type == SDL_MOUSEBUTTONDOWN)
+					mouse_down(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
+				else if(event->type == SDL_MOUSEBUTTONUP)
+					mouse_up(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
+				else if(event->type == SDL_MOUSEWHEEL)
+					mouse_scroll(&p->u, &p->u.dev[0x90], event->wheel.x, event->wheel.y);
+				return;
+			}
 		}
 	}
 	if(desk) {
@@ -505,6 +544,17 @@ screenvector(void)
 	reqdraw = 1;
 }
 
+static void
+porporo_key(char c)
+{
+	switch(c) {
+	case 'd':
+		movemode = !movemode;
+		printf("%d\n", movemode);
+		break;
+	}
+}
+
 int
 main(int argc, char **argv)
 {
@@ -536,8 +586,10 @@ main(int argc, char **argv)
 
 	while(1) {
 		SDL_Event event;
-		if(!begintime) begintime = SDL_GetTicks();
-		else delta = endtime - begintime;
+		if(!begintime)
+			begintime = SDL_GetTicks();
+		else
+			delta = endtime - begintime;
 		if(delta < 40)
 			SDL_Delay(40 - delta);
 		screenvector();
@@ -552,7 +604,11 @@ main(int argc, char **argv)
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEMOTION: domouse(&event); break;
 			case SDL_TEXTINPUT:
-				controller_key(&focused->u, &focused->u.dev[0x80], event.text.text[0]);
+				if(focused == porporo) {
+					porporo_key(event.text.text[0]);
+				} else {
+					controller_key(&focused->u, &focused->u.dev[0x80], event.text.text[0]);
+				}
 				reqdraw = 1;
 				break;
 			case SDL_KEYDOWN:
