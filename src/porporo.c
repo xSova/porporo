@@ -6,6 +6,7 @@
 #include "devices/screen.h"
 #include "devices/controller.h"
 #include "devices/mouse.h"
+#include "devices/file.h"
 #include "devices/datetime.h"
 
 /*
@@ -31,7 +32,7 @@ static Uint8 *ram;
 static int plen;
 
 static int reqdraw;
-static int dragx, dragy, movemode = 1;
+static int dragx, dragy, movemode;
 static int camerax, cameray;
 
 static SDL_Window *gWindow = NULL;
@@ -353,6 +354,10 @@ static void
 handle_mouse(SDL_Event *event)
 {
 	int i, desk = 1, x = event->motion.x - camerax, y = event->motion.y - cameray;
+	if(event->type == SDL_MOUSEWHEEL) {
+		mouse_scroll(&focused->u, &focused->u.dev[0x90], event->wheel.x, event->wheel.y);
+		return;
+	}
 	for(i = plen - 1; i; i--) {
 		Program *p = &programs[i];
 		if(withinprogram(p, x, y)) {
@@ -373,8 +378,6 @@ handle_mouse(SDL_Event *event)
 					mouse_down(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
 				else if(event->type == SDL_MOUSEBUTTONUP)
 					mouse_up(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
-				else if(event->type == SDL_MOUSEWHEEL)
-					mouse_scroll(&p->u, &p->u.dev[0x90], event->wheel.x, event->wheel.y);
 				return;
 			}
 		}
@@ -395,6 +398,7 @@ handle_mouse(SDL_Event *event)
 static void
 domouse(SDL_Event *event)
 {
+
 	switch(event->type) {
 	case SDL_MOUSEBUTTONDOWN: handle_mouse(event); break;
 	case SDL_MOUSEMOTION: handle_mouse(event); break;
@@ -529,6 +533,8 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	case 0x20:
 		screen_deo(prg, u->ram, &u->dev[d], p);
 		break;
+	case 0xa0: file_deo(prg, 0, u->ram, &u->dev[d], p); break;
+	case 0xb0: file_deo(prg, 1, u->ram, &u->dev[d], p); break;
 	}
 }
 
@@ -550,7 +556,6 @@ porporo_key(char c)
 	switch(c) {
 	case 'd':
 		movemode = !movemode;
-		printf("%d\n", movemode);
 		break;
 	}
 }
@@ -577,6 +582,7 @@ main(int argc, char **argv)
 	addprogram(20, 30, "bin/screen.pixel.rom");
 	addprogram(150, 90, "bin/oekaki.rom");
 	addprogram(650, 160, "bin/catclock.rom");
+	addprogram(750, 300, "bin/left.rom");
 
 	connectports(prg_hello, prg_listen, 0x12, 0x18);
 	connectports(prg_listen, porporo, 0x12, 0x18);
@@ -600,9 +606,12 @@ main(int argc, char **argv)
 		while(SDL_PollEvent(&event) != 0) {
 			switch(event.type) {
 			case SDL_QUIT: quit(); break;
+			case SDL_MOUSEWHEEL:
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
-			case SDL_MOUSEMOTION: domouse(&event); break;
+			case SDL_MOUSEMOTION:
+				domouse(&event);
+				break;
 			case SDL_TEXTINPUT:
 				if(focused == porporo) {
 					porporo_key(event.text.text[0]);
