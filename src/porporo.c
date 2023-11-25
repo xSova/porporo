@@ -4,6 +4,7 @@
 #include "uxn.h"
 #include "devices/system.h"
 #include "devices/screen.h"
+#include "devices/controller.h"
 #include "devices/mouse.h"
 
 /*
@@ -24,7 +25,7 @@ WITH REGARD TO THIS SOFTWARE.
 static int WIDTH = 8 * HOR, HEIGHT = 8 * VER;
 static int ZOOM = 1, GUIDES = 1;
 
-static Program programs[0x10], *porporo;
+static Program programs[0x10], *porporo, *focused;
 static Uint8 *ram;
 static int plen;
 
@@ -327,12 +328,15 @@ handle_mouse(SDL_Event *event)
 		Program *p = &programs[i];
 		if(x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h) {
 			xx = x - p->x, yy = y - p->y, desk = 0;
+			focused = p;
 			if(event->type == SDL_MOUSEMOTION)
 				mouse_pos(&p->u, &p->u.dev[0x90], xx, yy);
 			else if(event->type == SDL_MOUSEBUTTONDOWN)
 				mouse_down(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
 			else if(event->type == SDL_MOUSEBUTTONUP)
 				mouse_up(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
+			else if(event->type == SDL_MOUSEWHEEL)
+				mouse_scroll(&p->u, &p->u.dev[0x90], event->wheel.x, event->wheel.y);
 			break;
 		}
 	}
@@ -344,6 +348,7 @@ handle_mouse(SDL_Event *event)
 			drag_move(event->motion.x, event->motion.y);
 		if(event->type == SDL_MOUSEBUTTONUP)
 			drag_end();
+		focused = porporo;
 	}
 	redraw(pixels);
 }
@@ -355,7 +360,40 @@ domouse(SDL_Event *event)
 	case SDL_MOUSEBUTTONDOWN: handle_mouse(event); break;
 	case SDL_MOUSEMOTION: handle_mouse(event); break;
 	case SDL_MOUSEBUTTONUP: handle_mouse(event); break;
+	case SDL_MOUSEWHEEL: handle_mouse(event); break;
 	}
+}
+
+static Uint8
+get_button(SDL_Event *event)
+{
+	switch(event->key.keysym.sym) {
+	case SDLK_LCTRL: return 0x01;
+	case SDLK_LALT: return 0x02;
+	case SDLK_LSHIFT: return 0x04;
+	case SDLK_HOME: return 0x08;
+	case SDLK_UP: return 0x10;
+	case SDLK_DOWN: return 0x20;
+	case SDLK_LEFT: return 0x40;
+	case SDLK_RIGHT: return 0x80;
+	}
+	return 0x00;
+}
+
+static Uint8
+get_key(SDL_Event *event)
+{
+	int sym = event->key.keysym.sym;
+	SDL_Keymod mods = SDL_GetModState();
+	if(sym < 0x20 || sym == SDLK_DELETE)
+		return sym;
+	if(mods & KMOD_CTRL) {
+		if(sym < SDLK_a)
+			return sym;
+		else if(sym <= SDLK_z)
+			return sym - (mods & KMOD_SHIFT) * 0x20;
+	}
+	return 0x00;
 }
 
 static void
@@ -502,17 +540,28 @@ main(int argc, char **argv)
 		/* redraw(pixels); */
 
 		while(SDL_PollEvent(&event) != 0) {
-			if(event.type == SDL_QUIT)
-				quit();
-			else if(event.type == SDL_MOUSEBUTTONUP ||
-				event.type == SDL_MOUSEBUTTONDOWN ||
-				event.type == SDL_MOUSEMOTION) {
-				domouse(&event);
-			} else if(event.type == SDL_KEYDOWN)
-				dokey(&event);
-			else if(event.type == SDL_WINDOWEVENT)
+			switch(event.type) {
+			case SDL_QUIT: quit(); break;
+			case SDL_MOUSEBUTTONUP:
+			case SDL_MOUSEBUTTONDOWN:
+			case SDL_MOUSEMOTION: domouse(&event); break;
+			case SDL_TEXTINPUT: 
+				controller_key(&focused->u, &focused->u.dev[0x80], event.text.text[0]);
+				break;
+			case SDL_KEYDOWN: 
+				if(get_key(&event))
+					controller_key(&focused->u, &focused->u.dev[0x80], get_key(&event));
+				else if(get_button(&event))
+					controller_down(&focused->u, &focused->u.dev[0x80], get_button(&event));
+				break;
+			case SDL_KEYUP:
+				controller_up(&focused->u, &focused->u.dev[0x80], get_button(&event));
+				break;
+			case SDL_WINDOWEVENT:
 				if(event.window.event == SDL_WINDOWEVENT_EXPOSED)
 					redraw(pixels);
+				break;
+			}
 		}
 		begintime = endtime;
 		endtime = SDL_GetTicks();
