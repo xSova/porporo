@@ -308,12 +308,10 @@ drag_start(int x, int y)
 static void
 drag_move(int x, int y)
 {
-	if(dragx && dragy) {
-		clear(pixels);
-		camerax += x - dragx, cameray += y - dragy;
-		dragx = x, dragy = y;
-		redraw(pixels);
-	}
+	camerax += x - dragx, cameray += y - dragy;
+	dragx = x, dragy = y;
+	clear(pixels);
+	redraw(pixels);
 }
 static void
 drag_end(int x, int y)
@@ -324,7 +322,7 @@ drag_end(int x, int y)
 static void
 handle_mouse(SDL_Event *event)
 {
-	int i, desk = 1, x = event->motion.x - camerax, y = event->motion.y - cameray, xx, yy;
+	int i, desk = 1, x = event->motion.x, y = event->motion.y, xx, yy;
 	for(i = plen - 1; i; i--) {
 		Program *p = &programs[i];
 		if(x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h) {
@@ -342,9 +340,9 @@ handle_mouse(SDL_Event *event)
 		/* on desktop */
 		if(event->type == SDL_MOUSEBUTTONDOWN)
 			drag_start(x, y);
-		else if(event->type == SDL_MOUSEMOTION)
+		if(event->type == SDL_MOUSEMOTION && event->button.button)
 			drag_move(x, y);
-		else if(event->type == SDL_MOUSEBUTTONUP)
+		if(event->type == SDL_MOUSEBUTTONUP)
 			drag_end(x, y);
 	}
 	redraw(pixels);
