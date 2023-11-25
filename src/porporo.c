@@ -500,13 +500,25 @@ emu_resize(int width, int height)
 	return 1;
 }
 
+void
+screenvector(void)
+{
+	int i;
+	if(!focused || focused == porporo)
+		return;
+	Uint16 vector = (focused->u.dev[0x20] << 8) | focused->u.dev[0x21];
+	if(vector)
+		uxn_eval(&focused->u, vector);
+	reqdraw = 1;
+}
+
 int
 main(int argc, char **argv)
 {
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *prg_listen, *prg_hello;
+	Program *prg_listen, *prg_hello, *prg_left, *prg_bicycle;
 	(void)argc;
 	(void)argv;
 
@@ -537,6 +549,7 @@ main(int argc, char **argv)
 			delta = endtime - begintime;
 		if(delta < 40)
 			SDL_Delay(40 - delta);
+		screenvector();
 		if(reqdraw) {
 			redraw(pixels);
 			reqdraw = 0;
