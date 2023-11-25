@@ -32,7 +32,7 @@ static Uint8 *ram;
 static int plen;
 
 static int reqdraw;
-static int isdrag, dragx, dragy, isprgdrag, dragprgx, dragprgy, movemode;
+static int isdrag, dragx, dragy, movemode;
 static int camerax, cameray;
 
 static SDL_Window *gWindow = NULL;
@@ -336,9 +336,9 @@ on_mouse_move(int x, int y)
 		return;
 	}
 	if(movemode) {
-		if(isprgdrag) {
-			focused->x += x - dragprgx, focused->y += y - dragprgy;
-			dragprgx = x, dragprgy = y;
+		if(isdrag) {
+			focused->x += x - dragx, focused->y += y - dragy;
+			dragx = x, dragy = y;
 			clear(pixels);
 			reqdraw = 1;
 		}
@@ -352,12 +352,8 @@ static void
 on_mouse_down(int button, int x, int y)
 {
 	Uxn *u;
-	if(!focused) {
+	if(!focused || movemode) {
 		isdrag = 1, dragx = x, dragy = y;
-		return;
-	}
-	if(movemode) {
-		isprgdrag = 1, dragprgx = x, dragprgy = y;
 		return;
 	}
 	u = &focused->u;
@@ -368,12 +364,8 @@ static void
 on_mouse_up(int button)
 {
 	Uxn *u;
-	if(!focused) {
+	if(!focused || movemode) {
 		isdrag = 0;
-		return;
-	}
-	if(movemode) {
-		isprgdrag = 0;
 		return;
 	}
 	u = &focused->u;
@@ -436,7 +428,7 @@ static void
 on_controller_input(char c)
 {
 	Uxn *u;
-	if(!focused) {
+	if(!focused || movemode) {
 		on_porporo_key(c);
 		return;
 	}
@@ -448,9 +440,7 @@ static void
 on_controller_down(Uint8 key, Uint8 button)
 {
 	Uxn *u;
-	if(!focused) {
-		return;
-	}
+	if(!focused) return;
 	u = &focused->u;
 	if(key)
 		controller_key(u, &u->dev[0x80], key);
@@ -463,9 +453,7 @@ static void
 on_controller_up(Uint8 button)
 {
 	Uxn *u;
-	if(!focused) {
-		return;
-	}
+	if(!focused) return; 
 	u = &focused->u;
 	controller_up(u, &u->dev[0x80], button);
 	reqdraw = 1;
