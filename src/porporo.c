@@ -89,8 +89,8 @@ drawconnection(Uint32 *dst, Program *p, int color)
 	int i;
 	for(i = 0; i < p->clen; i++) {
 		Connection *c = &p->out[i];
-		int x1 = p->x + 3 + camerax, y1 = p->y + 3 + cameray;
-		int x2 = c->b->x - 5 + camerax, y2 = c->b->y + 3 + cameray;
+		int x1 = p->x + 2 + camerax + p->screen.w, y1 = p->y - 2 + cameray;
+		int x2 = c->b->x - 3 + camerax, y2 = c->b->y - 2 + cameray;
 		line(dst, x1, y1, x2, y2, color);
 	}
 }
@@ -428,6 +428,7 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 				uxn_eval(&tprg->u, vector);
 			} else if(tprg == porporo)
 				printf("%c", value);
+			screenvector(tprg);
 		}
 	} break;
 	case 0x20: screen_deo(prg, u->ram, &u->dev[d], p); break;
@@ -437,12 +438,11 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 }
 
 void
-screenvector(void)
+screenvector(Program *p)
 {
-	if(!focused) return;
-	Uint16 vector = (focused->u.dev[0x20] << 8) | focused->u.dev[0x21];
+	Uint16 vector = (p->u.dev[0x20] << 8) | p->u.dev[0x21];
 	if(vector)
-		uxn_eval(&focused->u, vector);
+		uxn_eval(&p->u, vector);
 	reqdraw = 1;
 }
 
@@ -452,7 +452,7 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *prg_listen, *prg_hello;
+	Program *prg_listen, *prg_hello, *prg_left;
 	(void)argc;
 	(void)argv;
 
@@ -466,13 +466,12 @@ main(int argc, char **argv)
 	prg_listen = addprogram(920, 140, "bin/listen.rom");
 	prg_hello = addprogram(700, 300, "bin/hello.rom");
 
-	addprogram(300, 300, "bin/left.rom");
-
 	addprogram(20, 30, "bin/screen.pixel.rom");
-	addprogram(650, 160, "bin/catclock.rom");
+	prg_left = addprogram(300, 300, "bin/left.rom");
 
 	connectports(prg_hello, prg_listen, 0x12, 0x18);
 	connectports(prg_listen, porporo, 0x12, 0x18);
+	connectports(menu, prg_left, 0x12, 0x18);
 
 	uxn_eval(&prg_hello->u, 0x100);
 
@@ -486,7 +485,8 @@ main(int argc, char **argv)
 			delta = endtime - begintime;
 		if(delta < 40)
 			SDL_Delay(40 - delta);
-		screenvector();
+		if(focused)
+			screenvector(focused);
 		if(reqdraw) {
 			redraw(pixels);
 			reqdraw = 0;
