@@ -4,8 +4,6 @@
 |90 @Mouse &vector $2 &x $2 &y $2 &state $1 &chord $1 &pad $4 &scrolly &scrolly-hb $1 &scrolly-lb $1
 |a0 @File &vector $2 &success $2 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
 
-|0000
-
 |0100
 
 @on-reset ( -> )
@@ -35,14 +33,34 @@
 
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
-	.Mouse/y DEI2 #0008 SUB2 #04 SFT2 NIP <hover>
+	.Mouse/y DEI2 #0008 SUB2 #04 SFT2 NIP .Mouse/state DEI ?{ <hover>
+		BRK }
+	<select>
+	#00 .Mouse/state DEO
 	BRK
 
+@<select> ( id -- )
+	STH
+	[ LITr 00 ] ;dir #0005 ADD2
+	&w ( -- )
+		LDAk #0a NEQ ?{
+			#0006 ADD2 INCr EQUkr STHr ?&found }
+		INC2 LDAk ?&w
+	&found ( str* | a b -- )
+		POP2r <print-word>/
+		#0a18 DEO
+		JMP2r
+
+@<print-word> ( str* -- )
+	&w ( -- )
+		LDAk #18 DEO
+		INC2 & LDAk #20 GTH ?&w
+	POP2 JMP2r
+
 @<hover> ( id -- )
-	DUP [ LIT &last ff ] NEQ ?{ POP2 JMP2r }
-	,&last STR
-	<redraw>
-	JMP2r
+	[ LIT &last ff ] NEQk ?{ POP2 JMP2r }
+	POP ,&last STR
+	( >> )
 
 @<redraw> ( -- )
 	( | clear )
