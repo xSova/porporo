@@ -12,12 +12,10 @@
 	#f07f .System/r DEO2
 	#f0d6 .System/g DEO2
 	#f0b2 .System/b DEO2
-	#00a0 .Screen/width DEO2
+	#0080 .Screen/width DEO2
 	<load-dir>
 	;dir count-lines #40 SFT2 #0010 ADD2 .Screen/height DEO2
-	#0008 .Screen/x DEO2
-	#0008 .Screen/y DEO2
-	;dir <draw-text>
+	<redraw>
 	;on-mouse .Mouse/vector DEO2
 	BRK
 
@@ -37,7 +35,31 @@
 
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
+	.Mouse/y DEI2 #0008 SUB2 #04 SFT2 NIP <hover>
 	BRK
+
+@<hover> ( id -- )
+	DUP [ LIT &last ff ] NEQ ?{
+		POP2 JMP2r
+}
+	,&last STR
+	<redraw>
+JMP2r
+
+@<redraw> ( -- )
+	#0000 DUP2 .Screen/x DEO2 .Screen/y DEO2
+	#80 .Screen/pixel DEO
+	( | selection )
+	;fill-icn .Screen/addr DEO2
+	#0000 .Screen/x DEO2
+	#00 ;<hover>/last LDA #40 SFT2 #0008 ADD2 .Screen/y DEO2
+	#f2 .Screen/auto DEO
+	#02 .Screen/sprite DEOk DEO
+
+	#0008 .Screen/x DEO2
+	#0008 .Screen/y DEO2
+	;dir <draw-text>
+JMP2r
 
 @<draw-text> ( str* -- )
 	.Screen/x DEI2 ,&anchor STR2
@@ -50,7 +72,7 @@
 		LDAk #20 SUB #00 SWP
 		( ) DUP2 #50 SFT2 ;font-uf2/glyphs ADD2 .Screen/addr DEO2
 		( ) ;font-uf2 ADD2 LDA #00 SWP .Screen/x DEI2 ADD2
-		( ) #01 .Screen/sprite DEOk DEO
+		( ) #05 .Screen/sprite DEOk DEO
 		.Screen/x DEO2
 		&resume INC2 LDAk ?&w
 	POP2 JMP2r

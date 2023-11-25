@@ -28,7 +28,7 @@ static int WIDTH = HOR << 3, HEIGHT = VER << 3, ZOOM = 1;
 static int isdrag, dragx, dragy, camerax, cameray;
 static int movemode, reqdraw;
 
-static Program programs[0x10], *porporo, *focused;
+static Program programs[0x10], *porporo, *menu, *focused;
 static Uint8 *ram, plen;
 
 static SDL_Window *gWindow = NULL;
@@ -184,8 +184,13 @@ quit(void)
 }
 
 static void
-open_porporo(int x, int y){
-	printf("%d,%d\n", x,y);
+open_menu(int x, int y)
+{
+	clear(pixels);
+	reqdraw = 1;
+	menu->x = x, menu->y = y;
+	uxn_eval(&menu->u, 0x100);
+	isdrag = 0;
 }
 
 /* = MOUSE ======================================= */
@@ -242,8 +247,8 @@ static void
 on_mouse_down(int button, int x, int y)
 {
 	Uxn *u;
-	if(!focused && button == 2){
-		open_porporo(x,y);
+	if(!focused && button == 2) {
+		open_menu(x - camerax, y - cameray);
 	}
 	if(!focused || movemode) {
 		isdrag = 1, dragx = x, dragy = y;
@@ -457,9 +462,12 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 
-	porporo = addprogram(150, 150, "bin/porporo.rom");
+	porporo = addprogram(850, 150, "bin/porporo.rom");
+	menu = addprogram(1500, 1500, "bin/menu.rom");
 	prg_listen = addprogram(920, 140, "bin/listen.rom");
 	prg_hello = addprogram(700, 300, "bin/hello.rom");
+
+	addprogram(300, 300, "bin/left.rom");
 
 	addprogram(20, 30, "bin/screen.pixel.rom");
 	addprogram(650, 160, "bin/catclock.rom");
