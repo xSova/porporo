@@ -119,7 +119,7 @@ nibble(Uint8 v)
 static void
 putpixel(Uint32 *dst, int x, int y, int color)
 {
-	if(x >= 0 && x < WIDTH - 8 && y >= 0 && y < HEIGHT - 8)
+	if(x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT)
 		dst[y * WIDTH + x] = theme[color];
 }
 
@@ -129,8 +129,10 @@ drawscreen(Uint32 *dst, Screen *scr, int x1, int y1)
 	int x, y, w = scr->w, x2 = x1 + scr->w, y2 = y1 + scr->h;
 	for(y = y1; y < y2; y++) {
 		for(x = x1; x < x2; x++) {
-			int index = (x - x1) + (y - y1) * w;
-			dst[y * WIDTH + x] = scr->pixels[index];
+			if(x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
+				int index = (x - x1) + (y - y1) * w;
+				dst[y * WIDTH + x] = scr->pixels[index];
+			}
 		}
 	}
 }
@@ -155,10 +157,8 @@ drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int fg)
 {
 	int v, h;
 	for(v = 0; v < 8; v++)
-		for(h = 0; h < 8; h++) {
-			int ch1 = (sprite[v] >> (7 - h)) & 0x1;
-			if(ch1) putpixel(dst, x + h, y + v, fg);
-		}
+		for(h = 0; h < 8; h++)
+			if((sprite[v] >> (7 - h)) & 0x1) putpixel(dst, x + h, y + v, fg);
 }
 
 static void
@@ -252,14 +252,12 @@ static void
 redraw(Uint32 *dst)
 {
 	int i;
-	/* clear(dst); */
 	if(GUIDES)
 		drawguides(dst);
 	for(i = 0; i < plen; i++)
 		drawprogram(dst, &programs[i]);
 	for(i = 0; i < plen; i++)
 		drawconnection(dst, &programs[i], 3);
-
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
 	SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
@@ -305,6 +303,7 @@ drag_start(int x, int y)
 {
 	dragx = x, dragy = y;
 }
+
 static void
 drag_move(int x, int y)
 {
@@ -313,8 +312,9 @@ drag_move(int x, int y)
 	clear(pixels);
 	redraw(pixels);
 }
+
 static void
-drag_end(int x, int y)
+drag_end(void)
 {
 	dragx = dragy = 0;
 }
@@ -322,7 +322,7 @@ drag_end(int x, int y)
 static void
 handle_mouse(SDL_Event *event)
 {
-	int i, desk = 1, x = event->motion.x, y = event->motion.y, xx, yy;
+	int i, desk = 1, x = event->motion.x - camerax, y = event->motion.y - cameray, xx, yy;
 	for(i = plen - 1; i; i--) {
 		Program *p = &programs[i];
 		if(x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h) {
@@ -339,11 +339,11 @@ handle_mouse(SDL_Event *event)
 	if(desk) {
 		/* on desktop */
 		if(event->type == SDL_MOUSEBUTTONDOWN)
-			drag_start(x, y);
+			drag_start(event->motion.x, event->motion.y);
 		if(event->type == SDL_MOUSEMOTION && event->button.button)
-			drag_move(x, y);
+			drag_move(event->motion.x, event->motion.y);
 		if(event->type == SDL_MOUSEBUTTONUP)
-			drag_end(x, y);
+			drag_end();
 	}
 	redraw(pixels);
 }
@@ -476,12 +476,13 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 
-	porporo = addprogram(550, 350, "bin/porporo.rom");
-	prg_listen = addprogram(520, 140, "bin/listen.rom");
-	prg_hello = addprogram(300, 300, "bin/hello.rom");
+	porporo = addprogram(950, 350, "bin/porporo.rom");
+	prg_listen = addprogram(920, 140, "bin/listen.rom");
+	prg_hello = addprogram(700, 300, "bin/hello.rom");
 
 	addprogram(20, 30, "bin/screen.pixel.rom");
 	addprogram(150, 90, "bin/oekaki.rom");
+	addprogram(650, 160, "bin/catclock.rom");
 
 	connectports(prg_hello, prg_listen, 0x12, 0x18);
 	connectports(prg_listen, porporo, 0x12, 0x18);
