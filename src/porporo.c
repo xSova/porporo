@@ -29,6 +29,7 @@ static Program programs[0x10], *porporo, *focused;
 static Uint8 *ram;
 static int plen;
 
+int reqdraw = 0;
 int dragx, dragy;
 int camerax = 0, cameray = 0;
 
@@ -311,7 +312,7 @@ drag_move(int x, int y)
 	camerax += x - dragx, cameray += y - dragy;
 	dragx = x, dragy = y;
 	clear(pixels);
-	redraw(pixels);
+	reqdraw = 1;
 }
 
 static void
@@ -350,7 +351,7 @@ handle_mouse(SDL_Event *event)
 			drag_end();
 		focused = porporo;
 	}
-	redraw(pixels);
+	reqdraw = 1;
 }
 
 static void
@@ -536,30 +537,34 @@ main(int argc, char **argv)
 			delta = endtime - begintime;
 		if(delta < 40)
 			SDL_Delay(40 - delta);
-
-		/* redraw(pixels); */
-
+		if(reqdraw) {
+			redraw(pixels);
+			reqdraw = 0;
+		}
 		while(SDL_PollEvent(&event) != 0) {
 			switch(event.type) {
 			case SDL_QUIT: quit(); break;
 			case SDL_MOUSEBUTTONUP:
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEMOTION: domouse(&event); break;
-			case SDL_TEXTINPUT: 
+			case SDL_TEXTINPUT:
 				controller_key(&focused->u, &focused->u.dev[0x80], event.text.text[0]);
+				reqdraw = 1;
 				break;
-			case SDL_KEYDOWN: 
+			case SDL_KEYDOWN:
 				if(get_key(&event))
 					controller_key(&focused->u, &focused->u.dev[0x80], get_key(&event));
 				else if(get_button(&event))
 					controller_down(&focused->u, &focused->u.dev[0x80], get_button(&event));
+				reqdraw = 1;
 				break;
 			case SDL_KEYUP:
 				controller_up(&focused->u, &focused->u.dev[0x80], get_button(&event));
+				reqdraw = 1;
 				break;
 			case SDL_WINDOWEVENT:
 				if(event.window.event == SDL_WINDOWEVENT_EXPOSED)
-					redraw(pixels);
+					reqdraw = 1;
 				break;
 			}
 		}
