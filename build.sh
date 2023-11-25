@@ -21,7 +21,6 @@ bin/uxnasm etc/hello.tal bin/hello.rom
 bin/uxnasm etc/listen.tal bin/listen.rom
 bin/uxnasm etc/screen.pixel.tal bin/screen.pixel.rom
 bin/uxnasm etc/catclock.tal bin/catclock.rom
-bin/uxnasm etc/oekaki.tal bin/oekaki.rom
-
+bin/uxnasm etc/porporo.tal bin/porporo.rom
 # run
 ./bin/porporo

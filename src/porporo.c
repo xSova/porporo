@@ -183,6 +183,11 @@ quit(void)
 	exit(0);
 }
 
+static void
+open_porporo(int x, int y){
+	printf("%d,%d\n", x,y);
+}
+
 /* = MOUSE ======================================= */
 
 static int
@@ -237,6 +242,9 @@ static void
 on_mouse_down(int button, int x, int y)
 {
 	Uxn *u;
+	if(!focused && button == 2){
+		open_porporo(x,y);
+	}
 	if(!focused || movemode) {
 		isdrag = 1, dragx = x, dragy = y;
 		return;
@@ -392,8 +400,6 @@ emu_dei(Uxn *u, Uint8 addr)
 {
 	Program *prg = &programs[u->id];
 	switch(addr & 0xf0) {
-	case 0x00: break;
-	case 0x10: break;
 	case 0xc0: return datetime_dei(u, addr); break;
 	}
 	return u->dev[addr];
@@ -442,7 +448,7 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *prg_listen, *prg_hello, *prg_left, *prg_bicycle;
+	Program *prg_listen, *prg_hello;
 	(void)argc;
 	(void)argv;
 
@@ -456,9 +462,7 @@ main(int argc, char **argv)
 	prg_hello = addprogram(700, 300, "bin/hello.rom");
 
 	addprogram(20, 30, "bin/screen.pixel.rom");
-	addprogram(150, 90, "bin/oekaki.rom");
 	addprogram(650, 160, "bin/catclock.rom");
-	addprogram(750, 300, "bin/left.rom");
 
 	connectports(prg_hello, prg_listen, 0x12, 0x18);
 	connectports(prg_listen, porporo, 0x12, 0x18);
