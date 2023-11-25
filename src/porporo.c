@@ -320,31 +320,6 @@ update_focus(int x, int y)
 	focused = 0;
 }
 
-static void
-drag_start(int x, int y)
-{
-	dragx = x, dragy = y;
-	isdrag = 1;
-}
-
-static void
-drag_move(int x, int y)
-{
-	if(!isdrag)
-		return;
-	camerax += x - dragx, cameray += y - dragy;
-	dragx = x, dragy = y;
-	clear(pixels);
-	reqdraw = 1;
-}
-
-static void
-drag_end(void)
-{
-	dragx = dragy = 0;
-	isdrag = 0;
-}
-
 int dragprgx, dragprgy;
 
 static void
@@ -382,7 +357,12 @@ on_mouse_move(int x, int y)
 	int relx = x - camerax, rely = y - cameray;
 	update_focus(relx, rely);
 	if(!focused) {
-		drag_move(x, y);
+		if(isdrag) {
+			camerax += x - dragx, cameray += y - dragy;
+			dragx = x, dragy = y;
+			clear(pixels);
+			reqdraw = 1;
+		}
 		return;
 	}
 	u = &focused->u;
@@ -394,7 +374,7 @@ on_mouse_down(int button, int x, int y)
 {
 	Uxn *u;
 	if(!focused) {
-		drag_start(x, y);
+		isdrag = 1, dragx = x, dragy = y;
 		return;
 	}
 	u = &focused->u;
@@ -406,7 +386,7 @@ on_mouse_up(int button)
 {
 	Uxn *u;
 	if(!focused) {
-		drag_end();
+		isdrag = 0;
 		return;
 	}
 	u = &focused->u;
