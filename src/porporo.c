@@ -4,6 +4,7 @@
 #include "uxn.h"
 #include "devices/system.h"
 #include "devices/screen.h"
+#include "devices/mouse.h"
 
 /*
 Copyright (c) 2023 Devine Lu Linvega
@@ -17,27 +18,15 @@ WITH REGARD TO THIS SOFTWARE.
 */
 
 #define HOR 100
-#define VER 50
-#define PAD 2
+#define VER 60
 #define SZ (HOR * VER * 16)
 
-typedef struct {
-	int x, y;
-} Point2d;
-
-typedef struct Brush {
-	int down;
-	Point2d pos;
-} Brush;
-
-static int WIDTH = 8 * HOR + 8 * PAD * 2;
-static int HEIGHT = 8 * (VER + 2) + 8 * PAD * 2;
+static int WIDTH = 8 * HOR, HEIGHT = 8 * VER;
 static int ZOOM = 1, GUIDES = 1;
-static Program programs[0x10];
-static Program *porporo;
-static int plen;
-static Brush brush;
+
+static Program programs[0x10], *porporo;
 static Uint8 *ram;
+static int plen;
 
 /* clang-format off */
 
@@ -114,34 +103,6 @@ static Uint32 *pixels;
 
 #pragma mark - Helpers
 
-int
-distance(Point2d a, Point2d b)
-{
-	return (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y);
-}
-
-Point2d *
-setpt2d(Point2d *p, int x, int y)
-{
-	p->x = x;
-	p->y = y;
-	return p;
-}
-
-Point2d *
-clamp2d(Point2d *p, int step)
-{
-	return setpt2d(p, p->x / step * step, p->y / step * step);
-}
-
-Point2d
-Pt2d(int x, int y)
-{
-	Point2d p;
-	setpt2d(&p, x, y);
-	return p;
-}
-
 static char
 nibble(Uint8 v)
 {
@@ -156,17 +117,17 @@ static void
 putpixel(Uint32 *dst, int x, int y, int color)
 {
 	if(x >= 0 && x < WIDTH - 8 && y >= 0 && y < HEIGHT - 8)
-		dst[(y + PAD * 8) * WIDTH + (x + PAD * 8)] = theme[color];
+		dst[y * WIDTH + x] = theme[color];
 }
 
 static void
 drawscreen(Uint32 *dst, Screen *scr, int x1, int y1)
 {
-	int x, y, x2 = x1 + scr->w, y2 = y1 + scr->h;
+	int x, y, w = scr->w, x2 = x1 + scr->w, y2 = y1 + scr->h;
 	for(y = y1; y < y2; y++) {
 		for(x = x1; x < x2; x++) {
-			int index = (x - x1) + (y - y1) * scr->w;
-			dst[(y + PAD * 8) * WIDTH + (x + PAD * 8)] = scr->pixels[index];
+			int index = (x - x1) + (y - y1) * w;
+			dst[y * WIDTH + x] = scr->pixels[index];
 		}
 	}
 }
@@ -179,13 +140,10 @@ line(Uint32 *dst, int ax, int ay, int bx, int by, int color)
 	int err = dx + dy, e2;
 	for(;;) {
 		putpixel(dst, ax, ay, color);
-		if(ax == bx && ay == by)
-			break;
+		if(ax == bx && ay == by) break;
 		e2 = 2 * err;
-		if(e2 >= dy)
-			err += dy, ax += sx;
-		if(e2 <= dx)
-			err += dx, ay += sy;
+		if(e2 >= dy) err += dy, ax += sx;
+		if(e2 <= dx) err += dx, ay += sy;
 	}
 }
 
@@ -196,8 +154,7 @@ drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int fg)
 	for(v = 0; v < 8; v++)
 		for(h = 0; h < 8; h++) {
 			int ch1 = (sprite[v] >> (7 - h)) & 0x1;
-			if(ch1)
-				putpixel(dst, x + h, y + v, fg);
+			if(ch1) putpixel(dst, x + h, y + v, fg);
 		}
 }
 
@@ -207,7 +164,7 @@ drawconnection(Uint32 *dst, Program *p, int color)
 	int i;
 	for(i = 0; i < p->clen; i++) {
 		Connection *c = &p->out[i];
-		int x1 = p->x + p->w + 3, y1 = p->y + 3;
+		int x1 = p->x + 3, y1 = p->y + 3;
 		int x2 = c->b->x - 5, y2 = c->b->y + 3;
 		line(dst, x1, y1, x2, y2, color);
 	}
@@ -217,16 +174,9 @@ static void
 drawguides(Uint32 *dst)
 {
 	int x, y;
-	for(x = 0; x < HOR; x++)
-		for(y = 0; y < VER; y++)
+	for(x = 2; x < HOR-2; x++)
+		for(y = 2; y < VER-2; y++)
 			drawicn(dst, x * 8, y * 8, icons[4], 4);
-}
-
-static void
-drawui(Uint32 *dst)
-{
-	int bottom = VER * 8 + 8;
-	drawicn(dst, 0 * 8, bottom, icons[GUIDES ? 6 : 5], GUIDES ? 1 : 2);
 }
 
 static void
@@ -269,25 +219,21 @@ drawbyte(Uint32 *dst, int x, int y, Uint8 byte, int color)
 }
 
 static void
-drawpage(Uint32 *dst, int x, int y, Uint8 *r)
-{
-	int i;
-	for(i = 0; i < 0x8; i++)
-		drawbyte(dst, x + (i * 0x18), y, r[i], 3);
-}
-
-static void
 drawprogram(Uint32 *dst, Program *p)
 {
-	drawrect(dst, p->x, p->y, p->x + p->w, p->y + p->h, 4);
-	linerect(dst, p->x, p->y, p->x + p->w, p->y + p->h, 3);
+	int w = p->screen.w, h = p->screen.h;
+	/* drawrect(dst, p->x, p->y, p->x + w, p->y + h, 4); */
+	linerect(dst, p->x, p->y, p->x + w, p->y + h, 3);
 	drawtext(dst, p->x + 2, p->y - 12, p->rom, 3);
 	/* ports */
 	drawicn(dst, p->x - 8, p->y, icons[0], 1);
-	drawicn(dst, p->x + p->w, p->y, icons[0], 2);
+	drawicn(dst, p->x + w, p->y, icons[0], 2);
 	drawbyte(dst, p->x - 32, p->y - 12, 0x12, 3);
-	drawbyte(dst, p->x + p->w - 8, p->y - 9, 0x18, 3);
-	drawpage(dst, p->x, p->y + 0x10, &p->u.ram[0x100]);
+	drawbyte(dst, p->x + w - 8, p->y - 9, 0x18, 3);
+	/* display */
+	if(p->screen.x2)
+		screen_redraw(&p->screen);
+	drawscreen(pixels, &p->screen, p->x, p->y);
 }
 
 static void
@@ -303,9 +249,7 @@ static void
 redraw(Uint32 *dst)
 {
 	int i;
-	Program *p1 = &programs[3], *p2 = &programs[4];
-	clear(dst);
-
+	/* clear(dst); */
 	if(GUIDES)
 		drawguides(dst);
 	for(i = 0; i < plen; i++)
@@ -313,35 +257,10 @@ redraw(Uint32 *dst)
 	for(i = 0; i < plen; i++)
 		drawconnection(dst, &programs[i], 3);
 
-	screen_redraw(&p1->screen);
-	drawscreen(pixels, &p1->screen, p1->x, p1->y);
-	screen_redraw(&p2->screen);
-	drawscreen(pixels, &p2->screen, p2->x, p2->y);
-
-	drawui(dst);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
 	SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
 	SDL_RenderPresent(gRenderer);
-}
-
-/* operation */
-
-static void
-savemode(int *i, int v)
-{
-	*i = v;
-	redraw(pixels);
-}
-
-static void
-selectoption(int option)
-{
-	switch(option) {
-	case 0:
-		savemode(&GUIDES, !GUIDES);
-		break;
-	}
 }
 
 /* options */
@@ -379,34 +298,32 @@ quit(void)
 #pragma mark - Triggers
 
 static void
-domouse(SDL_Event *event, Brush *b)
+handle_mouse(SDL_Event *event)
 {
-	setpt2d(&b->pos, (event->motion.x - (PAD * 8 * ZOOM)) / ZOOM, (event->motion.y - (PAD * 8 * ZOOM)) / ZOOM);
+	int i, x = event->motion.x, y = event->motion.y;
+	for(i = plen - 1; i; i--) {
+		Program *p = &programs[i];
+		if(x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h) {
+			int xx = x - p->x, yy = y - p->y;
+			if(event->type == SDL_MOUSEMOTION)
+				mouse_pos(&p->u, &p->u.dev[0x90], xx, yy);
+			else if(event->type == SDL_MOUSEBUTTONDOWN)
+				mouse_down(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
+			else if(event->type == SDL_MOUSEBUTTONUP)
+				mouse_up(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
+			break;
+		}
+	}
+	redraw(pixels);
+}
+
+static void
+domouse(SDL_Event *event)
+{
 	switch(event->type) {
-	case SDL_MOUSEBUTTONDOWN:
-		if(event->motion.y / ZOOM / 8 - PAD == VER + 1) {
-			selectoption(event->motion.x / ZOOM / 8 - PAD);
-			break;
-		}
-		if(event->button.button == SDL_BUTTON_RIGHT)
-			break;
-		b->down = 1;
-		break;
-	case SDL_MOUSEMOTION:
-		if(event->button.button == SDL_BUTTON_RIGHT)
-			break;
-		break;
-	case SDL_MOUSEBUTTONUP:
-		if(event->button.button == SDL_BUTTON_RIGHT) {
-			if(b->pos.x < 24 || b->pos.x > HOR * 8 - 72)
-				return;
-			if(b->pos.x > HOR * 8 || b->pos.y > VER * 8)
-				return;
-			redraw(pixels);
-			break;
-		}
-		b->down = 0;
-		break;
+	case SDL_MOUSEBUTTONDOWN: handle_mouse(event); break;
+	case SDL_MOUSEMOTION: handle_mouse(event); break;
+	case SDL_MOUSEBUTTONUP: handle_mouse(event); break;
 	}
 }
 
@@ -449,10 +366,10 @@ init(void)
 }
 
 static Program *
-addprogram(int x, int y, int w, int h, char *rom)
+addprogram(int x, int y, char *rom)
 {
 	Program *p = &programs[plen++];
-	p->x = x, p->y = y, p->w = w, p->h = h, p->rom = rom;
+	p->x = x, p->y = y, p->rom = rom;
 	p->u.ram = ram + (plen - 1) * 0x10000;
 	p->u.id = plen - 1;
 	system_init(&p->u, p->u.ram, rom);
@@ -519,7 +436,7 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *prg_listen, *prg_hello, *prg_screenpixel, *prg_catclock;
+	Program *prg_listen, *prg_hello, *prg_screenpixel, *prg_catclock, *prg_oekaki;
 	(void)argc;
 	(void)argv;
 
@@ -528,11 +445,12 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 
-	porporo = addprogram(550, 350, 200, 30, "bin/porporo.rom");
-	prg_listen = addprogram(520, 140, 200, 30, "bin/listen.rom");
-	prg_hello = addprogram(300, 300, 200, 30, "bin/hello.rom");
-	prg_screenpixel = addprogram(20, 30, 200, 200, "bin/screen.pixel.rom");
-	prg_catclock = addprogram(270, 80, 200, 200, "bin/catclock.rom");
+	porporo = addprogram(550, 350, "bin/porporo.rom");
+	prg_listen = addprogram(520, 140, "bin/listen.rom");
+	prg_hello = addprogram(300, 300, "bin/hello.rom");
+	prg_screenpixel = addprogram(20, 30, "bin/screen.pixel.rom");
+	prg_catclock = addprogram(670, 80, "bin/catclock.rom");
+	prg_oekaki = addprogram(150, 90, "bin/oekaki.rom");
 
 	connectports(prg_hello, prg_listen, 0x12, 0x18);
 	connectports(prg_listen, porporo, 0x12, 0x18);
@@ -557,7 +475,7 @@ main(int argc, char **argv)
 			else if(event.type == SDL_MOUSEBUTTONUP ||
 				event.type == SDL_MOUSEBUTTONDOWN ||
 				event.type == SDL_MOUSEMOTION) {
-				domouse(&event, &brush);
+				domouse(&event);
 			} else if(event.type == SDL_KEYDOWN)
 				dokey(&event);
 			else if(event.type == SDL_WINDOWEVENT)

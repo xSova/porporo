@@ -3,7 +3,7 @@
 # format code
 # clang-format -i src/porporo.c src/devices/*
 
-SRC="src/uxn.c src/devices/system.c src/devices/screen.c src/porporo.c"
+SRC="src/uxn.c src/devices/system.c src/devices/screen.c src/devices/mouse.c src/porporo.c"
 
 # remove old
 rm -f bin/porporo
@@ -21,6 +21,7 @@ bin/uxnasm etc/hello.tal bin/hello.rom
 bin/uxnasm etc/listen.tal bin/listen.rom
 bin/uxnasm etc/screen.pixel.tal bin/screen.pixel.rom
 bin/uxnasm etc/catclock.tal bin/catclock.rom
+bin/uxnasm etc/oekaki.tal bin/oekaki.rom
 
 # run
 ./bin/porporo
