@@ -22,33 +22,21 @@ WITH REGARD TO THIS SOFTWARE.
 
 #define HOR 100
 #define VER 60
-#define SZ (HOR * VER * 16)
 
-static int WIDTH = 8 * HOR, HEIGHT = 8 * VER;
-static int ZOOM = 1;
+static Uint32 theme[] = {0xffffff, 0xffb545, 0x72DEC2, 0x000000, 0xeeeeee};
+static int WIDTH = HOR << 3, HEIGHT = VER << 3, ZOOM = 1;
+static int isdrag, dragx, dragy, camerax, cameray;
+static int movemode, reqdraw;
 
 static Program programs[0x10], *porporo, *focused;
-static Uint8 *ram;
-static int plen;
-
-static int isdrag, dragx, dragy, movemode;
-static int reqdraw, camerax, cameray;
+static Uint8 *ram, plen;
 
 static SDL_Window *gWindow = NULL;
 static SDL_Renderer *gRenderer = NULL;
 static SDL_Texture *gTexture = NULL;
 static Uint32 *pixels;
-static Uint32 theme[] = {0xffffff, 0xffb545, 0x72DEC2, 0x000000, 0xeeeeee};
 
-static char
-nibble(Uint8 v)
-{
-	return v > 0x9 ? 'a' + v - 10 : '0' + v;
-}
-
-/* Add/Remove */
-
-#pragma mark - Draw
+/* = DRAWING ===================================== */
 
 void
 putpixel(Uint32 *dst, int x, int y, int color)
@@ -163,7 +151,7 @@ redraw(Uint32 *dst)
 	SDL_RenderPresent(gRenderer);
 }
 
-/* options */
+/* = OPTIONS ===================================== */
 
 static int
 error(char *msg, const char *err)
