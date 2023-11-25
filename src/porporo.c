@@ -135,6 +135,7 @@ clear(Uint32 *dst)
 	int i, l = WIDTH * HEIGHT, c = theme[4];
 	for(i = 0; i < l; i++)
 		dst[i] = c;
+	reqdraw = 1;
 }
 
 static void
@@ -187,7 +188,6 @@ static void
 open_menu(int x, int y)
 {
 	clear(pixels);
-	reqdraw = 1;
 	menu->x = x, menu->y = y;
 	uxn_eval(&menu->u, 0x100);
 	isdrag = 0;
@@ -226,7 +226,6 @@ on_mouse_move(int x, int y)
 			camerax += x - dragx, cameray += y - dragy;
 			dragx = x, dragy = y;
 			clear(pixels);
-			reqdraw = 1;
 		}
 		return;
 	}
@@ -235,7 +234,6 @@ on_mouse_move(int x, int y)
 			focused->x += x - dragx, focused->y += y - dragy;
 			dragx = x, dragy = y;
 			clear(pixels);
-			reqdraw = 1;
 		}
 		return;
 	}
@@ -249,6 +247,7 @@ on_mouse_down(int button, int x, int y)
 	Uxn *u;
 	if(!focused && button == 2) {
 		open_menu(x - camerax, y - cameray);
+		return;
 	}
 	if(!focused || movemode) {
 		isdrag = 1, dragx = x, dragy = y;

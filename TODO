@@ -1,6 +1,6 @@
 - Remove program node on exit(#010f DEO)
 - Spawn new node
 - Connect nodes
-- Open porporo
 - Swap program pointers when touching application
-
+- Close menu after selection
+- Show/Hide programs

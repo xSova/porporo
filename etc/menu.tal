@@ -39,42 +39,39 @@
 	BRK
 
 @<hover> ( id -- )
-	DUP [ LIT &last ff ] NEQ ?{
-		POP2 JMP2r
-}
+	DUP [ LIT &last ff ] NEQ ?{ POP2 JMP2r }
 	,&last STR
 	<redraw>
-JMP2r
+	JMP2r
 
 @<redraw> ( -- )
-	#0000 DUP2 .Screen/x DEO2 .Screen/y DEO2
+	( | clear )
+	#0000 DUP2 .Screen/x DEO2
+	.Screen/y DEO2
 	#80 .Screen/pixel DEO
-	( | selection )
+	( | highlight )
 	;fill-icn .Screen/addr DEO2
 	#0000 .Screen/x DEO2
 	#00 ;<hover>/last LDA #40 SFT2 #0008 ADD2 .Screen/y DEO2
 	#f2 .Screen/auto DEO
 	#02 .Screen/sprite DEOk DEO
-
+	( | text )
 	#0008 .Screen/x DEO2
 	#0008 .Screen/y DEO2
-	;dir <draw-text>
-JMP2r
-
-@<draw-text> ( str* -- )
 	.Screen/x DEI2 ,&anchor STR2
 	#15 .Screen/auto DEO
+	;dir #0005 ADD2
 	&w ( -- )
 		LDAk #0a NEQ ?{
 			.Screen/y DEI2k #0010 ADD2 ROT DEO2
 			[ LIT2 &anchor $2 ] .Screen/x DEO2
-			!&resume }
+			#0006 ADD2 !&resume }
 		LDAk #20 SUB #00 SWP
 		( ) DUP2 #50 SFT2 ;font-uf2/glyphs ADD2 .Screen/addr DEO2
 		( ) ;font-uf2 ADD2 LDA #00 SWP .Screen/x DEI2 ADD2
 		( ) #05 .Screen/sprite DEOk DEO
 		.Screen/x DEO2
-		&resume INC2 LDAk ?&w
+		INC2 &resume LDAk ?&w
 	POP2 JMP2r
 
 @<update-cursor> ( color addr* -- )
