@@ -389,29 +389,6 @@ on_mouse_wheel(int x, int y)
 
 /* =============================================== */
 
-static void
-on_porporo_key(char c)
-{
-	switch(c) {
-	case 'd':
-		movemode = !movemode;
-		reqdraw = 1;
-		break;
-	}
-}
-
-static void
-on_controller_key(char c)
-{
-	Uxn *u;
-	if(!focused) {
-		on_porporo_key(c);
-		return;
-	}
-	u = &focused->u;
-	controller_key(u, &u->dev[0x80], c);
-}
-
 static Uint8
 get_button(SDL_Event *event)
 {
@@ -427,8 +404,6 @@ get_button(SDL_Event *event)
 	}
 	return 0x00;
 }
-
-/* =============================================== */
 
 static Uint8
 get_key(SDL_Event *event)
@@ -447,21 +422,56 @@ get_key(SDL_Event *event)
 }
 
 static void
-dokey(SDL_Event *event)
+on_porporo_key(char c)
 {
-	switch(event->key.keysym.sym) {
-	case SDLK_EQUALS:
-	case SDLK_PLUS:
-		modzoom(1);
-		break;
-	case SDLK_UNDERSCORE:
-	case SDLK_MINUS:
-		modzoom(-1);
-		break;
-	case SDLK_BACKSPACE:
+	switch(c) {
+	case 'd':
+		movemode = !movemode;
+		reqdraw = 1;
 		break;
 	}
 }
+
+static void
+on_controller_input(char c)
+{
+	Uxn *u;
+	if(!focused) {
+		on_porporo_key(c);
+		return;
+	}
+	u = &focused->u;
+	controller_key(u, &u->dev[0x80], c);
+}
+
+static void
+on_controller_down(Uint8 key, Uint8 button)
+{
+	Uxn *u;
+	if(!focused) {
+		return;
+	}
+	u = &focused->u;
+	if(key)
+		controller_key(u, &u->dev[0x80], key);
+	else
+		controller_down(u, &u->dev[0x80], button);
+	reqdraw = 1;
+}
+
+static void
+on_controller_up(Uint8 button)
+{
+	Uxn *u;
+	if(!focused) {
+		return;
+	}
+	u = &focused->u;
+	controller_up(u, &u->dev[0x80], button);
+	reqdraw = 1;
+}
+
+/* =============================================== */
 
 static int
 init(void)
@@ -608,35 +618,11 @@ main(int argc, char **argv)
 			case SDL_MOUSEMOTION: on_mouse_move(event.motion.x, event.motion.y); break;
 			case SDL_MOUSEBUTTONDOWN: on_mouse_down(SDL_BUTTON(event.button.button), event.motion.x, event.motion.y); break;
 			case SDL_MOUSEBUTTONUP: on_mouse_up(SDL_BUTTON(event.button.button)); break;
-			case SDL_TEXTINPUT:
-				on_controller_key(event.text.text[0]);
-				break;
-				/*
-				if(!focused) {
-					porporo_key(event.text.text[0]);
-				} else {
-					controller_key(&focused->u, &focused->u.dev[0x80], event.text.text[0]);
-				}
-				*/
-				reqdraw = 1;
-				break;
-			case SDL_KEYDOWN:
-				/*
-				if(get_key(&event))
-					controller_key(&focused->u, &focused->u.dev[0x80], get_key(&event));
-				else if(get_button(&event))
-					controller_down(&focused->u, &focused->u.dev[0x80], get_button(&event));
-				*/
-				reqdraw = 1;
-				break;
-			case SDL_KEYUP:
-				/*
-				controller_up(&focused->u, &focused->u.dev[0x80], get_button(&event)); */
-				reqdraw = 1;
-				break;
+			case SDL_TEXTINPUT: on_controller_input(event.text.text[0]); break;
+			case SDL_KEYDOWN: on_controller_down(get_key(&event), get_button(&event)); break;
+			case SDL_KEYUP: on_controller_up(get_button(&event)); break;
 			case SDL_WINDOWEVENT:
-				if(event.window.event == SDL_WINDOWEVENT_EXPOSED)
-					reqdraw = 1;
+				if(event.window.event == SDL_WINDOWEVENT_EXPOSED) reqdraw = 1;
 				break;
 			}
 		}
