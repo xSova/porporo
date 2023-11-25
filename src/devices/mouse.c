@@ -27,7 +27,7 @@ mouse_up(Uxn *u, Uint8 *d, Uint8 mask)
 }
 
 void
-mouse_pos(Uxn *u, Uint8 *d, Uint16 x, Uint16 y)
+mouse_move(Uxn *u, Uint8 *d, Uint16 x, Uint16 y)
 {
 	*(d + 2) = x >> 8;
 	*(d + 3) = x;

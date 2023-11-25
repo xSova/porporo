@@ -15,5 +15,5 @@ WITH REGARD TO THIS SOFTWARE.
 
 void mouse_down(Uxn *u, Uint8 *d, Uint8 mask);
 void mouse_up(Uxn *u, Uint8 *d, Uint8 mask);
-void mouse_pos(Uxn *u, Uint8 *d, Uint16 x, Uint16 y);
+void mouse_move(Uxn *u, Uint8 *d, Uint16 x, Uint16 y);
 void mouse_scroll(Uxn *u, Uint8 *d, Uint16 x, Uint16 y);

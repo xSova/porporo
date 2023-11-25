@@ -32,7 +32,7 @@ static Uint8 *ram;
 static int plen;
 
 static int reqdraw;
-static int dragx, dragy, movemode;
+static int isdrag, dragx, dragy, movemode;
 static int camerax, cameray;
 
 static SDL_Window *gWindow = NULL;
@@ -298,17 +298,40 @@ quit(void)
 	exit(0);
 }
 
-#pragma mark - Triggers
+/* = MOUSE ======================================= */
+
+static int
+withinprogram(Program *p, int x, int y)
+{
+	return x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h;
+}
+
+static void
+update_focus(int x, int y)
+{
+	int i;
+	for(i = plen - 1; i; i--) {
+		Program *p = &programs[i];
+		if(withinprogram(p, x, y)) {
+			focused = p;
+			return;
+		}
+	}
+	focused = 0;
+}
 
 static void
 drag_start(int x, int y)
 {
 	dragx = x, dragy = y;
+	isdrag = 1;
 }
 
 static void
 drag_move(int x, int y)
 {
+	if(!isdrag)
+		return;
 	camerax += x - dragx, cameray += y - dragy;
 	dragx = x, dragy = y;
 	clear(pixels);
@@ -319,6 +342,7 @@ static void
 drag_end(void)
 {
 	dragx = dragy = 0;
+	isdrag = 0;
 }
 
 int dragprgx, dragprgy;
@@ -344,64 +368,52 @@ drag_prg_end(void)
 	dragprgx = dragprgy = 0;
 }
 
-static int
-withinprogram(Program *p, int x, int y)
+static void
+on_mouse_wheel(int x, int y)
 {
-	return x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h;
+	Uxn *u = &focused->u;
+	mouse_scroll(u, &u->dev[0x90], x, y);
 }
 
 static void
-handle_mouse(SDL_Event *event)
+on_mouse_move(int x, int y)
 {
-	int i, desk = 1, x = event->motion.x - camerax, y = event->motion.y - cameray;
-	for(i = plen - 1; i; i--) {
-		Program *p = &programs[i];
-		if(withinprogram(p, x, y)) {
-			focused = p;
-			if(movemode) {
-				if(event->type == SDL_MOUSEBUTTONDOWN)
-					drag_prg_start(event->motion.x, event->motion.y);
-				if(event->type == SDL_MOUSEMOTION && event->button.button)
-					drag_prg_move(event->motion.x, event->motion.y);
-				if(event->type == SDL_MOUSEBUTTONUP)
-					drag_prg_end();
-				return;
-			} else {
-				int xx = x - p->x, yy = y - p->y, desk = 0;
-				if(event->type == SDL_MOUSEMOTION)
-					mouse_pos(&p->u, &p->u.dev[0x90], xx, yy);
-				else if(event->type == SDL_MOUSEBUTTONDOWN)
-					mouse_down(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
-				else if(event->type == SDL_MOUSEBUTTONUP)
-					mouse_up(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
-				return;
-			}
-		}
+	Uxn *u;
+	int relx = x - camerax, rely = y - cameray;
+	update_focus(relx, rely);
+	if(!focused) {
+		drag_move(x, y);
+		return;
 	}
-	if(desk) {
-		/* on desktop */
-		if(event->type == SDL_MOUSEBUTTONDOWN)
-			drag_start(event->motion.x, event->motion.y);
-		if(event->type == SDL_MOUSEMOTION && event->button.button)
-			drag_move(event->motion.x, event->motion.y);
-		if(event->type == SDL_MOUSEBUTTONUP)
-			drag_end();
-		focused = porporo;
-	}
-	reqdraw = 1;
+	u = &focused->u;
+	mouse_move(u, &u->dev[0x90], relx - focused->x, rely - focused->y);
 }
 
 static void
-domouse(SDL_Event *event)
+on_mouse_down(int button, int x, int y)
 {
-
-	switch(event->type) {
-	case SDL_MOUSEBUTTONDOWN: handle_mouse(event); break;
-	case SDL_MOUSEMOTION: handle_mouse(event); break;
-	case SDL_MOUSEBUTTONUP: handle_mouse(event); break;
-	case SDL_MOUSEWHEEL: handle_mouse(event); break;
+	Uxn *u;
+	if(!focused) {
+		drag_start(x, y);
+		return;
 	}
+	u = &focused->u;
+	mouse_down(u, &u->dev[0x90], button);
 }
+
+static void
+on_mouse_up(int button)
+{
+	Uxn *u;
+	if(!focused) {
+		drag_end();
+		return;
+	}
+	u = &focused->u;
+	mouse_up(u, &u->dev[0x90], button);
+}
+
+/* =============================================== */
 
 static Uint8
 get_button(SDL_Event *event)
@@ -450,13 +462,6 @@ dokey(SDL_Event *event)
 	case SDLK_BACKSPACE:
 		break;
 	}
-}
-
-static void
-on_mouse_wheel(int x, int y)
-{
-	Uxn *u = &focused->u;
-	mouse_scroll(u, &u->dev[0x90], x, y);
 }
 
 static int
@@ -545,7 +550,7 @@ void
 screenvector(void)
 {
 	int i;
-	if(!focused || focused == porporo)
+	if(!focused)
 		return;
 	Uint16 vector = (focused->u.dev[0x20] << 8) | focused->u.dev[0x21];
 	if(vector)
@@ -611,28 +616,31 @@ main(int argc, char **argv)
 			switch(event.type) {
 			case SDL_QUIT: quit(); break;
 			case SDL_MOUSEWHEEL: on_mouse_wheel(event.wheel.x, event.wheel.y); break;
-			case SDL_MOUSEBUTTONUP:
-			case SDL_MOUSEBUTTONDOWN:
-			case SDL_MOUSEMOTION:
-				domouse(&event);
-				break;
+			case SDL_MOUSEMOTION: on_mouse_move(event.motion.x, event.motion.y); break;
+			case SDL_MOUSEBUTTONDOWN: on_mouse_down(SDL_BUTTON(event.button.button), event.motion.x, event.motion.y); break;
+			case SDL_MOUSEBUTTONUP: on_mouse_up(SDL_BUTTON(event.button.button)); break;
 			case SDL_TEXTINPUT:
-				if(focused == porporo) {
+				/*
+				if(!focused) {
 					porporo_key(event.text.text[0]);
 				} else {
 					controller_key(&focused->u, &focused->u.dev[0x80], event.text.text[0]);
 				}
+				*/
 				reqdraw = 1;
 				break;
 			case SDL_KEYDOWN:
+				/*
 				if(get_key(&event))
 					controller_key(&focused->u, &focused->u.dev[0x80], get_key(&event));
 				else if(get_button(&event))
 					controller_down(&focused->u, &focused->u.dev[0x80], get_button(&event));
+				*/
 				reqdraw = 1;
 				break;
 			case SDL_KEYUP:
-				controller_up(&focused->u, &focused->u.dev[0x80], get_button(&event));
+				/*
+				controller_up(&focused->u, &focused->u.dev[0x80], get_button(&event)); */
 				reqdraw = 1;
 				break;
 			case SDL_WINDOWEVENT:
