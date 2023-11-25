@@ -28,6 +28,9 @@ static Program programs[0x10], *porporo;
 static Uint8 *ram;
 static int plen;
 
+int dragx, dragy;
+int camerax = 0, cameray = 0;
+
 /* clang-format off */
 
 static Uint32 theme[] = {0xffffff, 0xffb545, 0x72DEC2, 0x000000, 0xeeeeee};
@@ -164,8 +167,8 @@ drawconnection(Uint32 *dst, Program *p, int color)
 	int i;
 	for(i = 0; i < p->clen; i++) {
 		Connection *c = &p->out[i];
-		int x1 = p->x + 3, y1 = p->y + 3;
-		int x2 = c->b->x - 5, y2 = c->b->y + 3;
+		int x1 = p->x + 3 + camerax, y1 = p->y + 3 + cameray;
+		int x2 = c->b->x - 5 + camerax, y2 = c->b->y + 3 + cameray;
 		line(dst, x1, y1, x2, y2, color);
 	}
 }
@@ -174,23 +177,9 @@ static void
 drawguides(Uint32 *dst)
 {
 	int x, y;
-	for(x = 2; x < HOR-2; x++)
-		for(y = 2; y < VER-2; y++)
+	for(x = 2; x < HOR - 2; x++)
+		for(y = 2; y < VER - 2; y++)
 			drawicn(dst, x * 8, y * 8, icons[4], 4);
-}
-
-static void
-linerect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
-{
-	int x, y;
-	for(y = y1 - 1; y < y2 + 1; y++) {
-		putpixel(dst, x1 - 2, y, color), putpixel(dst, x2, y, color);
-		putpixel(dst, x1 - 1, y, color), putpixel(dst, x2 + 1, y, color);
-	}
-	for(x = x1 - 2; x < x2 + 2; x++) {
-		putpixel(dst, x, y1 - 2, color), putpixel(dst, x, y2, color);
-		putpixel(dst, x, y1 - 1, color), putpixel(dst, x, y2 + 1, color);
-	}
 }
 
 static void
@@ -219,21 +208,35 @@ drawbyte(Uint32 *dst, int x, int y, Uint8 byte, int color)
 }
 
 static void
+linerect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
+{
+	int x, y;
+	for(y = y1 - 1; y < y2 + 1; y++) {
+		putpixel(dst, x1 - 2, y, color), putpixel(dst, x2, y, color);
+		putpixel(dst, x1 - 1, y, color), putpixel(dst, x2 + 1, y, color);
+	}
+	for(x = x1 - 2; x < x2 + 2; x++) {
+		putpixel(dst, x, y1 - 2, color), putpixel(dst, x, y2, color);
+		putpixel(dst, x, y1 - 1, color), putpixel(dst, x, y2 + 1, color);
+	}
+}
+
+static void
 drawprogram(Uint32 *dst, Program *p)
 {
-	int w = p->screen.w, h = p->screen.h;
+	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
 	/* drawrect(dst, p->x, p->y, p->x + w, p->y + h, 4); */
-	linerect(dst, p->x, p->y, p->x + w, p->y + h, 3);
-	drawtext(dst, p->x + 2, p->y - 12, p->rom, 3);
+	linerect(dst, x, y, x + w, y + h, 3);
+	drawtext(dst, x + 2, y - 12, p->rom, 3);
 	/* ports */
-	drawicn(dst, p->x - 8, p->y, icons[0], 1);
-	drawicn(dst, p->x + w, p->y, icons[0], 2);
-	drawbyte(dst, p->x - 32, p->y - 12, 0x12, 3);
-	drawbyte(dst, p->x + w - 8, p->y - 9, 0x18, 3);
+	drawicn(dst, x - 8, y, icons[0], 1);
+	drawicn(dst, x + w, y, icons[0], 2);
+	drawbyte(dst, x - 32, y - 12, 0x12, 3);
+	drawbyte(dst, x + w - 8, y - 9, 0x18, 3);
 	/* display */
 	if(p->screen.x2)
 		screen_redraw(&p->screen);
-	drawscreen(pixels, &p->screen, p->x, p->y);
+	drawscreen(pixels, &p->screen, x, y);
 }
 
 static void
@@ -298,13 +301,34 @@ quit(void)
 #pragma mark - Triggers
 
 static void
+drag_start(int x, int y)
+{
+	dragx = x, dragy = y;
+}
+static void
+drag_move(int x, int y)
+{
+	if(dragx && dragy) {
+		clear(pixels);
+		camerax += x - dragx, cameray += y - dragy;
+		dragx = x, dragy = y;
+		redraw(pixels);
+	}
+}
+static void
+drag_end(int x, int y)
+{
+	dragx = dragy = 0;
+}
+
+static void
 handle_mouse(SDL_Event *event)
 {
-	int i, x = event->motion.x, y = event->motion.y;
+	int i, desk = 1, x = event->motion.x - camerax, y = event->motion.y - cameray, xx, yy;
 	for(i = plen - 1; i; i--) {
 		Program *p = &programs[i];
 		if(x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h) {
-			int xx = x - p->x, yy = y - p->y;
+			xx = x - p->x, yy = y - p->y, desk = 0;
 			if(event->type == SDL_MOUSEMOTION)
 				mouse_pos(&p->u, &p->u.dev[0x90], xx, yy);
 			else if(event->type == SDL_MOUSEBUTTONDOWN)
@@ -313,6 +337,15 @@ handle_mouse(SDL_Event *event)
 				mouse_up(&p->u, &p->u.dev[0x90], SDL_BUTTON(event->button.button));
 			break;
 		}
+	}
+	if(desk) {
+		/* on desktop */
+		if(event->type == SDL_MOUSEBUTTONDOWN)
+			drag_start(x, y);
+		else if(event->type == SDL_MOUSEMOTION)
+			drag_move(x, y);
+		else if(event->type == SDL_MOUSEBUTTONUP)
+			drag_end(x, y);
 	}
 	redraw(pixels);
 }
@@ -436,7 +469,7 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *prg_listen, *prg_hello, *prg_screenpixel, *prg_catclock, *prg_oekaki;
+	Program *prg_listen, *prg_hello;
 	(void)argc;
 	(void)argv;
 
@@ -448,9 +481,9 @@ main(int argc, char **argv)
 	porporo = addprogram(550, 350, "bin/porporo.rom");
 	prg_listen = addprogram(520, 140, "bin/listen.rom");
 	prg_hello = addprogram(300, 300, "bin/hello.rom");
-	prg_screenpixel = addprogram(20, 30, "bin/screen.pixel.rom");
-	prg_catclock = addprogram(670, 80, "bin/catclock.rom");
-	prg_oekaki = addprogram(150, 90, "bin/oekaki.rom");
+
+	addprogram(20, 30, "bin/screen.pixel.rom");
+	addprogram(150, 90, "bin/oekaki.rom");
 
 	connectports(prg_hello, prg_listen, 0x12, 0x18);
 	connectports(prg_listen, porporo, 0x12, 0x18);
