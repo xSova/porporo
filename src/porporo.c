@@ -6,6 +6,7 @@
 #include "devices/screen.h"
 #include "devices/controller.h"
 #include "devices/mouse.h"
+#include "devices/datetime.h"
 
 /*
 Copyright (c) 2023 Devine Lu Linvega
@@ -29,9 +30,14 @@ static Program programs[0x10], *porporo, *focused;
 static Uint8 *ram;
 static int plen;
 
-int reqdraw = 0;
-int dragx, dragy;
-int camerax = 0, cameray = 0;
+static int reqdraw = 0;
+static int dragx, dragy;
+static int camerax = 0, cameray = 0;
+
+static SDL_Window *gWindow = NULL;
+static SDL_Renderer *gRenderer = NULL;
+static SDL_Texture *gTexture = NULL;
+static Uint32 *pixels;
 
 /* clang-format off */
 
@@ -100,13 +106,6 @@ static Uint8 font[] = {
 };
 
 /* clang-format on */
-
-static SDL_Window *gWindow = NULL;
-static SDL_Renderer *gRenderer = NULL;
-static SDL_Texture *gTexture = NULL;
-static Uint32 *pixels;
-
-#pragma mark - Helpers
 
 static char
 nibble(Uint8 v)
@@ -462,7 +461,7 @@ emu_dei(Uxn *u, Uint8 addr)
 	switch(addr & 0xf0) {
 	case 0x00: break;
 	case 0x10: break;
-	case 0x20: break;
+	case 0xc0: return datetime_dei(u, addr); break;
 	}
 	return u->dev[addr];
 }
@@ -492,12 +491,6 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 		screen_deo(prg, u->ram, &u->dev[d], p);
 		break;
 	}
-}
-
-int
-emu_resize(int width, int height)
-{
-	return 1;
 }
 
 void
@@ -543,10 +536,8 @@ main(int argc, char **argv)
 
 	while(1) {
 		SDL_Event event;
-		if(!begintime)
-			begintime = SDL_GetTicks();
-		else
-			delta = endtime - begintime;
+		if(!begintime) begintime = SDL_GetTicks();
+		else delta = endtime - begintime;
 		if(delta < 40)
 			SDL_Delay(40 - delta);
 		screenvector();

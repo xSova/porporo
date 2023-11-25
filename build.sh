@@ -3,7 +3,7 @@
 # format code
 # clang-format -i src/porporo.c src/devices/*
 
-SRC="src/uxn.c src/devices/system.c src/devices/screen.c src/devices/controller.c src/devices/mouse.c src/porporo.c"
+SRC="src/uxn.c src/devices/system.c src/devices/screen.c src/devices/controller.c src/devices/mouse.c src/devices/datetime.c src/porporo.c"
 
 # remove old
 rm -f bin/porporo
