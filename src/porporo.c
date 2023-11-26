@@ -148,6 +148,7 @@ redraw(Uint32 *dst)
 	int i;
 	for(i = 2; i < plen; i++)
 		drawprogram(dst, &programs[i]);
+	drawprogram(dst, porporo);
 	drawprogram(dst, menu);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
@@ -162,15 +163,6 @@ error(char *msg, const char *err)
 {
 	printf("Error %s: %s\n", msg, err);
 	return 0;
-}
-
-static void
-modzoom(int mod)
-{
-	if((mod > 0 && ZOOM < 4) || (mod < 0 && ZOOM > 1)) {
-		ZOOM += mod;
-		SDL_SetWindowSize(gWindow, WIDTH * ZOOM, HEIGHT * ZOOM);
-	}
 }
 
 static void
@@ -450,15 +442,15 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 			endprogram(prg);
 		break;
 	case 0x10: {
-		Program *tprg = prg->out[0].b;
-		if(tprg) {
-			Uint16 vector = (tprg->u.dev[0x10] << 8) | tprg->u.dev[0x11];
-			tprg->u.dev[0x12] = value;
-			if(vector) {
-				uxn_eval(&tprg->u, vector);
-			} else if(tprg == porporo)
-				printf("%c", value);
-			screenvector(tprg);
+		int i;
+		for(i = 0; i < prg->clen; i++) {
+			Program *tprg = prg->out[i].b;
+			if(tprg) {
+				Uint16 vector = (tprg->u.dev[0x10] << 8) | tprg->u.dev[0x11];
+				tprg->u.dev[0x12] = value;
+				if(vector)
+					uxn_eval(&tprg->u, vector);
+			}
 		}
 	} break;
 	case 0x20: screen_deo(prg, u->ram, &u->dev[d], p); break;
@@ -473,7 +465,7 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *prg_left, *prg_log;
+	Program *prg_left, *prg_log, *prg_log2;
 	(void)argc;
 	(void)argv;
 
@@ -482,15 +474,20 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 
-	porporo = addprogram(850, 150, "bin/porporo.rom");
+	porporo = addprogram(650, 250, "bin/porporo.rom");
 
 	menu = addprogram(200, 150, "bin/menu.rom");
 	menu->stick = 1;
 	menu->done = 1;
 
 	addprogram(20, 30, "bin/screen.pixel.rom");
+
 	prg_log = addprogram(400, 10, "bin/log.rom");
+	prg_log2 = addprogram(500, 110, "bin/log.rom");
+
 	connectports(menu, prg_log, 0x12, 0x18);
+	connectports(menu, prg_log2, 0x12, 0x18);
+	connectports(menu, porporo, 0x12, 0x18);
 
 	fflush(stdout);
 
