@@ -47,7 +47,7 @@ typedef struct Screen {
 
 typedef struct Program {
 	char *rom;
-	int x, y, clen, done;
+	int x, y, clen, done, stick;
 	Connection out[0x100];
 	Uxn u;
 	Screen screen;

@@ -125,7 +125,8 @@ drawprogram(Uint32 *dst, Program *p)
 	if(p->done)
 		return;
 	drawconnection(dst, p, 3);
-	linerect(dst, x, y, x + w, y + h, 2 + !movemode);
+	linerect(dst, x, y, x + w, y + h, movemode ? 2 : p->stick ? 1 :
+                                                                3);
 	/* display */
 	if(p->screen.x2)
 		screen_redraw(&p->screen);
@@ -209,6 +210,8 @@ static void
 update_focus(int x, int y)
 {
 	int i;
+	if(focused && focused->stick)
+		return;
 	if(withinprogram(menu, x, y)) {
 		focused = menu;
 		return;
@@ -403,6 +406,7 @@ static void
 endprogram(Program *p)
 {
 	p->done = 1;
+	focused = 0;
 	clear(pixels);
 }
 
@@ -480,6 +484,7 @@ main(int argc, char **argv)
 
 	porporo = addprogram(850, 150, "bin/porporo.rom");
 	menu = addprogram(200, 150, "bin/menu.rom");
+	menu->stick = 1;
 
 	addprogram(20, 30, "bin/screen.pixel.rom");
 	prg_log = addprogram(400, 10, "bin/log.rom");
