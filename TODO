@@ -3,27 +3,26 @@
 - Spawn new node
 - Connect nodes
 - Swap program pointers when touching application
-- Fixed application
 - Wallpaper program
 - Fixed time program
 - Clear programs
-- Toggle borders
 
 - Toggle sticky programs
-- Global pointer
 - Display cli roms properly
 - Display roms metadata
 
-- Keep sticky programs visible
-- Only draw program screens that are visible
-- Test fork output
+Window Manager
+	- only draw program screens that are visible
+	- Global pointer
+	- Toggle borders
+	- Fixed position application
+	- Keep sticky programs visible
 
 Menu.rom
-	- Exit button
 	- Navigate into folders
 	- Close when clicked outside
 	
 Log.rom
 	- Toggle binary/ascii mode
 	- Scroll buffer
-	
+

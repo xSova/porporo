@@ -143,7 +143,7 @@ screen_redraw(Screen *scr)
 }
 
 Uint8
-screen_dei(Program *prg, Uxn *u, Uint8 addr)
+screen_dei(Varvara *prg, Uxn *u, Uint8 addr)
 {
 	Screen *scr = &prg->screen;
 	switch(addr) {
@@ -156,7 +156,7 @@ screen_dei(Program *prg, Uxn *u, Uint8 addr)
 }
 
 void
-screen_deo(Program *prg, Uint8 *ram, Uint8 *d, Uint8 port)
+screen_deo(Varvara *prg, Uint8 *ram, Uint8 *d, Uint8 port)
 {
 	Uint8 *port_x, *port_y, *port_addr;
 	Uint16 x, y, dx, dy, dxy, dyx, addr, addr_incr;

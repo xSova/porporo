@@ -22,5 +22,5 @@ void screen_resize(Screen *scr, Uint16 width, Uint16 height);
 void screen_change(Screen *scr, Uint16 x1, Uint16 y1, Uint16 x2, Uint16 y2);
 void screen_redraw(Screen *scr);
 
-Uint8 screen_dei(Program *prg, Uxn *u, Uint8 addr);
-void screen_deo(Program *prg, Uint8 *ram, Uint8 *d, Uint8 port);
+Uint8 screen_dei(Varvara *prg, Uxn *u, Uint8 addr);
+void screen_deo(Varvara *prg, Uint8 *ram, Uint8 *d, Uint8 port);

@@ -28,7 +28,7 @@ static int WIDTH = HOR << 3, HEIGHT = VER << 3, ZOOM = 1;
 static int isdrag, dragx, dragy, camerax, cameray;
 static int movemode, reqdraw;
 
-static Program programs[0x10], *porporo, *menu, *focused;
+static Varvara programs[0x10], *porporo, *menu, *focused;
 static Uint8 *ram, plen;
 
 static SDL_Window *gWindow = NULL;
@@ -84,7 +84,7 @@ drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int fg)
 }
 
 void
-drawconnection(Uint32 *dst, Program *p, int color)
+drawconnection(Uint32 *dst, Varvara *p, int color)
 {
 	int i;
 	for(i = 0; i < p->clen; i++) {
@@ -119,7 +119,7 @@ linerect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
 }
 
 static void
-drawprogram(Uint32 *dst, Program *p)
+drawprogram(Uint32 *dst, Varvara *p)
 {
 	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
 	if(p->done)
@@ -193,7 +193,7 @@ open_menu(int x, int y)
 /* = MOUSE ======================================= */
 
 static int
-withinprogram(Program *p, int x, int y)
+withinprogram(Varvara *p, int x, int y)
 {
 	return !p->done && x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h;
 }
@@ -209,7 +209,7 @@ update_focus(int x, int y)
 		return;
 	}
 	for(i = plen - 1; i > 1; i--) {
-		Program *p = &programs[i];
+		Varvara *p = &programs[i];
 		if(withinprogram(p, x, y)) {
 			focused = p;
 			return;
@@ -382,10 +382,10 @@ init(void)
 	return 1;
 }
 
-static Program *
+static Varvara *
 addprogram(int x, int y, char *rom)
 {
-	Program *p = &programs[plen++];
+	Varvara *p = &programs[plen++];
 	p->x = x, p->y = y, p->rom = rom;
 	p->u.ram = ram + (plen - 1) * 0x10000;
 	p->u.id = plen - 1;
@@ -395,7 +395,7 @@ addprogram(int x, int y, char *rom)
 }
 
 static void
-endprogram(Program *p)
+endprogram(Varvara *p)
 {
 	p->done = 1;
 	focused = 0;
@@ -403,7 +403,7 @@ endprogram(Program *p)
 }
 
 static void
-connectports(Program *a, Program *b, Uint8 ap, Uint8 bp)
+connectports(Varvara *a, Varvara *b, Uint8 ap, Uint8 bp)
 {
 	Connection *c = &a->out[a->clen++];
 	c->ap = ap, c->bp = bp;
@@ -411,7 +411,7 @@ connectports(Program *a, Program *b, Uint8 ap, Uint8 bp)
 }
 
 void
-screenvector(Program *p)
+screenvector(Varvara *p)
 {
 	Uint16 vector = (p->u.dev[0x20] << 8) | p->u.dev[0x21];
 	if(vector)
@@ -422,7 +422,7 @@ screenvector(Program *p)
 Uint8
 emu_dei(Uxn *u, Uint8 addr)
 {
-	Program *prg = &programs[u->id];
+	Varvara *prg = &programs[u->id];
 	switch(addr & 0xf0) {
 	case 0xc0: return datetime_dei(u, addr); break;
 	}
@@ -433,7 +433,7 @@ void
 emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 {
 	Uint8 p = addr & 0x0f, d = addr & 0xf0;
-	Program *prg = &programs[u->id];
+	Varvara *prg = &programs[u->id];
 	u->dev[addr] = value;
 	switch(d) {
 	case 0x00:
@@ -444,7 +444,7 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	case 0x10: {
 		int i;
 		for(i = 0; i < prg->clen; i++) {
-			Program *tprg = prg->out[i].b;
+			Varvara *tprg = prg->out[i].b;
 			if(tprg) {
 				Uint16 vector = (tprg->u.dev[0x10] << 8) | tprg->u.dev[0x11];
 				tprg->u.dev[0x12] = value;
@@ -465,7 +465,7 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *prg_left, *prg_log, *prg_log2;
+	Varvara *prg_left, *prg_log, *prg_log2;
 	(void)argc;
 	(void)argv;
 
