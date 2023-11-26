@@ -202,7 +202,7 @@ open_menu(int x, int y)
 static int
 withinprogram(Program *p, int x, int y)
 {
-	return x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h;
+	return !p->done && x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h;
 }
 
 static void
