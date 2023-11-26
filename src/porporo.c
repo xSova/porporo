@@ -195,12 +195,53 @@ open_menu(int x, int y)
 	isdrag = 0;
 }
 
+static void
+endprogram(Varvara *p)
+{
+	p->done = 1;
+	focused = 0;
+	clear(pixels);
+}
+
+static void
+connect(Varvara *a, Varvara *b, Uint8 ap, Uint8 bp)
+{
+	Connection *c = &a->out[a->clen++];
+	printf("Connected %s[%02x] -> %s[%02x]\n", a->rom, ap, b->rom, bp);
+	c->ap = ap, c->bp = bp;
+	c->a = a, c->b = b;
+}
+
+static Varvara *
+addprogram(int x, int y, char *rom)
+{
+	Varvara *p = &programs[plen++];
+	p->x = x, p->y = y, p->rom = rom;
+	p->u.ram = ram + (plen - 1) * 0x10000;
+	p->u.id = plen - 1;
+	system_init(&p->u, p->u.ram, rom);
+	uxn_eval(&p->u, 0x100);
+	return p;
+}
+
 /* = MOUSE ======================================= */
 
 static int
 withinprogram(Varvara *p, int x, int y)
 {
 	return !p->done && x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h;
+}
+
+static Varvara *
+pickprogram(int x, int y)
+{
+	int i;
+	for(i = plen - 1; i > 0; i--) {
+		Varvara *p = &programs[i];
+		if(withinprogram(p, x, y))
+			return p;
+	}
+	return 0;
 }
 
 static void
@@ -226,6 +267,12 @@ on_mouse_move(int x, int y)
 {
 	Uxn *u;
 	int relx = x - camerax, rely = y - cameray;
+
+	if(action == DRAW && isdrag) {
+		/* keep holding when in draw mode, draw line */
+		return;
+	}
+
 	update_focus(relx, rely);
 	if(!focused) {
 		if(isdrag) {
@@ -264,9 +311,17 @@ on_mouse_down(int button, int x, int y)
 }
 
 static void
-on_mouse_up(int button)
+on_mouse_up(int button, int x, int y)
 {
 	Uxn *u;
+	if(action == DRAW) {
+		Varvara *a = pickprogram(dragx - camerax, dragy - cameray);
+		Varvara *b = pickprogram(x - camerax, y - cameray);
+		if(a && b && a != b)
+			connect(a, b, 0x12, 0x18);
+		isdrag = 0;
+		return;
+	}
 	if(!focused || action) {
 		isdrag = 0;
 		return;
@@ -389,34 +444,6 @@ init(void)
 	return 1;
 }
 
-static Varvara *
-addprogram(int x, int y, char *rom)
-{
-	Varvara *p = &programs[plen++];
-	p->x = x, p->y = y, p->rom = rom;
-	p->u.ram = ram + (plen - 1) * 0x10000;
-	p->u.id = plen - 1;
-	system_init(&p->u, p->u.ram, rom);
-	uxn_eval(&p->u, 0x100);
-	return p;
-}
-
-static void
-endprogram(Varvara *p)
-{
-	p->done = 1;
-	focused = 0;
-	clear(pixels);
-}
-
-static void
-connectports(Varvara *a, Varvara *b, Uint8 ap, Uint8 bp)
-{
-	Connection *c = &a->out[a->clen++];
-	c->ap = ap, c->bp = bp;
-	c->a = a, c->b = b;
-}
-
 void
 screenvector(Varvara *p)
 {
@@ -491,9 +518,10 @@ main(int argc, char **argv)
 	prg_log = addprogram(400, 10, "bin/log.rom");
 	prg_log2 = addprogram(500, 110, "bin/log.rom");
 
-	connectports(menu, prg_log, 0x12, 0x18);
-	connectports(menu, prg_log2, 0x12, 0x18);
-	connectports(menu, porporo, 0x12, 0x18);
+	/*
+	connect(menu, prg_log, 0x12, 0x18);
+	connect(menu, prg_log2, 0x12, 0x18);
+	connect(menu, porporo, 0x12, 0x18); */
 
 	fflush(stdout);
 
@@ -517,7 +545,7 @@ main(int argc, char **argv)
 			case SDL_MOUSEWHEEL: on_mouse_wheel(event.wheel.x, event.wheel.y); break;
 			case SDL_MOUSEMOTION: on_mouse_move(event.motion.x, event.motion.y); break;
 			case SDL_MOUSEBUTTONDOWN: on_mouse_down(SDL_BUTTON(event.button.button), event.motion.x, event.motion.y); break;
-			case SDL_MOUSEBUTTONUP: on_mouse_up(SDL_BUTTON(event.button.button)); break;
+			case SDL_MOUSEBUTTONUP: on_mouse_up(SDL_BUTTON(event.button.button), event.motion.x, event.motion.y); break;
 			case SDL_TEXTINPUT: on_controller_input(event.text.text[0]); break;
 			case SDL_KEYDOWN: on_controller_down(get_key(&event), get_button(&event)); break;
 			case SDL_KEYUP: on_controller_up(get_button(&event)); break;
