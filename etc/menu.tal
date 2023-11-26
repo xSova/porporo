@@ -30,7 +30,7 @@
 
 @on-control ( -> )
 	.Controller/key DEI
-	( esc ) DUP #1b NEQ ?{ #800f DEO }
+	( esc ) DUP #1b NEQ ?{ #ff ;<hover>/last STA #800f DEO }
 	POP BRK
 
 @<load-dir> ( -- )

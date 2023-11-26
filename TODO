@@ -1,11 +1,19 @@
-- Remove program node on exit(#010f DEO)
+# TODOs
+
 - Spawn new node
 - Connect nodes
 - Swap program pointers when touching application
-- Sticky application
+- Fixed application
 - Wallpaper program
-- Sticky time program
+- Fixed time program
 
+- Toggle sticky programs
+- Global pointer
+	
 Menu.rom
-	- Make sticky
+	- Exit button
+	-
+	
+Log.rom
+	- Toggle binary/ascii mode
 	
