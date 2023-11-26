@@ -452,7 +452,7 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Program *prg_listen, *prg_hello, *prg_left;
+	Program *prg_left, *prg_log;
 	(void)argc;
 	(void)argv;
 
@@ -463,17 +463,12 @@ main(int argc, char **argv)
 
 	porporo = addprogram(850, 150, "bin/porporo.rom");
 	menu = addprogram(1500, 1500, "bin/menu.rom");
-	prg_listen = addprogram(920, 140, "bin/listen.rom");
-	prg_hello = addprogram(700, 300, "bin/hello.rom");
 
 	addprogram(20, 30, "bin/screen.pixel.rom");
 	prg_left = addprogram(300, 300, "bin/left.rom");
-
-	connectports(prg_hello, prg_listen, 0x12, 0x18);
-	connectports(prg_listen, porporo, 0x12, 0x18);
+	prg_log = addprogram(400, 10, "bin/log.rom");
 	connectports(menu, prg_left, 0x12, 0x18);
-
-	uxn_eval(&prg_hello->u, 0x100);
+	connectports(prg_left, prg_log, 0x12, 0x18);
 
 	fflush(stdout);
 

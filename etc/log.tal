@@ -7,9 +7,9 @@
 |0100
 
 @on-reset ( -> )
-	#f07f .System/r DEO2
-	#f0d6 .System/g DEO2
-	#f0b2 .System/b DEO2
+	#7f0f .System/r DEO2
+	#df06 .System/g DEO2
+	#bf02 .System/b DEO2
 	#0180 .Screen/width DEO2
 	#00c0 .Screen/height DEO2
 	<redraw>
@@ -40,7 +40,7 @@
 			.Screen/y DEI2k #0010 ADD2 ROT DEO2
 			[ LIT2 &anchor $2 ] .Screen/x DEO2 }
 		LDAk #20 SUB #00 SWP #40 SFT2 ;font-icn ADD2 .Screen/addr DEO2
-		#05 .Screen/sprite DEO
+		#0a .Screen/sprite DEO
 		INC2 LDAk ?&w
 	POP2 JMP2r
 
