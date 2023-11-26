@@ -1,0 +1,80 @@
+|00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
+|10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
+|20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
+|90 @Mouse &vector $2 &x $2 &y $2 &state $1 &chord $1 &pad $4 &scrolly &scrolly-hb $1 &scrolly-lb $1
+|a0 @File &vector $2 &success $2 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
+
+|0100
+
+@on-reset ( -> )
+	#f07f .System/r DEO2
+	#f0d6 .System/g DEO2
+	#f0b2 .System/b DEO2
+	#0180 .Screen/width DEO2
+	#00c0 .Screen/height DEO2
+	<redraw>
+	;on-mouse .Mouse/vector DEO2
+	;on-console .Console/vector DEO2
+	BRK
+
+@on-console ( -> )
+	( | append )
+	.Console/read DEI ;buf scap/ STA
+	<redraw>
+	BRK
+
+@on-mouse ( -> )
+	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
+	BRK
+
+@<redraw> ( -- )
+	#0008 .Screen/x DEO2
+	#0008 .Screen/y DEO2
+	;buf <draw-text>
+	JMP2r
+
+@<draw-text> ( str* -- )
+	#15 .Screen/auto DEO
+	&w ( -- )
+		LDAk #0a NEQ ?{
+			.Screen/y DEI2k #0010 ADD2 ROT DEO2
+			[ LIT2 &anchor $2 ] .Screen/x DEO2 }
+		LDAk #20 SUB #00 SWP #40 SFT2 ;font-icn ADD2 .Screen/addr DEO2
+		#05 .Screen/sprite DEO
+		INC2 LDAk ?&w
+	POP2 JMP2r
+
+@<update-cursor> ( color addr* -- )
+	[ LIT2 00 -Screen/auto ] DEO
+	;fill-icn .Screen/addr DEO2
+	#40 <draw-cursor>
+	.Mouse/x DEI2 ,<draw-cursor>/x STR2
+	.Mouse/y DEI2 ,<draw-cursor>/y STR2
+	.Screen/addr DEO2
+
+@<draw-cursor> ( color -- )
+	[ LIT2 &x $2 ] .Screen/x DEO2
+	[ LIT2 &y $2 ] .Screen/y DEO2
+	.Screen/sprite DEO
+	JMP2r
+
+(
+@|stdlib )
+
+@scap ( str* -- end* )
+	&w ( -- )
+		INC2 & LDAk ?&w
+	JMP2r
+
+(
+@|assets )
+
+@cursor-icn [ 80c0 e0f0 f8e0 1000 ]
+
+@fill-icn [ ffff ffff ffff ffff ]
+
+@buf
+	">ASCII 20 "Mode, 20 "ready. 0a $1000
+
+~etc/font_816.tal
+
