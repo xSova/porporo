@@ -35,8 +35,8 @@ typedef struct Uxn {
 } Uxn;
 
 typedef struct Connection {
-	Uint8 ap, bp;
-	struct Varvara *a, *b;
+	Uint8 bp;
+	struct Varvara *b;
 } Connection;
 
 typedef struct Screen {
@@ -49,6 +49,7 @@ typedef struct Varvara {
 	char *rom;
 	int x, y, clen, done;
 	Connection out[0x100];
+	struct Varvara *routes[0x10];
 	Uxn u;
 	Screen screen;
 } Varvara;

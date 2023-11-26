@@ -202,8 +202,8 @@ connect(Varvara *a, Varvara *b, Uint8 ap, Uint8 bp)
 	}
 	c = &a->out[a->clen++];
 	printf("Connected %s[%02x] -> %s[%02x]\n", a->rom, ap, b->rom, bp);
-	c->ap = ap, c->bp = bp;
-	c->a = a, c->b = b;
+	c->bp = bp;
+	c->b = b;
 }
 
 static Varvara *
@@ -239,7 +239,7 @@ pickprogram(int x, int y)
 }
 
 static void
-update_focus(int x, int y)
+pickfocus(int x, int y)
 {
 	int i;
 	if(withinprogram(menu, x, y)) {
@@ -261,13 +261,8 @@ on_mouse_move(int x, int y)
 {
 	Uxn *u;
 	int relx = x - camerax, rely = y - cameray;
-
-	if(action == DRAW && isdrag) {
-		/* keep holding when in draw mode, draw line */
-		return;
-	}
-
-	update_focus(relx, rely);
+	if(action == DRAW && isdrag) return;
+	pickfocus(relx, rely);
 	if(!focused) {
 		if(isdrag) {
 			camerax += x - dragx, cameray += y - dragy;
