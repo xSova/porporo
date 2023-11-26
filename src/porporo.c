@@ -89,8 +89,8 @@ drawconnection(Uint32 *dst, Program *p, int color)
 	int i;
 	for(i = 0; i < p->clen; i++) {
 		Connection *c = &p->out[i];
-		int x1 = p->x + 2 + camerax + p->screen.w, y1 = p->y - 2 + cameray;
-		int x2 = c->b->x - 3 + camerax, y2 = c->b->y - 2 + cameray;
+		int x1 = p->x + 1 + camerax + p->screen.w, y1 = p->y - 2 + cameray;
+		int x2 = c->b->x - 2 + camerax, y2 = c->b->y - 2 + cameray;
 		line(dst, x1, y1, x2, y2, color);
 	}
 }
@@ -462,13 +462,11 @@ main(int argc, char **argv)
 		return error("Init", "Failure");
 
 	porporo = addprogram(850, 150, "bin/porporo.rom");
-	menu = addprogram(1500, 1500, "bin/menu.rom");
+	menu = addprogram(200, 150, "bin/menu.rom");
 
 	addprogram(20, 30, "bin/screen.pixel.rom");
-	prg_left = addprogram(300, 300, "bin/left.rom");
 	prg_log = addprogram(400, 10, "bin/log.rom");
-	connectports(menu, prg_left, 0x12, 0x18);
-	connectports(prg_left, prg_log, 0x12, 0x18);
+	connectports(menu, prg_log, 0x12, 0x18);
 
 	fflush(stdout);
 
