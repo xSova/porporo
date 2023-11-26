@@ -122,11 +122,14 @@ static void
 drawprogram(Uint32 *dst, Program *p)
 {
 	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
+	if(p->done)
+		return;
 	linerect(dst, x, y, x + w, y + h, 2 + !movemode);
 	/* display */
 	if(p->screen.x2)
 		screen_redraw(&p->screen);
 	drawscreen(pixels, &p->screen, x, y);
+	drawconnection(dst, p, 3);
 }
 
 static void
@@ -144,8 +147,6 @@ redraw(Uint32 *dst)
 	int i;
 	for(i = 0; i < plen; i++)
 		drawprogram(dst, &programs[i]);
-	for(i = 0; i < plen; i++)
-		drawconnection(dst, &programs[i], 3);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
 	SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
@@ -188,6 +189,8 @@ static void
 open_menu(int x, int y)
 {
 	clear(pixels);
+	menu->done = 0;
+	menu->u.dev[0x0f] = 0;
 	menu->x = x, menu->y = y;
 	uxn_eval(&menu->u, 0x100);
 	isdrag = 0;
@@ -392,6 +395,13 @@ addprogram(int x, int y, char *rom)
 }
 
 static void
+endprogram(Program *p)
+{
+	p->done = 1;
+	clear(pixels);
+}
+
+static void
 connectports(Program *a, Program *b, Uint8 ap, Uint8 bp)
 {
 	Connection *c = &a->out[a->clen++];
@@ -418,6 +428,8 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	switch(d) {
 	case 0x00:
 		if(p > 0x7 && p < 0xe) screen_palette(&prg->screen, &u->dev[0x8]);
+		if(p == 0xf)
+			endprogram(prg);
 		break;
 	case 0x10: {
 		Program *tprg = prg->out[0].b;

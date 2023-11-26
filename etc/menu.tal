@@ -1,6 +1,8 @@
+
 |00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
 |10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
 |20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
+|80 @Controller &vector $2 &button $1 &key $1
 |90 @Mouse &vector $2 &x $2 &y $2 &state $1 &chord $1 &pad $4 &scrolly &scrolly-hb $1 &scrolly-lb $1
 |a0 @File &vector $2 &success $2 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
 
@@ -15,7 +17,21 @@
 	;dir count-lines #40 SFT2 #0010 ADD2 .Screen/height DEO2
 	<redraw>
 	;on-mouse .Mouse/vector DEO2
+	;on-control .Controller/vector DEO2
 	BRK
+
+@on-mouse ( -> )
+	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
+	.Mouse/y DEI2 #0008 SUB2 #04 SFT2 NIP .Mouse/state DEI ?{ <hover>
+		BRK }
+	<select>
+	#00 .Mouse/state DEO
+	BRK
+
+@on-control ( -> )
+	.Controller/key DEI
+	( esc ) DUP #1b NEQ ?{ #800f DEO }
+	POP BRK
 
 @<load-dir> ( -- )
 	{ ". 00 }
@@ -30,14 +46,6 @@
 		LDAk #0a NEQ ?{ INC2r }
 		INC2 LDAk ?&w
 	POP2 STH2r JMP2r
-
-@on-mouse ( -> )
-	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
-	.Mouse/y DEI2 #0008 SUB2 #04 SFT2 NIP .Mouse/state DEI ?{ <hover>
-		BRK }
-	<select>
-	#00 .Mouse/state DEO
-	BRK
 
 @<select> ( id -- )
 	DUP ?{
