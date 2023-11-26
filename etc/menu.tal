@@ -1,4 +1,3 @@
-
 |00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
 |10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
 |20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
@@ -30,8 +29,13 @@
 
 @on-control ( -> )
 	.Controller/key DEI
-	( esc ) DUP #1b NEQ ?{ #ff ;<hover>/last STA #800f DEO }
+	( esc ) DUP #1b NEQ ?{ <exit> }
 	POP BRK
+
+@<exit> ( -- )
+	#ff ;<hover>/last STA
+	#800f DEO
+	JMP2r
 
 @<load-dir> ( -- )
 	{ ". 00 }
@@ -48,6 +52,7 @@
 	POP2 STH2r JMP2r
 
 @<select> ( id -- )
+	.Mouse/state DEI #01 NEQ ?<exit>
 	DUP ?{
 		;dir #0005 ADD2 <print-word>/ }
 	STH

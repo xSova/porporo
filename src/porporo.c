@@ -256,7 +256,7 @@ static void
 on_mouse_down(int button, int x, int y)
 {
 	Uxn *u;
-	if(!focused && button == 2) {
+	if(!focused && button > 1) {
 		open_menu(x - camerax, y - cameray);
 		return;
 	}
@@ -418,6 +418,15 @@ connectports(Program *a, Program *b, Uint8 ap, Uint8 bp)
 	c->a = a, c->b = b;
 }
 
+void
+screenvector(Program *p)
+{
+	Uint16 vector = (p->u.dev[0x20] << 8) | p->u.dev[0x21];
+	if(vector)
+		uxn_eval(&p->u, vector);
+	reqdraw = 1;
+}
+
 Uint8
 emu_dei(Uxn *u, Uint8 addr)
 {
@@ -456,15 +465,6 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	case 0xa0: file_deo(prg, 0, u->ram, &u->dev[d], p); break;
 	case 0xb0: file_deo(prg, 1, u->ram, &u->dev[d], p); break;
 	}
-}
-
-void
-screenvector(Program *p)
-{
-	Uint16 vector = (p->u.dev[0x20] << 8) | p->u.dev[0x21];
-	if(vector)
-		uxn_eval(&p->u, vector);
-	reqdraw = 1;
 }
 
 int
