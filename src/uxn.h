@@ -47,7 +47,7 @@ typedef struct Screen {
 
 typedef struct Varvara {
 	char *rom;
-	int x, y, clen, done, stick;
+	int x, y, clen, done;
 	Connection out[0x100];
 	Uxn u;
 	Screen screen;

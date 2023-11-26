@@ -10,6 +10,7 @@
 - Toggle sticky programs
 - Display cli roms properly
 - Display roms metadata
+- Map connections to porporo's ram
 
 Window Manager
 	- only draw program screens that are visible

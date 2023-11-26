@@ -23,10 +23,16 @@ WITH REGARD TO THIS SOFTWARE.
 #define HOR 100
 #define VER 60
 
-static Uint32 theme[] = {0xffffff, 0xffb545, 0x72DEC2, 0x000000, 0xeeeeee};
+enum Action {
+	NORMAL,
+	MOVE,
+	DRAW
+};
+
+static Uint32 theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
 static int WIDTH = HOR << 3, HEIGHT = VER << 3, ZOOM = 1;
-static int isdrag, dragx, dragy, camerax, cameray;
-static int movemode, reqdraw;
+static int isdrag, reqdraw, dragx, dragy, camerax, cameray;
+enum Action action;
 
 static Varvara programs[0x10], *porporo, *menu, *focused;
 static Uint8 *ram, plen;
@@ -124,9 +130,8 @@ drawprogram(Uint32 *dst, Varvara *p)
 	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
 	if(p->done)
 		return;
-	drawconnection(dst, p, 3);
-	linerect(dst, x, y, x + w, y + h, movemode ? 2 : p->stick ? 1 :
-                                                                3);
+	drawconnection(dst, p, 2 - action);
+	linerect(dst, x, y, x + w, y + h, 2 - action);
 	/* display */
 	if(p->screen.x2)
 		screen_redraw(&p->screen);
@@ -202,8 +207,6 @@ static void
 update_focus(int x, int y)
 {
 	int i;
-	if(focused && focused->stick)
-		return;
 	if(withinprogram(menu, x, y)) {
 		focused = menu;
 		return;
@@ -232,7 +235,7 @@ on_mouse_move(int x, int y)
 		}
 		return;
 	}
-	if(movemode) {
+	if(action) {
 		if(isdrag) {
 			focused->x += x - dragx, focused->y += y - dragy;
 			dragx = x, dragy = y;
@@ -252,7 +255,7 @@ on_mouse_down(int button, int x, int y)
 		open_menu(x - camerax, y - cameray);
 		return;
 	}
-	if(!focused || movemode) {
+	if(!focused || action) {
 		isdrag = 1, dragx = x, dragy = y;
 		return;
 	}
@@ -264,7 +267,7 @@ static void
 on_mouse_up(int button)
 {
 	Uxn *u;
-	if(!focused || movemode) {
+	if(!focused || action) {
 		isdrag = 0;
 		return;
 	}
@@ -318,7 +321,11 @@ on_porporo_key(char c)
 {
 	switch(c) {
 	case 'd':
-		movemode = !movemode;
+		action = action == DRAW ? NORMAL : DRAW;
+		reqdraw = 1;
+		break;
+	case 'm':
+		action = action == MOVE ? NORMAL : MOVE;
 		reqdraw = 1;
 		break;
 	}
@@ -328,7 +335,7 @@ static void
 on_controller_input(char c)
 {
 	Uxn *u;
-	if(!focused || movemode) {
+	if(!focused || action) {
 		on_porporo_key(c);
 		return;
 	}
@@ -477,7 +484,6 @@ main(int argc, char **argv)
 	porporo = addprogram(650, 250, "bin/porporo.rom");
 
 	menu = addprogram(200, 150, "bin/menu.rom");
-	menu->stick = 1;
 	menu->done = 1;
 
 	addprogram(20, 30, "bin/screen.pixel.rom");
