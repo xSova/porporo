@@ -61,6 +61,7 @@
 		LDAk #0a NEQ ?{
 			#0006 ADD2 INCr EQUkr STHr ?&found }
 		INC2 LDAk ?&w
+	POP2r !<exit>
 	&found ( str* | a b -- )
 		POP2r <print-word>/
 		#0a18 DEO

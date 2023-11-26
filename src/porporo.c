@@ -193,8 +193,8 @@ open_menu(int x, int y)
 	clear(pixels);
 	menu->done = 0;
 	menu->u.dev[0x0f] = 0;
-	menu->x = x, menu->y = y;
 	uxn_eval(&menu->u, 0x100);
+	menu->x = x, menu->y = y;
 	isdrag = 0;
 }
 
@@ -483,8 +483,10 @@ main(int argc, char **argv)
 		return error("Init", "Failure");
 
 	porporo = addprogram(850, 150, "bin/porporo.rom");
+
 	menu = addprogram(200, 150, "bin/menu.rom");
 	menu->stick = 1;
+	menu->done = 1;
 
 	addprogram(20, 30, "bin/screen.pixel.rom");
 	prg_log = addprogram(400, 10, "bin/log.rom");

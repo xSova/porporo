@@ -6,13 +6,20 @@
 - Fixed application
 - Wallpaper program
 - Fixed time program
+- Clear programs
+- Toggle borders
 
 - Toggle sticky programs
 - Global pointer
-	
+- Display cli roms properly
+- Display roms metadata
+
+- Keep sticky programs visible
+
 Menu.rom
 	- Exit button
-	-
+	- Navigate into folders
+	- Close when clicked outside
 	
 Log.rom
 	- Toggle binary/ascii mode
