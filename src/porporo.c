@@ -28,12 +28,11 @@ enum Action {
 	MOVE,
 	DRAW
 };
-
-static Uint32 theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
-static int WIDTH = HOR << 3, HEIGHT = VER << 3, ZOOM = 1;
-static int isdrag, reqdraw, dragx, dragy, camerax, cameray;
 enum Action action;
 
+static Uint32 theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
+static int WIDTH = HOR << 3, HEIGHT = VER << 3;
+static int isdrag, reqdraw, dragx, dragy, camerax, cameray;
 static Varvara programs[0x10], *porporo, *menu, *focused;
 static Uint8 *ram, plen;
 
@@ -92,22 +91,13 @@ drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int fg)
 void
 drawconnection(Uint32 *dst, Varvara *p, int color)
 {
-	int i;
+	int i, x = camerax + p->screen.w;
 	for(i = 0; i < p->clen; i++) {
 		Connection *c = &p->out[i];
-		int x1 = p->x + 1 + camerax + p->screen.w, y1 = p->y - 2 + cameray;
+		int x1 = p->x + 1 + x, y1 = p->y - 2 + cameray;
 		int x2 = c->b->x - 2 + camerax, y2 = c->b->y - 2 + cameray;
 		line(dst, x1, y1, x2, y2, color);
 	}
-}
-
-void
-drawrect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
-{
-	int x, y;
-	for(y = y1; y < y2; y++)
-		for(x = x1; x < x2; x++)
-			putpixel(dst, x, y, color);
 }
 
 static void
@@ -128,11 +118,9 @@ static void
 drawprogram(Uint32 *dst, Varvara *p)
 {
 	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
-	if(p->done)
-		return;
+	if(p->done) return;
 	drawconnection(dst, p, 2 - action);
 	linerect(dst, x, y, x + w, y + h, 2 - action);
-	/* display */
 	if(p->screen.x2)
 		screen_redraw(&p->screen);
 	drawscreen(pixels, &p->screen, x, y);
@@ -174,18 +162,15 @@ static void
 quit(void)
 {
 	free(pixels);
-	SDL_DestroyTexture(gTexture);
-	gTexture = NULL;
-	SDL_DestroyRenderer(gRenderer);
-	gRenderer = NULL;
-	SDL_DestroyWindow(gWindow);
-	gWindow = NULL;
+	SDL_DestroyTexture(gTexture), gTexture = NULL;
+	SDL_DestroyRenderer(gRenderer), gRenderer = NULL;
+	SDL_DestroyWindow(gWindow), gWindow = NULL;
 	SDL_Quit();
 	exit(0);
 }
 
 static void
-open_menu(int x, int y)
+showmenu(int x, int y)
 {
 	clear(pixels);
 	menu->done = 0;
@@ -206,7 +191,16 @@ endprogram(Varvara *p)
 static void
 connect(Varvara *a, Varvara *b, Uint8 ap, Uint8 bp)
 {
-	Connection *c = &a->out[a->clen++];
+	int i;
+	Connection *c;
+	clear(pixels);
+	for(i = 0; i < a->clen; i++) {
+		if(b == a->out[i].b) {
+			a->clen = 0;
+			return;
+		}
+	}
+	c = &a->out[a->clen++];
 	printf("Connected %s[%02x] -> %s[%02x]\n", a->rom, ap, b->rom, bp);
 	c->ap = ap, c->bp = bp;
 	c->a = a, c->b = b;
@@ -299,7 +293,7 @@ on_mouse_down(int button, int x, int y)
 {
 	Uxn *u;
 	if(!focused && button > 1) {
-		open_menu(x - camerax, y - cameray);
+		showmenu(x - camerax, y - cameray);
 		return;
 	}
 	if(!focused || action) {
@@ -428,7 +422,7 @@ init(void)
 {
 	if(SDL_Init(SDL_INIT_VIDEO) < 0)
 		return error("Init", SDL_GetError());
-	gWindow = SDL_CreateWindow("Porporo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH * ZOOM, HEIGHT * ZOOM, SDL_WINDOW_SHOWN);
+	gWindow = SDL_CreateWindow("Porporo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
 	if(gWindow == NULL)
 		return error("Window", SDL_GetError());
 	gRenderer = SDL_CreateRenderer(gWindow, -1, 0);

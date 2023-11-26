@@ -12,6 +12,8 @@
 - Display roms metadata
 - Map connections to porporo's ram
 
+- Detect doubled connection
+
 Window Manager
 	- only draw program screens that are visible
 	- Global pointer
