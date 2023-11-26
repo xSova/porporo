@@ -124,12 +124,12 @@ drawprogram(Uint32 *dst, Program *p)
 	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
 	if(p->done)
 		return;
+	drawconnection(dst, p, 3);
 	linerect(dst, x, y, x + w, y + h, 2 + !movemode);
 	/* display */
 	if(p->screen.x2)
 		screen_redraw(&p->screen);
 	drawscreen(pixels, &p->screen, x, y);
-	drawconnection(dst, p, 3);
 }
 
 static void
@@ -145,8 +145,9 @@ static void
 redraw(Uint32 *dst)
 {
 	int i;
-	for(i = 0; i < plen; i++)
+	for(i = 2; i < plen; i++)
 		drawprogram(dst, &programs[i]);
+	drawprogram(dst, menu);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
 	SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
@@ -208,7 +209,11 @@ static void
 update_focus(int x, int y)
 {
 	int i;
-	for(i = plen - 1; i; i--) {
+	if(withinprogram(menu, x, y)) {
+		focused = menu;
+		return;
+	}
+	for(i = plen - 1; i > 1; i--) {
 		Program *p = &programs[i];
 		if(withinprogram(p, x, y)) {
 			focused = p;

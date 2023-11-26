@@ -2,11 +2,10 @@
 - Spawn new node
 - Connect nodes
 - Swap program pointers when touching application
-- Close menu after selection
-- Show/Hide programs
-- Always draw menu & porporo above everything else
-- Log Reader program
 - Sticky application
 - Wallpaper program
 - Sticky time program
-- 
+
+Menu.rom
+	- Make sticky
+	
