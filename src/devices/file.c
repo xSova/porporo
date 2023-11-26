@@ -249,6 +249,7 @@ file_deo(Varvara *prg, Uint8 id, Uint8 *ram, Uint8 *d, Uint8 port)
 {
 	UxnFile *c = &uxn_file[id];
 	Uint16 addr, len, res;
+	(void)prg;
 	switch(port) {
 	case 0x5:
 		addr = PEEK2(d + 0x4);

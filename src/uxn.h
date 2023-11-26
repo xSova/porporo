@@ -34,11 +34,6 @@ typedef struct Uxn {
 	Uint16 id;
 } Uxn;
 
-typedef struct Connection {
-	Uint8 bp;
-	struct Varvara *b;
-} Connection;
-
 typedef struct Screen {
 	int w, h, x1, y1, x2, y2;
 	Uint32 palette[4], *pixels;
@@ -48,10 +43,9 @@ typedef struct Screen {
 typedef struct Varvara {
 	char *rom;
 	int x, y, clen, done;
-	Connection out[0x100];
-	struct Varvara *routes[0x10];
 	Uxn u;
 	Screen screen;
+	struct Varvara *routes[0x10];
 } Varvara;
 
 /* required functions */

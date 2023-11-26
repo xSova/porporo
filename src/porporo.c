@@ -89,13 +89,13 @@ drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int fg)
 }
 
 void
-drawconnection(Uint32 *dst, Varvara *p, int color)
+drawconnection(Uint32 *dst, Varvara *a, int color)
 {
-	int i, x = camerax + p->screen.w;
-	for(i = 0; i < p->clen; i++) {
-		Connection *c = &p->out[i];
-		int x1 = p->x + 1 + x, y1 = p->y - 2 + cameray;
-		int x2 = c->b->x - 2 + camerax, y2 = c->b->y - 2 + cameray;
+	int i;
+	for(i = 0; i < a->clen; i++) {
+		Varvara *b = a->routes[i];
+		int x1 = a->x + 1 + camerax + a->screen.w, y1 = a->y - 2 + cameray;
+		int x2 = b->x - 2 + camerax, y2 = b->y - 2 + cameray;
 		line(dst, x1, y1, x2, y2, color);
 	}
 }
@@ -189,21 +189,17 @@ endprogram(Varvara *p)
 }
 
 static void
-connect(Varvara *a, Varvara *b, Uint8 ap, Uint8 bp)
+connect(Varvara *a, Varvara *b)
 {
 	int i;
-	Connection *c;
 	clear(pixels);
 	for(i = 0; i < a->clen; i++) {
-		if(b == a->out[i].b) {
+		if(b == a->routes[i]) {
 			a->clen = 0;
 			return;
 		}
 	}
-	c = &a->out[a->clen++];
-	printf("Connected %s[%02x] -> %s[%02x]\n", a->rom, ap, b->rom, bp);
-	c->bp = bp;
-	c->b = b;
+	a->routes[a->clen++] = b;
 }
 
 static Varvara *
@@ -307,7 +303,7 @@ on_mouse_up(int button, int x, int y)
 		Varvara *a = pickprogram(dragx - camerax, dragy - cameray);
 		Varvara *b = pickprogram(x - camerax, y - cameray);
 		if(a && b && a != b)
-			connect(a, b, 0x12, 0x18);
+			connect(a, b);
 		isdrag = 0;
 		return;
 	}
@@ -445,7 +441,6 @@ screenvector(Varvara *p)
 Uint8
 emu_dei(Uxn *u, Uint8 addr)
 {
-	Varvara *prg = &programs[u->id];
 	switch(addr & 0xf0) {
 	case 0xc0: return datetime_dei(u, addr); break;
 	}
@@ -467,12 +462,12 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	case 0x10: {
 		int i;
 		for(i = 0; i < prg->clen; i++) {
-			Varvara *tprg = prg->out[i].b;
-			if(tprg) {
-				Uint16 vector = (tprg->u.dev[0x10] << 8) | tprg->u.dev[0x11];
-				tprg->u.dev[0x12] = value;
+			Varvara *b = prg->routes[i];
+			if(b) {
+				Uint16 vector = (b->u.dev[0x10] << 8) | b->u.dev[0x11];
+				b->u.dev[0x12] = value;
 				if(vector)
-					uxn_eval(&tprg->u, vector);
+					uxn_eval(&b->u, vector);
 			}
 		}
 	} break;
@@ -488,7 +483,6 @@ main(int argc, char **argv)
 	Uint32 begintime = 0;
 	Uint32 endtime = 0;
 	Uint32 delta = 0;
-	Varvara *prg_left, *prg_log, *prg_log2;
 	(void)argc;
 	(void)argv;
 
@@ -503,14 +497,8 @@ main(int argc, char **argv)
 	menu->done = 1;
 
 	addprogram(20, 30, "bin/screen.pixel.rom");
-
-	prg_log = addprogram(400, 10, "bin/log.rom");
-	prg_log2 = addprogram(500, 110, "bin/log.rom");
-
-	/*
-	connect(menu, prg_log, 0x12, 0x18);
-	connect(menu, prg_log2, 0x12, 0x18);
-	connect(menu, porporo, 0x12, 0x18); */
+	addprogram(400, 10, "bin/log.rom");
+	addprogram(500, 110, "bin/log.rom");
 
 	fflush(stdout);
 
