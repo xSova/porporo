@@ -33,7 +33,7 @@ enum Action action;
 static Uint8 *ram, plen;
 static Uint32 *pixels, theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
 static int WIDTH, HEIGHT, isdrag, reqdraw, dragx, dragy, camerax, cameray;
-static Varvara varvaras[0x10], *menu, *focused;
+static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *focused;
 
 static SDL_DisplayMode DM;
 static SDL_Window *gWindow = NULL;
@@ -131,7 +131,7 @@ redraw(Uint32 *dst)
 {
 	int i;
 	for(i = 1; i < plen; i++)
-		drawpixels(dst, &varvaras[i]);
+		drawpixels(dst, order[i]);
 	drawpixels(dst, menu);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
@@ -204,7 +204,7 @@ addvv(int x, int y, char *rom, int eval)
 	Varvara *p;
 	if(plen >= RAM_PAGES)
 		return 0;
-	p = &varvaras[plen++];
+	p = &varvaras[plen], order[plen++] = p;
 	p->x = x, p->y = y, p->rom = rom;
 	p->u.ram = ram + (plen - 1) * 0x10000;
 	p->u.id = plen - 1;
@@ -227,12 +227,28 @@ static Varvara *
 pickvv(int x, int y)
 {
 	int i;
-	for(i = plen; i > -1; --i) {
-		Varvara *p = &varvaras[i];
+	for(i = plen - 1; i > -1; --i) {
+		Varvara *p = order[i];
 		if(withinvv(p, x, y))
 			return p;
 	}
 	return 0;
+}
+
+static void
+raisevv(Varvara *v)
+{
+	int i, j = 0;
+	Varvara *a, *b;
+	for(i = 1; i < plen; i++) {
+		if(v == order[i])
+			j = i;
+	}
+	if(j == i - 1)
+		return;
+	a = order[j], b = order[i - 1];
+	order[j] = b, order[i - 1] = a;
+	clear(pixels);
 }
 
 static void
@@ -243,8 +259,8 @@ pickfocus(int x, int y)
 		focusvv(menu);
 		return;
 	}
-	for(i = plen; i > -1; --i) {
-		Varvara *p = &varvaras[i];
+	for(i = plen - 1; i > -1; --i) {
+		Varvara *p = order[i];
 		if(withinvv(p, x, y)) {
 			focusvv(p);
 			return;
@@ -338,6 +354,7 @@ on_mouse_down(int button, int x, int y)
 		isdrag = 1, dragx = x, dragy = y;
 		return;
 	}
+	raisevv(focused);
 	u = &focused->u;
 	mouse_down(u, &u->dev[0x90], button);
 }
@@ -450,11 +467,12 @@ static int
 on_controller_up(Uint8 button)
 {
 	Uxn *u;
-	if(!focused)
-		return 1;
-	u = &focused->u;
-	controller_up(u, &u->dev[0x80], button);
-	return (reqdraw = 1);
+	if(focused) {
+		u = &focused->u;
+		controller_up(u, &u->dev[0x80], button);
+		reqdraw = 1;
+	}
+	return 1;
 }
 
 /* =============================================== */
@@ -466,7 +484,7 @@ init(void)
 		return error("Init", SDL_GetError());
 	SDL_GetCurrentDisplayMode(0, &DM);
 	WIDTH = DM.w - 0x20;
-	HEIGHT = DM.h - 0x20;
+	HEIGHT = DM.h - 0x80;
 	gWindow = SDL_CreateWindow("Porporo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
 	if(gWindow == NULL)
 		return error("Window", SDL_GetError());

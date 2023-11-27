@@ -1,27 +1,17 @@
 # TODOs
 
 - Map connection data to porporo's ram
-- Warn when exceeding available memory
 
 Devices
 	- File device pointers should be assoc with Varvaras
 
 Window Manager
 	- only draw program screens that are visible
-	- Global pointer
+	- Global pointer, Hide pointer
 	- Toggle borders
 	- Clear windows
-	- Borderless windows
-	- Fixed position application
-	- Keep sticky programs visible
-	- Hide cursor
-	- Re-order program on focus
-	- Toggle sticky programs
-
-Porporo.rom
-	- Start	
-	- Support theme
-	- Display roms metadata
+	- Toggle Lock position application
+	- When dragging, don't change focus
 
 Menu.rom
 	- Navigate into folders
