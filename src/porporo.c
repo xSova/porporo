@@ -52,14 +52,12 @@ putpixel(Uint32 *dst, int x, int y, int color)
 void
 drawscreen(Uint32 *dst, Screen *scr, int x1, int y1)
 {
-	int x, y, w = scr->w, x2 = x1 + scr->w, y2 = y1 + scr->h;
+	int x, y, row, relrow, w = scr->w, x2 = x1 + w, y2 = y1 + scr->h;
 	for(y = y1; y < y2; y++) {
-		for(x = x1; x < x2; x++) {
-			if(x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
-				int index = (x - x1) + (y - y1) * w;
-				dst[y * WIDTH + x] = scr->pixels[index];
-			}
-		}
+		row = y * WIDTH, relrow = (y - y1) * w;
+		for(x = x1; x < x2; x++)
+			if(x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT)
+				dst[row + x] = scr->pixels[relrow + x - x1];
 	}
 }
 
