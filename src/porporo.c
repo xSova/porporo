@@ -33,7 +33,7 @@ enum Action action;
 static Uint32 theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
 static int WIDTH = HOR << 3, HEIGHT = VER << 3;
 static int isdrag, reqdraw, dragx, dragy, camerax, cameray;
-static Varvara programs[0x10], *porporo, *menu, *focused;
+static Varvara varvaras[0x10], *porporo, *menu, *focused;
 static Uint8 *ram, plen;
 
 static SDL_Window *gWindow = NULL;
@@ -115,7 +115,7 @@ linerect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
 }
 
 static void
-drawprogram(Uint32 *dst, Varvara *p)
+drawpixels(Uint32 *dst, Varvara *p)
 {
 	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
 	if(p->done) return;
@@ -140,9 +140,9 @@ redraw(Uint32 *dst)
 {
 	int i;
 	for(i = 2; i < plen; i++)
-		drawprogram(dst, &programs[i]);
-	drawprogram(dst, porporo);
-	drawprogram(dst, menu);
+		drawpixels(dst, &varvaras[i]);
+	drawpixels(dst, porporo);
+	drawpixels(dst, menu);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
 	SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
@@ -203,13 +203,31 @@ endvv(Varvara *p)
 static Varvara *
 addvv(int x, int y, char *rom)
 {
-	Varvara *p = &programs[plen++];
+	Varvara *p = &varvaras[plen++];
 	p->x = x, p->y = y, p->rom = rom;
 	p->u.ram = ram + (plen - 1) * 0x10000;
 	p->u.id = plen - 1;
 	system_init(&p->u, p->u.ram, rom);
 	uxn_eval(&p->u, 0x100);
 	return p;
+}
+
+static int
+withinvv(Varvara *p, int x, int y)
+{
+	return !p->done && x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h;
+}
+
+static Varvara *
+pickvv(int x, int y)
+{
+	int i;
+	for(i = plen - 1; i > 0; i--) {
+		Varvara *p = &varvaras[i];
+		if(withinvv(p, x, y))
+			return p;
+	}
+	return 0;
 }
 
 static void
@@ -228,35 +246,17 @@ connect(Varvara *a, Varvara *b)
 
 /* = MOUSE ======================================= */
 
-static int
-withinprogram(Varvara *p, int x, int y)
-{
-	return !p->done && x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h;
-}
-
-static Varvara *
-pickprogram(int x, int y)
-{
-	int i;
-	for(i = plen - 1; i > 0; i--) {
-		Varvara *p = &programs[i];
-		if(withinprogram(p, x, y))
-			return p;
-	}
-	return 0;
-}
-
 static void
 pickfocus(int x, int y)
 {
 	int i;
-	if(withinprogram(menu, x, y)) {
+	if(withinvv(menu, x, y)) {
 		focusvv(menu);
 		return;
 	}
 	for(i = plen - 1; i > 1; i--) {
-		Varvara *p = &programs[i];
-		if(withinprogram(p, x, y)) {
+		Varvara *p = &varvaras[i];
+		if(withinvv(p, x, y)) {
 			focusvv(p);
 			return;
 		}
@@ -312,8 +312,8 @@ on_mouse_up(int button, int x, int y)
 {
 	Uxn *u;
 	if(action == DRAW) {
-		Varvara *a = pickprogram(dragx - camerax, dragy - cameray);
-		Varvara *b = pickprogram(x - camerax, y - cameray);
+		Varvara *a = pickvv(dragx - camerax, dragy - cameray);
+		Varvara *b = pickvv(x - camerax, y - cameray);
 		if(a && b && a != b)
 			connect(a, b);
 		isdrag = 0;
@@ -463,7 +463,7 @@ void
 emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 {
 	Uint8 p = addr & 0x0f, d = addr & 0xf0;
-	Varvara *prg = &programs[u->id];
+	Varvara *prg = &varvaras[u->id];
 	u->dev[addr] = value;
 	switch(d) {
 	case 0x00:
