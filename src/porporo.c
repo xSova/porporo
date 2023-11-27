@@ -36,6 +36,7 @@ static int isdrag, reqdraw, dragx, dragy, camerax, cameray;
 static Varvara varvaras[0x10], *menu, *focused;
 static Uint8 *ram, plen;
 
+static SDL_DisplayMode DM;
 static SDL_Window *gWindow = NULL;
 static SDL_Renderer *gRenderer = NULL;
 static SDL_Texture *gTexture = NULL;
@@ -201,15 +202,19 @@ endvv(Varvara *p)
 }
 
 static Varvara *
-addvv(int x, int y, char *rom)
+addvv(int x, int y, char *rom, int eval)
 {
-	Varvara *p = &varvaras[plen++];
+	Varvara *p;
+	if(plen >= RAM_PAGES)
+		return 0;
+	p = &varvaras[plen++];
 	p->x = x, p->y = y, p->rom = rom;
 	p->u.ram = ram + (plen - 1) * 0x10000;
 	p->u.id = plen - 1;
 	screen_resize(&p->screen, 128, 128);
 	system_init(&p->u, p->u.ram, rom);
-	uxn_eval(&p->u, 0x100);
+	if(eval)
+		uxn_eval(&p->u, 0x100);
 	return p;
 }
 
@@ -243,6 +248,28 @@ connect(Varvara *a, Varvara *b)
 		}
 	}
 	a->routes[a->clen++] = b;
+}
+
+/* = COMMAND ===================================== */
+
+int cmdlen;
+char cmd[0x40];
+
+void
+sendcmd(char c)
+{
+	if(c < 0x20) {
+		clear(pixels);
+		menu->done = 1;
+		addvv(menu->x, menu->y, cmd, 0);
+		cmdlen = 0;
+		return;
+	}
+	if(cmdlen >= 0x3f) {
+		cmdlen = 0;
+		return;
+	}
+	cmd[cmdlen++] = c, cmd[cmdlen] = 0;
 }
 
 /* = MOUSE ======================================= */
@@ -350,7 +377,7 @@ get_button(SDL_Event *event)
 	case SDLK_LEFT: return 0x40;
 	case SDLK_RIGHT: return 0x80;
 	}
-	return 0x00;
+	return 0;
 }
 
 static Uint8
@@ -366,11 +393,11 @@ get_key(SDL_Event *event)
 		else if(sym <= SDLK_z)
 			return sym - (mods & KMOD_SHIFT) * 0x20;
 	}
-	return 0x00;
+	return 0;
 }
 
-static void
-on_porporo_key(char c)
+static int
+on_porporo_key(char c, int sym)
 {
 	switch(c) {
 	case 0x1b:
@@ -386,44 +413,49 @@ on_porporo_key(char c)
 		reqdraw = 1;
 		break;
 	}
+	switch(sym) {
+	case SDLK_F1:
+		printf("!!!\n");
+		break;
+	}
+	return 1;
 }
 
-static void
+static int
 on_controller_input(char c)
 {
 	Uxn *u;
-	if(!focused || action) {
-		on_porporo_key(c);
-		return;
-	}
+	if(!focused || action)
+		return on_porporo_key(c, 0);
 	u = &focused->u;
 	controller_key(u, &u->dev[0x80], c);
+	return 1;
 }
 
-static void
-on_controller_down(Uint8 key, Uint8 button)
+static int
+on_controller_down(Uint8 key, Uint8 button, int sym)
 {
 	Uxn *u;
-	if(!focused || action) {
-		on_porporo_key(key);
-		return;
-	}
+	if(sym)
+		return on_porporo_key(key, sym);
+	else if(!focused || action)
+		return on_porporo_key(key, sym);
 	u = &focused->u;
 	if(key)
 		controller_key(u, &u->dev[0x80], key);
 	else
 		controller_down(u, &u->dev[0x80], button);
-	reqdraw = 1;
+	return (reqdraw = 1);
 }
 
-static void
+static int
 on_controller_up(Uint8 button)
 {
 	Uxn *u;
-	if(!focused) return;
+	if(!focused) return 1;
 	u = &focused->u;
 	controller_up(u, &u->dev[0x80], button);
-	reqdraw = 1;
+	return (reqdraw = 1);
 }
 
 /* =============================================== */
@@ -433,6 +465,9 @@ init(void)
 {
 	if(SDL_Init(SDL_INIT_VIDEO) < 0)
 		return error("Init", SDL_GetError());
+	SDL_GetCurrentDisplayMode(0, &DM);
+	WIDTH = DM.w - 0x20;
+	HEIGHT = DM.h - 0x20;
 	gWindow = SDL_CreateWindow("Porporo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
 	if(gWindow == NULL)
 		return error("Window", SDL_GetError());
@@ -458,31 +493,13 @@ screenvector(Varvara *p)
 	reqdraw = 1;
 }
 
-int buflen;
-char buf[0x40];
-
-void
-listen(char c)
-{
-	if(c < 0x20) {
-		clear(pixels);
-		menu->done = 1;
-		/* test for compatible rom */
-		addvv(menu->x, menu->y, buf);
-		printf("> %s\n", buf);
-		buflen = 0;
-		return;
-	}
-	if(buflen < 0x40)
-		buf[buflen++] = c, buf[buflen] = 0;
-}
-
 void
 console_deo(Varvara *a, Uint8 addr, Uint8 value)
 {
 	int i;
+	(void)addr;
 	if(a == menu && !menu->clen) {
-		listen(value);
+		sendcmd(value);
 		return;
 	}
 	for(i = 0; i < a->clen; i++) {
@@ -536,11 +553,11 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 
-	menu = addvv(200, 150, "bin/menu.rom");
+	menu = addvv(200, 150, "bin/menu.rom", 0);
 	menu->done = 1;
 
 	for(i = 1; i < argc; i++) {
-		Varvara *a = addvv(anchor, 0x20 * i, argv[i]);
+		Varvara *a = addvv(anchor, 0x20 * i, argv[i], 1);
 		anchor += a->screen.w + 0x20;
 	}
 
@@ -568,7 +585,7 @@ main(int argc, char **argv)
 			case SDL_MOUSEBUTTONDOWN: on_mouse_down(SDL_BUTTON(event.button.button), event.motion.x, event.motion.y); break;
 			case SDL_MOUSEBUTTONUP: on_mouse_up(SDL_BUTTON(event.button.button), event.motion.x, event.motion.y); break;
 			case SDL_TEXTINPUT: on_controller_input(event.text.text[0]); break;
-			case SDL_KEYDOWN: on_controller_down(get_key(&event), get_button(&event)); break;
+			case SDL_KEYDOWN: on_controller_down(get_key(&event), get_button(&event), event.key.keysym.sym); break;
 			case SDL_KEYUP: on_controller_up(get_button(&event)); break;
 			case SDL_WINDOWEVENT:
 				if(event.window.event == SDL_WINDOWEVENT_EXPOSED) reqdraw = 1;

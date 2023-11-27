@@ -1,8 +1,9 @@
 # TODOs
 
+- Catch F keys
 - Soft reboot everything.
 - Map connection data to porporo's ram
-- Starting programs via args
+- Warn when exceeding available memory
 
 Devices
 	- File device pointers should be assoc with Varvaras
