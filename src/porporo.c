@@ -30,17 +30,15 @@ enum Action {
 };
 enum Action action;
 
-static Uint32 theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
-static int WIDTH = HOR << 3, HEIGHT = VER << 3;
-static int isdrag, reqdraw, dragx, dragy, camerax, cameray;
-static Varvara varvaras[0x10], *menu, *focused;
 static Uint8 *ram, plen;
+static Uint32 *pixels, theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
+static int WIDTH, HEIGHT, isdrag, reqdraw, dragx, dragy, camerax, cameray;
+static Varvara varvaras[0x10], *menu, *focused;
 
 static SDL_DisplayMode DM;
 static SDL_Window *gWindow = NULL;
 static SDL_Renderer *gRenderer = NULL;
 static SDL_Texture *gTexture = NULL;
-static Uint32 *pixels;
 
 /* = DRAWING ===================================== */
 
@@ -80,20 +78,8 @@ line(Uint32 *dst, int ax, int ay, int bx, int by, int color)
 	}
 }
 
-void
-drawconnection(Uint32 *dst, Varvara *a, int color)
-{
-	int i;
-	for(i = 0; i < a->clen; i++) {
-		Varvara *b = a->routes[i];
-		int x1 = a->x + 1 + camerax + a->screen.w, y1 = a->y - 2 + cameray;
-		int x2 = b->x - 2 + camerax, y2 = b->y - 2 + cameray;
-		line(dst, x1, y1, x2, y2, color);
-	}
-}
-
 static void
-linerect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
+drawborders(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
 {
 	int x, y;
 	for(y = y1 - 1; y < y2 + 1; y++) {
@@ -106,14 +92,26 @@ linerect(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
 	}
 }
 
+void
+drawconnections(Uint32 *dst, Varvara *a, int color)
+{
+	int i;
+	for(i = 0; i < a->clen; i++) {
+		Varvara *b = a->routes[i];
+		int x1 = a->x + 1 + camerax + a->screen.w, y1 = a->y - 2 + cameray;
+		int x2 = b->x - 2 + camerax, y2 = b->y - 2 + cameray;
+		line(dst, x1, y1, x2, y2, color);
+	}
+}
+
 static void
 drawpixels(Uint32 *dst, Varvara *p)
 {
 	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
 	if(p->done)
 		return;
-	drawconnection(dst, p, 2 - action);
-	linerect(dst, x, y, x + w, y + h, 2 - action);
+	drawconnections(dst, p, 2 - action);
+	drawborders(dst, x, y, x + w, y + h, 2 - action);
 	if(p->screen.x2)
 		screen_redraw(&p->screen);
 	drawscreen(pixels, &p->screen, x, y);
@@ -238,35 +236,51 @@ pickvv(int x, int y)
 }
 
 static void
+pickfocus(int x, int y)
+{
+	int i;
+	if(withinvv(menu, x, y)) {
+		focusvv(menu);
+		return;
+	}
+	for(i = plen; i > -1; --i) {
+		Varvara *p = &varvaras[i];
+		if(withinvv(p, x, y)) {
+			focusvv(p);
+			return;
+		}
+	}
+	focusvv(0);
+}
+
+static int
 connect(Varvara *a, Varvara *b)
 {
 	int i;
 	clear(pixels);
-	for(i = 0; i < a->clen; i++) {
-		if(b == a->routes[i]) {
-			a->clen = 0;
-			return;
-		}
-	}
+	for(i = 0; i < a->clen; i++)
+		if(b == a->routes[i])
+			return a->clen = 0;
 	a->routes[a->clen++] = b;
+	return 1;
 }
 
 static void
 softreboot(Varvara *v)
 {
+	screen_wipe(&v->screen);
 	system_boot(&v->u, 1);
 	system_load(&v->u, focused->rom);
-	screen_wipe(&v->screen);
 	uxn_eval(&v->u, PAGE_PROGRAM);
 	reqdraw = 1;
 }
 
 /* = COMMAND ===================================== */
 
-int cmdlen;
-char cmd[0x40];
+static int cmdlen;
+static char cmd[0x40];
 
-void
+static void
 sendcmd(char c)
 {
 	if(c < 0x20) {
@@ -284,24 +298,6 @@ sendcmd(char c)
 }
 
 /* = MOUSE ======================================= */
-
-static void
-pickfocus(int x, int y)
-{
-	int i;
-	if(withinvv(menu, x, y)) {
-		focusvv(menu);
-		return;
-	}
-	for(i = plen; i > -1; --i) {
-		Varvara *p = &varvaras[i];
-		if(withinvv(p, x, y)) {
-			focusvv(p);
-			return;
-		}
-	}
-	focusvv(0);
-}
 
 static void
 on_mouse_move(int x, int y)
@@ -488,15 +484,6 @@ init(void)
 }
 
 void
-screenvector(Varvara *p)
-{
-	Uint8 *address = &p->u.dev[0x20];
-	Uint16 vector = PEEK2(address);
-	uxn_eval(&p->u, vector);
-	reqdraw = 1;
-}
-
-void
 console_deo(Varvara *a, Uint8 addr, Uint8 value)
 {
 	int i;
@@ -574,8 +561,11 @@ main(int argc, char **argv)
 			delta = endtime - begintime;
 		if(delta < 40)
 			SDL_Delay(40 - delta);
-		if(focused)
-			screenvector(focused);
+		if(focused) {
+			Uint8 *address = &focused->u.dev[0x20];
+			uxn_eval(&focused->u, PEEK2(address));
+			reqdraw = 1;
+		}
 		if(reqdraw) {
 			redraw(pixels);
 			reqdraw = 0;
