@@ -15,8 +15,19 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 WITH REGARD TO THIS SOFTWARE.
 */
 
-char *boot_rom;
-Uint16 dev_vers[0x10];
+static void
+system_print(Stack *s, char *name)
+{
+	Uint8 i;
+	fprintf(stderr, "%s ", name);
+	for(i = 0; i < 9; i++) {
+		Uint8 pos = s->ptr - 4 + i;
+		fprintf(stderr, !pos ? "[%02x]" : i == 4 ? "<%02x>" :
+                                                   " %02x ",
+			s->dat[pos]);
+	}
+	fprintf(stderr, "\n");
+}
 
 int
 system_load(Uxn *u, char *filename)
@@ -30,20 +41,6 @@ system_load(Uxn *u, char *filename)
 		l = fread(u->ram + 0x10000 * i, 0x10000, 1, f);
 	fclose(f);
 	return 1;
-}
-
-static void
-system_print(Stack *s, char *name)
-{
-	Uint8 i;
-	fprintf(stderr, "%s ", name);
-	for(i = 0; i < 9; i++) {
-		Uint8 pos = s->ptr - 4 + i;
-		fprintf(stderr, !pos ? "[%02x]" : i == 4 ? "<%02x>" :
-                                                   " %02x ",
-			s->dat[pos]);
-	}
-	fprintf(stderr, "\n");
 }
 
 int
@@ -61,13 +58,6 @@ system_inspect(Uxn *u)
 	system_print(&u->rst, "rst");
 }
 
-int
-system_version(char *name, char *date)
-{
-	printf("%s, %s.\n", name, date);
-	return 0;
-}
-
 void
 system_boot(Uxn *u, int soft)
 {
@@ -80,15 +70,6 @@ system_boot(Uxn *u, int soft)
 	u->rst.ptr = 0;
 }
 
-void
-system_reboot(Uxn *u, char *rom, int soft)
-{
-	system_boot(u, soft);
-	if(system_load(u, boot_rom))
-		if(uxn_eval(u, PAGE_PROGRAM))
-			boot_rom = rom;
-}
-
 int
 system_init(Uxn *u, Uint8 *ram, char *rom)
 {
@@ -97,7 +78,6 @@ system_init(Uxn *u, Uint8 *ram, char *rom)
 	if(!system_load(u, rom))
 		if(!system_load(u, "boot.rom"))
 			return system_error("Init", "Failed to load rom.");
-	boot_rom = rom;
 	return 1;
 }
 
