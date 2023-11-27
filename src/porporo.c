@@ -244,6 +244,15 @@ connect(Varvara *a, Varvara *b)
 	a->routes[a->clen++] = b;
 }
 
+static void
+softreboot(Varvara *v){
+	system_boot(&v->u, 1);
+	system_load(&v->u, focused->rom);
+	screen_wipe(&v->screen);
+	uxn_eval(&v->u, PAGE_PROGRAM);
+	reqdraw = 1;
+}
+
 /* = COMMAND ===================================== */
 
 int cmdlen;
@@ -408,9 +417,7 @@ on_porporo_key(char c, int sym)
 		break;
 	}
 	switch(sym) {
-	case SDLK_F5:
-		printf("Soft-reboot\n");
-		break;
+	case SDLK_F5: if(focused) softreboot(focused); break;
 	}
 	return 1;
 }

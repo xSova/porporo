@@ -18,7 +18,7 @@ WITH REGARD TO THIS SOFTWARE.
 char *boot_rom;
 Uint16 dev_vers[0x10];
 
-static int
+int
 system_load(Uxn *u, char *filename)
 {
 	int l, i = 0;

@@ -17,6 +17,8 @@ WITH REGARD TO THIS SOFTWARE.
 
 extern char *boot_rom;
 
+int system_load(Uxn *u, char *filename);
+void system_boot(Uxn *u, int soft);
 void system_reboot(Uxn *u, char *rom, int soft);
 void system_inspect(Uxn *u);
 int system_version(char *emulator, char *date);

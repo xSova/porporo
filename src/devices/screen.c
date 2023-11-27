@@ -37,6 +37,15 @@ screen_change(Screen *scr, Uint16 x1, Uint16 y1, Uint16 x2, Uint16 y2)
 }
 
 void
+screen_wipe(Screen *scr)
+{
+	int i, length = scr->w * scr->h;
+	Uint8 *fg = scr->fg, *bg = scr->bg;
+	for(i = 0; i < length; i++)
+		fg[i] = 0, bg[i] = 0;
+}
+
+void
 screen_fill(Screen *scr, Uint8 *layer, int color)
 {
 	int i, length = scr->w * scr->h;
@@ -120,7 +129,7 @@ screen_resize(Screen *scr, Uint16 width, Uint16 height)
 	scr->bg = bg, scr->fg = fg;
 	scr->pixels = pixels;
 	scr->w = width, scr->h = height;
-	screen_fill(scr, scr->bg, 0), screen_fill(scr, scr->fg, 0);
+	screen_wipe(scr);
 	screen_change(scr, 0, 0, width, height);
 }
 

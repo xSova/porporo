@@ -15,6 +15,7 @@ WITH REGARD TO THIS SOFTWARE.
 
 extern int emu_resize(int width, int height);
 
+void screen_wipe(Screen *scr);
 void screen_fill(Screen *scr, Uint8 *layer, int color);
 void screen_rect(Screen *scr, Uint8 *layer, Uint16 x1, Uint16 y1, Uint16 x2, Uint16 y2, int color);
 void screen_palette(Screen *scr, Uint8 *addr);
