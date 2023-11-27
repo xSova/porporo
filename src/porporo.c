@@ -181,11 +181,35 @@ showmenu(int x, int y)
 }
 
 static void
-endprogram(Varvara *p)
+focusvv(Varvara *a)
+{
+	if(focused == a)
+		return;
+	if(focused) {
+		mouse_move(&focused->u, &focused->u.dev[0x90], 0x8000, 0x8000);
+		reqdraw = 1;
+	}
+	focused = a;
+}
+
+static void
+endvv(Varvara *p)
 {
 	p->done = 1;
-	focused = 0;
+	focusvv(0);
 	clear(pixels);
+}
+
+static Varvara *
+addvv(int x, int y, char *rom)
+{
+	Varvara *p = &programs[plen++];
+	p->x = x, p->y = y, p->rom = rom;
+	p->u.ram = ram + (plen - 1) * 0x10000;
+	p->u.id = plen - 1;
+	system_init(&p->u, p->u.ram, rom);
+	uxn_eval(&p->u, 0x100);
+	return p;
 }
 
 static void
@@ -200,18 +224,6 @@ connect(Varvara *a, Varvara *b)
 		}
 	}
 	a->routes[a->clen++] = b;
-}
-
-static Varvara *
-addprogram(int x, int y, char *rom)
-{
-	Varvara *p = &programs[plen++];
-	p->x = x, p->y = y, p->rom = rom;
-	p->u.ram = ram + (plen - 1) * 0x10000;
-	p->u.id = plen - 1;
-	system_init(&p->u, p->u.ram, rom);
-	uxn_eval(&p->u, 0x100);
-	return p;
 }
 
 /* = MOUSE ======================================= */
@@ -239,17 +251,17 @@ pickfocus(int x, int y)
 {
 	int i;
 	if(withinprogram(menu, x, y)) {
-		focused = menu;
+		focusvv(menu);
 		return;
 	}
 	for(i = plen - 1; i > 1; i--) {
 		Varvara *p = &programs[i];
 		if(withinprogram(p, x, y)) {
-			focused = p;
+			focusvv(p);
 			return;
 		}
 	}
-	focused = 0;
+	focusvv(0);
 }
 
 static void
@@ -457,7 +469,7 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	case 0x00:
 		if(p > 0x7 && p < 0xe) screen_palette(&prg->screen, &u->dev[0x8]);
 		if(p == 0xf)
-			endprogram(prg);
+			endvv(prg);
 		break;
 	case 0x10: {
 		int i;
@@ -491,14 +503,14 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 
-	porporo = addprogram(650, 250, "bin/porporo.rom");
+	porporo = addvv(650, 250, "bin/porporo.rom");
 
-	menu = addprogram(200, 150, "bin/menu.rom");
+	menu = addvv(200, 150, "bin/menu.rom");
 	menu->done = 1;
 
-	addprogram(20, 30, "bin/screen.pixel.rom");
-	addprogram(400, 10, "bin/log.rom");
-	addprogram(500, 110, "bin/log.rom");
+	addvv(20, 30, "bin/screen.pixel.rom");
+	addvv(400, 10, "bin/log.rom");
+	addvv(500, 110, "bin/log.rom");
 
 	fflush(stdout);
 

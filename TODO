@@ -1,31 +1,41 @@
 # TODOs
 
 - Spawn new node
-- Connect nodes
 - Swap program pointers when touching application
 - Wallpaper program
 - Fixed time program
-- Clear programs
 
 - Toggle sticky programs
 - Display cli roms properly
 - Display roms metadata
 - Map connections to porporo's ram
 
-- Detect doubled connection
+- Soft reboot everything.
+- Map connection data to porporo's ram
+
+Devices
+	- File device pointers should be assoc with Varvaras
 
 Window Manager
 	- only draw program screens that are visible
 	- Global pointer
 	- Toggle borders
+	- Clear windows
+	- Borderless windows
 	- Fixed position application
 	- Keep sticky programs visible
+
+Porporo.rom
+	- Start	
+	- Support theme
 
 Menu.rom
 	- Navigate into folders
 	- Close when clicked outside
+	- Support theme
 	
 Log.rom
 	- Toggle binary/ascii mode
 	- Scroll buffer
+	- Support theme
 
