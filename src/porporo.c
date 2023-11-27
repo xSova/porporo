@@ -161,6 +161,13 @@ quit(void)
 	exit(0);
 }
 
+static int
+setaction(enum Action a)
+{
+	action = a;
+	return reqdraw = 1;
+}
+
 static void
 showmenu(int x, int y)
 {
@@ -170,7 +177,7 @@ showmenu(int x, int y)
 	uxn_eval(&menu->u, 0x100);
 	menu->x = x, menu->y = y;
 	isdrag = 0;
-	action = NORMAL;
+	setaction(NORMAL);
 }
 
 static void
@@ -245,7 +252,8 @@ connect(Varvara *a, Varvara *b)
 }
 
 static void
-softreboot(Varvara *v){
+softreboot(Varvara *v)
+{
 	system_boot(&v->u, 1);
 	system_load(&v->u, focused->rom);
 	screen_wipe(&v->screen);
@@ -403,21 +411,14 @@ static int
 on_porporo_key(char c, int sym)
 {
 	switch(c) {
-	case 0x1b:
-		action = NORMAL;
-		reqdraw = 1;
-		break;
-	case 'd':
-		action = action == DRAW ? NORMAL : DRAW;
-		reqdraw = 1;
-		break;
-	case 'm':
-		action = action == MOVE ? NORMAL : MOVE;
-		reqdraw = 1;
-		break;
+	case 0x1b: return setaction(NORMAL);
+	case 'd': return setaction(action == DRAW ? NORMAL : DRAW);
+	case 'm': return setaction(action == MOVE ? NORMAL : MOVE);
 	}
 	switch(sym) {
-	case SDLK_F5: if(focused) softreboot(focused); break;
+	case SDLK_F5:
+		if(focused) softreboot(focused);
+		break;
 	}
 	return 1;
 }
