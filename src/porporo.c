@@ -33,7 +33,7 @@ enum Action action;
 static Uint32 theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
 static int WIDTH = HOR << 3, HEIGHT = VER << 3;
 static int isdrag, reqdraw, dragx, dragy, camerax, cameray;
-static Varvara varvaras[0x10], *porporo, *menu, *focused;
+static Varvara varvaras[0x10], *menu, *focused;
 static Uint8 *ram, plen;
 
 static SDL_Window *gWindow = NULL;
@@ -139,9 +139,8 @@ static void
 redraw(Uint32 *dst)
 {
 	int i;
-	for(i = 2; i < plen; i++)
+	for(i = 1; i < plen; i++)
 		drawpixels(dst, &varvaras[i]);
-	drawpixels(dst, porporo);
 	drawpixels(dst, menu);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
@@ -178,6 +177,7 @@ showmenu(int x, int y)
 	uxn_eval(&menu->u, 0x100);
 	menu->x = x, menu->y = y;
 	isdrag = 0;
+	action = NORMAL;
 }
 
 static void
@@ -207,6 +207,7 @@ addvv(int x, int y, char *rom)
 	p->x = x, p->y = y, p->rom = rom;
 	p->u.ram = ram + (plen - 1) * 0x10000;
 	p->u.id = plen - 1;
+	screen_resize(&p->screen, 128, 128);
 	system_init(&p->u, p->u.ram, rom);
 	uxn_eval(&p->u, 0x100);
 	return p;
@@ -222,7 +223,7 @@ static Varvara *
 pickvv(int x, int y)
 {
 	int i;
-	for(i = plen - 1; i > 0; i--) {
+	for(i = plen; i > -1; --i) {
 		Varvara *p = &varvaras[i];
 		if(withinvv(p, x, y))
 			return p;
@@ -254,7 +255,7 @@ pickfocus(int x, int y)
 		focusvv(menu);
 		return;
 	}
-	for(i = plen - 1; i > 1; i--) {
+	for(i = plen; i > -1; --i) {
 		Varvara *p = &varvaras[i];
 		if(withinvv(p, x, y)) {
 			focusvv(p);
@@ -372,6 +373,10 @@ static void
 on_porporo_key(char c)
 {
 	switch(c) {
+	case 0x1b:
+		action = NORMAL;
+		reqdraw = 1;
+		break;
 	case 'd':
 		action = action == DRAW ? NORMAL : DRAW;
 		reqdraw = 1;
@@ -399,7 +404,10 @@ static void
 on_controller_down(Uint8 key, Uint8 button)
 {
 	Uxn *u;
-	if(!focused) return;
+	if(!focused || action) {
+		on_porporo_key(key);
+		return;
+	}
 	u = &focused->u;
 	if(key)
 		controller_key(u, &u->dev[0x80], key);
@@ -444,10 +452,49 @@ init(void)
 void
 screenvector(Varvara *p)
 {
-	Uint16 vector = (p->u.dev[0x20] << 8) | p->u.dev[0x21];
-	if(vector)
-		uxn_eval(&p->u, vector);
+	Uint8 *address = &p->u.dev[0x20];
+	Uint16 vector = PEEK2(address);
+	uxn_eval(&p->u, vector);
 	reqdraw = 1;
+}
+
+int buflen;
+char buf[0x40];
+
+void
+listen(char c)
+{
+	if(c < 0x20) {
+		clear(pixels);
+		menu->done = 1;
+		/* test for compatible rom */
+		addvv(menu->x, menu->y, buf);
+		printf("> %s\n", buf);
+		buflen = 0;
+		return;
+	}
+	if(buflen < 0x40)
+		buf[buflen++] = c, buf[buflen] = 0;
+}
+
+void
+console_deo(Varvara *a, Uint8 addr, Uint8 value)
+{
+	int i;
+	if(a == menu && !menu->clen) {
+		listen(value);
+		return;
+	}
+	for(i = 0; i < a->clen; i++) {
+		Varvara *b = a->routes[i];
+		if(b) {
+			Uint8 *address = &b->u.dev[0x10];
+			Uint16 vector = PEEK2(address);
+			b->u.dev[0x12] = value;
+			if(vector)
+				uxn_eval(&b->u, vector);
+		}
+	}
 }
 
 Uint8
@@ -471,18 +518,7 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 		if(p == 0xf)
 			endvv(prg);
 		break;
-	case 0x10: {
-		int i;
-		for(i = 0; i < prg->clen; i++) {
-			Varvara *b = prg->routes[i];
-			if(b) {
-				Uint16 vector = (b->u.dev[0x10] << 8) | b->u.dev[0x11];
-				b->u.dev[0x12] = value;
-				if(vector)
-					uxn_eval(&b->u, vector);
-			}
-		}
-	} break;
+	case 0x10: console_deo(prg, addr, value); break;
 	case 0x20: screen_deo(prg, u->ram, &u->dev[d], p); break;
 	case 0xa0: file_deo(prg, 0, u->ram, &u->dev[d], p); break;
 	case 0xb0: file_deo(prg, 1, u->ram, &u->dev[d], p); break;
@@ -502,8 +538,6 @@ main(int argc, char **argv)
 
 	if(!init())
 		return error("Init", "Failure");
-
-	porporo = addvv(650, 250, "bin/porporo.rom");
 
 	menu = addvv(200, 150, "bin/menu.rom");
 	menu->done = 1;

@@ -1,15 +1,7 @@
 # TODOs
 
 - Spawn new node
-- Swap program pointers when touching application
-- Wallpaper program
-- Fixed time program
-
-- Toggle sticky programs
 - Display cli roms properly
-- Display roms metadata
-- Map connections to porporo's ram
-
 - Soft reboot everything.
 - Map connection data to porporo's ram
 
@@ -24,10 +16,14 @@ Window Manager
 	- Borderless windows
 	- Fixed position application
 	- Keep sticky programs visible
+	- Hide cursor
+	- Re-order program on focus
+	- Toggle sticky programs
 
 Porporo.rom
 	- Start	
 	- Support theme
+	- Display roms metadata
 
 Menu.rom
 	- Navigate into folders
@@ -39,3 +35,6 @@ Log.rom
 	- Scroll buffer
 	- Support theme
 
+Misc
+	- Wallpaper program
+	- Fixed time program

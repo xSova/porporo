@@ -17,6 +17,8 @@ WITH REGARD TO THIS SOFTWARE.
 [   L2   ][   N2   ][   T2   ] <
 */
 
+/* clang-format off */
+
 #define T *(s->dat + s->ptr)
 #define N *(s->dat + (Uint8)(s->ptr - 1))
 #define L *(s->dat + (Uint8)(s->ptr - 2))
@@ -27,36 +29,14 @@ WITH REGARD TO THIS SOFTWARE.
 #define H2 (L << 8 | N)
 #define N2 (X << 8 | L)
 #define L2 (Z << 8 | Y)
-#define T2_(v) \
-	{ \
-		r = (v); \
-		T = r; \
-		N = r >> 8; \
-	}
-#define N2_(v) \
-	{ \
-		r = (v); \
-		L = r; \
-		X = r >> 8; \
-	}
-#define L2_(v) \
-	{ \
-		r = (v); \
-		Y = r; \
-		Z = r >> 8; \
-	}
-#define FLIP \
-	{ \
-		s = ins & 0x40 ? &u->wst : &u->rst; \
-	}
-#define SHIFT(y) \
-	{ \
-		s->ptr += (y); \
-	}
-#define SET(x, y) \
-	{ \
-		SHIFT((ins & 0x80) ? x + y : y) \
-	}
+#define T2_(v) { r = (v); T = r; N = r >> 8; }
+#define N2_(v) { r = (v); L = r; X = r >> 8; }
+#define L2_(v) { r = (v); Y = r; Z = r >> 8; }
+#define FLIP      { s = ins & 0x40 ? &u->wst : &u->rst; }
+#define SHIFT(y)  { s->ptr += (y); }
+#define SET(x, y) { SHIFT((ins & 0x80) ? x + y : y) }
+
+/* clang-format on */
 
 int
 uxn_eval(Uxn *u, Uint16 pc)
