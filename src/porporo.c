@@ -321,7 +321,8 @@ on_mouse_move(int x, int y)
 	Uxn *u;
 	int relx = x - camerax, rely = y - cameray;
 	if(action == DRAW && isdrag) return;
-	pickfocus(relx, rely);
+	if(!isdrag)
+		pickfocus(relx, rely);
 	if(!focused) {
 		if(isdrag) {
 			camerax += x - dragx, cameray += y - dragy;
