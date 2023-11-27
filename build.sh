@@ -22,4 +22,4 @@ bin/uxnasm etc/screen.pixel.tal bin/screen.pixel.rom
 bin/uxnasm etc/catclock.tal bin/catclock.rom
 bin/uxnasm etc/log.tal bin/log.rom
 # run
-./bin/porporo
+./bin/porporo bin/screen.pixel.rom bin/catclock.rom bin/log.rom

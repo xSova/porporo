@@ -1,9 +1,8 @@
 # TODOs
 
-- Spawn new node
-- Display cli roms properly
 - Soft reboot everything.
 - Map connection data to porporo's ram
+- Starting programs via args
 
 Devices
 	- File device pointers should be assoc with Varvaras
@@ -29,6 +28,8 @@ Menu.rom
 	- Navigate into folders
 	- Close when clicked outside
 	- Support theme
+	- MODE: Only display roms
+	- MODE: All files
 	
 Log.rom
 	- Toggle binary/ascii mode

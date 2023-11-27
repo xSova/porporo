@@ -528,11 +528,8 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 int
 main(int argc, char **argv)
 {
-	Uint32 begintime = 0;
-	Uint32 endtime = 0;
-	Uint32 delta = 0;
-	(void)argc;
-	(void)argv;
+	int i, anchor = 0x20;
+	Uint32 begintime = 0, endtime = 0, delta = 0;
 
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
 
@@ -542,9 +539,10 @@ main(int argc, char **argv)
 	menu = addvv(200, 150, "bin/menu.rom");
 	menu->done = 1;
 
-	addvv(20, 30, "bin/screen.pixel.rom");
-	addvv(400, 10, "bin/log.rom");
-	addvv(500, 110, "bin/log.rom");
+	for(i = 1; i < argc; i++) {
+		Varvara *a = addvv(anchor, 0x20 * i, argv[i]);
+		anchor += a->screen.w + 0x20;
+	}
 
 	fflush(stdout);
 
