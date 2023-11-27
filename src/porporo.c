@@ -241,14 +241,15 @@ raisevv(Varvara *v)
 	int i, j = 0;
 	Varvara *a, *b;
 	for(i = 1; i < plen; i++) {
-		if(v == order[i])
+		if(v == order[i]) {
 			j = i;
+			break;
+		}
 	}
-	if(j == i - 1)
+	if(!j || j == plen - 1)
 		return;
-	a = order[j], b = order[i - 1];
-	order[j] = b, order[i - 1] = a;
-	clear(pixels);
+	a = order[j], b = order[plen - 1];
+	order[j] = b, order[plen - 1] = a;
 }
 
 static void
@@ -302,7 +303,7 @@ sendcmd(char c)
 	if(c < 0x20) {
 		clear(pixels);
 		menu->done = 1;
-		addvv(menu->x, menu->y, cmd, 0);
+		addvv(menu->x, menu->y, cmd, 1);
 		cmdlen = 0;
 		return;
 	}
@@ -355,9 +356,9 @@ on_mouse_down(int button, int x, int y)
 		isdrag = 1, dragx = x, dragy = y;
 		return;
 	}
-	raisevv(focused);
 	u = &focused->u;
 	mouse_down(u, &u->dev[0x90], button);
+	raisevv(focused);
 }
 
 static void
