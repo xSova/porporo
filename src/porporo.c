@@ -81,15 +81,6 @@ line(Uint32 *dst, int ax, int ay, int bx, int by, int color)
 }
 
 void
-drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int fg)
-{
-	int v, h;
-	for(v = 0; v < 8; v++)
-		for(h = 0; h < 8; h++)
-			if((sprite[v] >> (7 - h)) & 0x1) putpixel(dst, x + h, y + v, fg);
-}
-
-void
 drawconnection(Uint32 *dst, Varvara *a, int color)
 {
 	int i;
@@ -119,7 +110,8 @@ static void
 drawpixels(Uint32 *dst, Varvara *p)
 {
 	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
-	if(p->done) return;
+	if(p->done)
+		return;
 	drawconnection(dst, p, 2 - action);
 	linerect(dst, x, y, x + w, y + h, 2 - action);
 	if(p->screen.x2)
@@ -221,7 +213,9 @@ addvv(int x, int y, char *rom, int eval)
 static int
 withinvv(Varvara *p, int x, int y)
 {
-	return !p->done && x > p->x && x < p->x + p->screen.w && y > p->y && y < p->y + p->screen.h;
+	Screen *s = &p->screen;
+	int xx = p->x, yy = p->y;
+	return !p->done && x > xx && x < xx + s->w && y > yy && y < yy + s->h;
 }
 
 static Varvara *
@@ -362,7 +356,7 @@ on_mouse_wheel(int x, int y)
 	mouse_scroll(u, &u->dev[0x90], x, y);
 }
 
-/* =============================================== */
+/* = CONTROL ===================================== */
 
 static Uint8
 get_button(SDL_Event *event)
@@ -414,8 +408,8 @@ on_porporo_key(char c, int sym)
 		break;
 	}
 	switch(sym) {
-	case SDLK_F1:
-		printf("!!!\n");
+	case SDLK_F5:
+		printf("Soft-reboot\n");
 		break;
 	}
 	return 1;
@@ -452,7 +446,8 @@ static int
 on_controller_up(Uint8 button)
 {
 	Uxn *u;
-	if(!focused) return 1;
+	if(!focused)
+		return 1;
 	u = &focused->u;
 	controller_up(u, &u->dev[0x80], button);
 	return (reqdraw = 1);
