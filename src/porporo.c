@@ -453,9 +453,7 @@ static int
 on_controller_down(Uint8 key, Uint8 button, int sym)
 {
 	Uxn *u;
-	if(sym)
-		return on_porporo_key(key, sym);
-	else if(!focused || action)
+	if(!focused || action)
 		return on_porporo_key(key, sym);
 	u = &focused->u;
 	if(key)
