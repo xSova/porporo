@@ -201,23 +201,29 @@ order_push(Varvara *p)
 }
 
 static void
-order_pop(Varvara *p)
+raisevv(Varvara *v)
 {
-	p->live = 0;
-	olen--;
-	order_print();
+	int i, j = 0;
+	Varvara *a, *b;
+	for(i = 0; i < olen; i++) {
+		if(v == order[i]) {
+			j = i;
+			break;
+		}
+	}
+	if(!j || j == olen - 1)
+		return;
+	a = order[j], b = order[olen - 1];
+	order[j] = b, order[olen - 1] = a;
 }
 
 static void
-showmenu(int x, int y)
+order_pop(Varvara *p)
 {
-	clear(pixels);
-	menu->u.dev[0x0f] = 0;
-	uxn_eval(&menu->u, 0x100);
-	menu->x = x, menu->y = y;
-	isdrag = 0;
-	setaction(NORMAL);
-	order_push(menu);
+	raisevv(p);
+	p->live = 0;
+	olen--;
+	order_print();
 }
 
 static void
@@ -227,6 +233,20 @@ remvv(Varvara *p)
 	focusvv(0);
 	clear(pixels);
 	order_pop(p);
+}
+
+static void
+showmenu(int x, int y)
+{
+	if(menu->live)
+		remvv(menu);
+	clear(pixels);
+	menu->u.dev[0x0f] = 0;
+	uxn_eval(&menu->u, 0x100);
+	menu->x = x, menu->y = y;
+	isdrag = 0;
+	setaction(NORMAL);
+	order_push(menu);
 }
 
 static Varvara *
@@ -281,11 +301,6 @@ pickvv(int x, int y)
 			return p;
 	}
 	return 0;
-}
-
-static void
-raisevv(Varvara *v)
-{
 }
 
 static void
