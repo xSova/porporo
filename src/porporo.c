@@ -259,10 +259,16 @@ raisevv(Varvara *v)
 static void
 lockvv(Varvara *v)
 {
-	if(v) {
-		v->lock = !v->lock;
-		clear(pixels);
+	if(v)
+		v->lock = 1;
+	else {
+		int i;
+		for(i = 1; i < plen; i++) {
+			order[i]->lock = 0;
+			break;
+		}
 	}
+	clear(pixels);
 }
 
 static void
