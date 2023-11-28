@@ -95,8 +95,8 @@ drawconnections(Uint32 *dst, Varvara *a, int color)
 {
 	int i, x1, x2, y1, y2;
 	for(i = 0; i < a->clen; i++) {
-		Varvara *b;
-		if(b->live) {
+		Varvara *b = a->routes[i];
+		if(b && b->live) {
 			x1 = a->x + 1 + camerax + a->screen.w, y1 = a->y - 2 + cameray;
 			x2 = b->x - 2 + camerax, y2 = b->y - 2 + cameray;
 			line(dst, x1, y1, x2, y2, color);
@@ -243,7 +243,6 @@ setvv(int id, int x, int y, char *rom, int eval)
 {
 	Varvara *p;
 	if(id == -1) return 0;
-	printf("set: %d:%s\n", id, rom);
 	p = &varvaras[id];
 	p->x = x, p->y = y, p->rom = rom;
 	p->u.id = id, p->u.ram = ram + id * 0x10000;
