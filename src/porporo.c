@@ -194,7 +194,7 @@ focusvv(Varvara *a)
 }
 
 static void
-endvv(Varvara *p)
+donevv(Varvara *p)
 {
 	p->clen = 0;
 	p->done = 1;
@@ -474,6 +474,8 @@ on_controller_down(Uint8 key, Uint8 button, int sym)
 	Uxn *u;
 	if(sym == SDLK_F1)
 		lockvv(focused);
+	if(sym == SDLK_F4)
+		donevv(focused);
 	if(!focused || action)
 		return on_porporo_key(key, sym);
 	u = &focused->u;
@@ -563,7 +565,7 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	case 0x00:
 		if(p > 0x7 && p < 0xe) screen_palette(&prg->screen, &u->dev[0x8]);
 		if(p == 0xf)
-			endvv(prg);
+			donevv(prg);
 		break;
 	case 0x10: console_deo(prg, addr, value); break;
 	case 0x20: screen_deo(prg, u->ram, &u->dev[d], p); break;

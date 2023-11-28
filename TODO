@@ -9,6 +9,8 @@ Window Manager
 	- only draw program screens that are visible
 	- Global pointer, Hide pointer
 	- Clear windows
+	- Stick window issue with position w/ camera
+	- End applications
 
 Menu.rom
 	- Navigate into folders
