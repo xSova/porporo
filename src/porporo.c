@@ -129,13 +129,12 @@ static void
 redraw(Uint32 *dst)
 {
 	int i;
-	for(i = 1; i < olen; i++)
+	for(i = 0; i < olen; i++)
 		if(order[i]->lock)
 			drawpixels(dst, order[i]);
-	for(i = 1; i < olen; i++)
+	for(i = 0; i < olen; i++)
 		if(!order[i]->lock)
 			drawpixels(dst, order[i]);
-	drawpixels(dst, menu);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
 	SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
@@ -170,18 +169,6 @@ setaction(enum Action a)
 }
 
 static void
-showmenu(int x, int y)
-{
-	clear(pixels);
-	menu->live = 1;
-	menu->u.dev[0x0f] = 0;
-	uxn_eval(&menu->u, 0x100);
-	menu->x = x, menu->y = y;
-	isdrag = 0;
-	setaction(NORMAL);
-}
-
-static void
 focusvv(Varvara *a)
 {
 	if(focused == a)
@@ -194,43 +181,63 @@ focusvv(Varvara *a)
 }
 
 static void
-donevv(Varvara *p)
-{
-	p->clen = 0;
-	p->live = 0;
-	focusvv(0);
-	clear(pixels);
-}
-
-static void
 order_print(void)
 {
 	int i;
 	if(!olen)
 		return;
 	printf("\n\n");
-	for(i = 0; i < olen; i++) {
-		printf("%d/%d -> %s\n", i, olen, order[i]->rom);
-	}
+	for(i = 0; i < olen; i++)
+		printf("%d/%d -> %d\n", i, olen, order[i]->u.id);
+}
+
+static Varvara *
+order_push(Varvara *p)
+{
+	p->live = 1;
+	order[olen++] = p;
+	order_print();
+	return p;
 }
 
 static void
-order_push(Varvara *p)
+order_pop(Varvara *p)
 {
-	order[olen++] = p;
+	p->live = 0;
+	olen--;
 	order_print();
+}
+
+static void
+showmenu(int x, int y)
+{
+	clear(pixels);
+	menu->u.dev[0x0f] = 0;
+	uxn_eval(&menu->u, 0x100);
+	menu->x = x, menu->y = y;
+	isdrag = 0;
+	setaction(NORMAL);
+	order_push(menu);
+}
+
+static void
+remvv(Varvara *p)
+{
+	p->clen = 0;
+	focusvv(0);
+	clear(pixels);
+	order_pop(p);
 }
 
 static Varvara *
 setvv(int id, int x, int y, char *rom, int eval)
 {
-	Varvara *p = &varvaras[id];
+	Varvara *p;
 	if(id == -1) return 0;
+	printf("set: %d:%s\n", id, rom);
+	p = &varvaras[id];
 	p->x = x, p->y = y, p->rom = rom;
-	p->u.ram = ram + id * 0x10000;
-	p->u.id = id;
-	p->live = 1;
-	order_push(p);
+	p->u.id = id, p->u.ram = ram + id * 0x10000;
 	screen_resize(&p->screen, 128, 128);
 	system_init(&p->u, p->u.ram, rom);
 	if(eval)
@@ -279,18 +286,6 @@ pickvv(int x, int y)
 static void
 raisevv(Varvara *v)
 {
-	int i, j = 0;
-	Varvara *a, *b;
-	for(i = 1; i < olen; i++) {
-		if(v == order[i]) {
-			j = i;
-			break;
-		}
-	}
-	if(!j || j == olen - 1)
-		return;
-	a = order[j], b = order[olen - 1];
-	order[j] = b, order[olen - 1] = a;
 }
 
 static void
@@ -300,7 +295,7 @@ lockvv(Varvara *v)
 		v->lock = 1;
 	else {
 		int i;
-		for(i = 1; i < olen; i++) {
+		for(i = 0; i < olen; i++) {
 			order[i]->lock = 0;
 			break;
 		}
@@ -358,8 +353,8 @@ sendcmd(char c)
 {
 	if(c < 0x20) {
 		clear(pixels);
-		menu->live = 0;
-		addvv(menu->x, menu->y, cmd, 1);
+		order_pop(menu);
+		order_push(addvv(menu->x, menu->y, cmd, 1));
 		cmdlen = 0;
 		return;
 	}
@@ -512,7 +507,7 @@ on_controller_down(Uint8 key, Uint8 button, int sym)
 	if(sym == SDLK_F1)
 		lockvv(focused);
 	if(sym == SDLK_F4)
-		donevv(focused);
+		remvv(focused);
 	if(!focused || action)
 		return on_porporo_key(key, sym);
 	u = &focused->u;
@@ -602,7 +597,7 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	case 0x00:
 		if(p > 0x7 && p < 0xe) screen_palette(&prg->screen, &u->dev[0x8]);
 		if(p == 0xf)
-			donevv(prg);
+			remvv(prg);
 		break;
 	case 0x10: console_deo(prg, addr, value); break;
 	case 0x20: screen_deo(prg, u->ram, &u->dev[d], p); break;
@@ -620,9 +615,8 @@ main(int argc, char **argv)
 		return error("Init", "Failure");
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
 	menu = setvv(0, 200, 150, "bin/menu.rom", 0);
-	menu->live = 0;
 	for(i = 1; i < argc; i++) {
-		Varvara *a = addvv(anchor, 0x20 * i, argv[i], 1);
+		Varvara *a = order_push(addvv(anchor, 0x20 * i, argv[i], 1));
 		anchor += a->screen.w + 0x20;
 	}
 	/* event loop */

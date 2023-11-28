@@ -1,6 +1,7 @@
 # TODOs
 
 - Map connection data to porporo's ram
+- Really store the ram string in memory
 
 Devices
 	- File device pointers should be assoc with Varvaras
