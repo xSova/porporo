@@ -14,15 +14,17 @@ Window Manager
 
 Menu.rom
 	- Navigate into folders
-	- Close when clicked outside
-	- Support theme
 	- MODE: Only display roms
-	- MODE: All files
+	- MODE: All files mode
 	
 Log.rom
 	- Toggle binary/ascii mode
 	- Scroll buffer
 	- Support theme
+
+Wallpaper.rom
+	- TGA to ICN
+	- Make first draft
 
 Misc
 	- Wallpaper program

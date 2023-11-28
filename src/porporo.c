@@ -481,8 +481,9 @@ init(void)
 	if(SDL_Init(SDL_INIT_VIDEO) < 0)
 		return error("Init", SDL_GetError());
 	SDL_GetCurrentDisplayMode(0, &DM);
-	WIDTH = DM.w - 0x20;
-	HEIGHT = DM.h - 0x80;
+	WIDTH = (DM.w >> 3 << 3) - 0x20;
+	HEIGHT = (DM.h >> 3 << 3) - 0x80;
+	printf("%dx%d\n",WIDTH,HEIGHT);
 	gWindow = SDL_CreateWindow("Porporo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
 	if(gWindow == NULL)
 		return error("Window", SDL_GetError());

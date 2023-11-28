@@ -1,0 +1,159 @@
+|00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
+|10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
+|20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
+|80 @Controller &vector $2 &button $1 &key $1
+|90 @Mouse &vector $2 &x $2 &y $2 &state $1 &chord $1 &pad $4 &scrolly &scrolly-hb $1 &scrolly-lb $1
+|a0 @File &vector $2 &success $2 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
+
+|0000
+
+	@src $40
+
+|0100
+
+@on-reset ( -> )
+	#26ae .System/r DEO2
+	#26ae .System/g DEO2
+	#26ae .System/b DEO2
+	<load-theme>
+	;await-src .Console/vector DEO2
+	BRK
+
+@await-src ( -> )
+	.Console/read DEI .src skey ?{ BRK }
+	;src scap/ #0009 SUB2 read-size
+	( | resize )
+	#00 SWP #30 SFT2 .Screen/height DEO2
+	#00 SWP STH2k #30 SFT2 STH2k .Screen/width DEO2
+	( | stream )
+	#0000 DUP2 .Screen/x DEO2
+	.Screen/y DEO2
+	#05 .Screen/auto DEO
+	;src .File/name DEO2
+	STH2r #10 SFT2 .File/length DEO2
+	&s ( -- )
+		;row .File/read DEO2
+		.File/success DEI2 #0000 EQU2 ?&eof
+		STH2kr <draw-row>
+		!&s
+	&eof ( -- )
+		POP2r #010e DEO
+		;on-mouse .Mouse/vector DEO2
+		BRK
+
+@<draw-row> ( width* -- )
+	#20 SFT2 DUP2 <phex>
+	#0a18 DEO
+	;row .Screen/addr DEO2
+	#0000
+	&l ( -- )
+		#85 .Screen/sprite DEO
+		INC2 GTH2k ?&l
+	POP2 POP2
+	( | next row )
+	#0000 .Screen/x DEO2
+	.Screen/y DEI2k #0008 ADD2 ROT DEO2
+	JMP2r
+
+@on-mouse ( -> )
+	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
+	BRK
+
+@<load-default> ( -- )
+	{ "wallpapera6x50.chr 00 }
+	STH2r .File/name DEO2
+	JMP2r
+	&default
+
+@<update-cursor> ( color addr* -- )
+	[ LIT2 00 -Screen/auto ] DEO
+	;fill-icn .Screen/addr DEO2
+	#40 <draw-cursor>
+	.Mouse/x DEI2 ,<draw-cursor>/x STR2
+	.Mouse/y DEI2 ,<draw-cursor>/y STR2
+	.Screen/addr DEO2
+
+@<draw-cursor> ( color -- )
+	[ LIT2 &x $2 ] .Screen/x DEO2
+	[ LIT2 &y $2 ] .Screen/y DEO2
+	.Screen/sprite DEO
+	JMP2r
+
+(
+@|stdlib )
+
+@read-size ( 00x00* -- )
+	DUP2 sbyte #00 EQU ?&cancel
+	INC2k INC2 LDA [ LIT "x ] NEQ ?&cancel
+	INC2k INC2 INC2 sbyte #00 EQU ?&cancel
+	( y ) INC2k INC2 INC2 sbyte STH
+	( x ) sbyte STHr JMP2r
+	&cancel ( -- )
+		POP2 #1010 JMP2r
+
+@<phex> ( short* -- )
+	SWP <phex>/b
+	&b ( -- )
+		DUP #04 SFT <phex>/c
+	&c ( -- )
+		#0f AND DUP #09 GTH #27 MUL ADD LIT "0 ADD #18 DEO
+		JMP2r
+
+@<pstr> ( str* -- )
+	LDAk #18 DEO
+	INC2 & LDAk ?<pstr>
+	POP2 JMP2r
+
+@sbyte ( str* -- byte )
+	LDAk ,chex JSR #40 SFT STH
+	INC2 LDA ,chex JSR STHr ADD JMP2r
+
+@chex ( c -- val|ff )
+	LIT "0 SUB DUP #09 GTH JMP
+	JMP2r
+	#27 SUB DUP #0f GTH JMP
+	JMP2r
+	POP #ff JMP2r
+
+@skey ( key buf -- proc )
+	OVR #21 LTH ?{
+		#00 SWP sput #00 JMP2r }
+	POP2 #01 JMP2r
+
+@scap ( str* -- end* )
+	&w ( -- )
+		INC2 & LDAk ?&w
+	JMP2r
+
+@sput ( chr str* -- )
+	scap/ STA
+	JMP2r
+
+@slen ( str* -- len* )
+	DUP2 scap/ SWP2 SUB2 JMP2r
+
+@<load-theme> ( -- )
+	;&path .File/name DEO2
+	#0002 .File/length DEO2
+	[ LIT2 -System/debug -System/r ]
+	&l ( -- )
+		;&buf .File/read DEO2
+		.File/success DEI2 #0000 EQU2 ?{
+			STHk [ LIT2 &buf $2 ] STHr DEO2
+			INC INC NEQk ?&l }
+	POP2 JMP2r
+	&path ".theme $1
+
+(
+@|assets )
+
+@cursor-icn [ 80c0 e0f0 f8e0 1000 ]
+
+@fill-icn [ ffff ffff ffff ffff ]
+
+(
+@|memory )
+
+@row
+
+

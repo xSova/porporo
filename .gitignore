@@ -8,6 +8,10 @@
 *.bak
 /*-test
 /screenshot-*.bmp
+*.rom
+*.rom.sym
+*.tga
+*.chr
 
 *snarf
 *theme
