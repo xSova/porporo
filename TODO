@@ -10,7 +10,6 @@ Window Manager
 	- Global pointer, Hide pointer
 	- Toggle borders
 	- Clear windows
-	- Toggle Lock position application
 
 Menu.rom
 	- Navigate into folders
@@ -22,10 +21,5 @@ Log.rom
 	- Scroll buffer
 	- Support theme
 
-Wallpaper.rom
-	- TGA to ICN
-	- Make first draft
-
 Misc
-	- Wallpaper program
 	- Fixed time program

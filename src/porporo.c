@@ -129,14 +129,12 @@ static void
 redraw(Uint32 *dst)
 {
 	int i;
-	for(i = 1; i < plen; i++) {
+	for(i = 1; i < plen; i++)
 		if(order[i]->lock)
 			drawpixels(dst, order[i]);
-	}
-	for(i = 1; i < plen; i++) {
+	for(i = 1; i < plen; i++)
 		if(!order[i]->lock)
 			drawpixels(dst, order[i]);
-	}
 	drawpixels(dst, menu);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
@@ -198,6 +196,7 @@ focusvv(Varvara *a)
 static void
 endvv(Varvara *p)
 {
+	p->clen = 0;
 	p->done = 1;
 	focusvv(0);
 	clear(pixels);
@@ -261,7 +260,7 @@ static void
 lockvv(Varvara *v)
 {
 	if(v) {
-		v->lock = 1;
+		v->lock = !v->lock;
 		clear(pixels);
 	}
 }

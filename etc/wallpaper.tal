@@ -12,12 +12,25 @@
 |0100
 
 @on-reset ( -> )
+	;meta #06 DEO2
 	#26ae .System/r DEO2
 	#26ae .System/g DEO2
 	#26ae .System/b DEO2
 	<load-theme>
 	;await-src .Console/vector DEO2
+	;on-mouse .Mouse/vector DEO2
 	BRK
+
+@on-mouse ( -> )
+	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
+	BRK
+
+@meta $1
+	( name ) "Wallpaper 0a
+	( desc ) "Image 20 "Viewer 0a
+	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
+	( date ) "27 20 "Nov 20 "2023 $1
+	( exts ) 00
 
 @await-src ( -> )
 	.Console/read DEI .src skey ?{ BRK }
@@ -37,14 +50,11 @@
 		STH2kr <draw-row>
 		!&s
 	&eof ( -- )
-		POP2r #010e DEO
-		;on-mouse .Mouse/vector DEO2
+		POP2r ;src <sclr>
 		BRK
 
 @<draw-row> ( width* -- )
-	#20 SFT2 DUP2 <phex>
-	#0a18 DEO
-	;row .Screen/addr DEO2
+	#20 SFT2 ;row .Screen/addr DEO2
 	#0000
 	&l ( -- )
 		#85 .Screen/sprite DEO
@@ -54,16 +64,6 @@
 	#0000 .Screen/x DEO2
 	.Screen/y DEI2k #0008 ADD2 ROT DEO2
 	JMP2r
-
-@on-mouse ( -> )
-	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
-	BRK
-
-@<load-default> ( -- )
-	{ "wallpapera6x50.chr 00 }
-	STH2r .File/name DEO2
-	JMP2r
-	&default
 
 @<update-cursor> ( color addr* -- )
 	[ LIT2 00 -Screen/auto ] DEO
@@ -91,29 +91,15 @@
 	&cancel ( -- )
 		POP2 #1010 JMP2r
 
-@<phex> ( short* -- )
-	SWP <phex>/b
-	&b ( -- )
-		DUP #04 SFT <phex>/c
-	&c ( -- )
-		#0f AND DUP #09 GTH #27 MUL ADD LIT "0 ADD #18 DEO
-		JMP2r
-
-@<pstr> ( str* -- )
-	LDAk #18 DEO
-	INC2 & LDAk ?<pstr>
-	POP2 JMP2r
-
 @sbyte ( str* -- byte )
-	LDAk ,chex JSR #40 SFT STH
-	INC2 LDA ,chex JSR STHr ADD JMP2r
+	LDAk chex #40 SFT STH
+	INC2 LDA chex STHr ADD JMP2r
 
-@chex ( c -- val|ff )
-	LIT "0 SUB DUP #09 GTH JMP
+@chex ( c -- <val> )
+	[ LIT "0 ] SUB DUP #0a LTH ?&>end
+	#27 SUB DUP #10 LTH ?&>end
+		POP #ff &>end
 	JMP2r
-	#27 SUB DUP #0f GTH JMP
-	JMP2r
-	POP #ff JMP2r
 
 @skey ( key buf -- proc )
 	OVR #21 LTH ?{
@@ -129,8 +115,12 @@
 	scap/ STA
 	JMP2r
 
-@slen ( str* -- len* )
-	DUP2 scap/ SWP2 SUB2 JMP2r
+@<sclr> ( str* -- )
+	#00 ROT ROT
+	&w ( -- )
+		STAk INC2 LDAk ?&w
+	STA
+	JMP2r
 
 @<load-theme> ( -- )
 	;&path .File/name DEO2
