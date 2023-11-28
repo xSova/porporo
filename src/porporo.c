@@ -129,14 +129,14 @@ static void
 redraw(Uint32 *dst)
 {
 	int i;
-	for(i = 1; i < plen; i++){
+	for(i = 1; i < plen; i++) {
 		if(order[i]->lock)
-		drawpixels(dst, order[i]);
-		}
-	for(i = 1; i < plen; i++){
+			drawpixels(dst, order[i]);
+	}
+	for(i = 1; i < plen; i++) {
 		if(!order[i]->lock)
-		drawpixels(dst, order[i]);
-		}
+			drawpixels(dst, order[i]);
+	}
 	drawpixels(dst, menu);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
@@ -258,13 +258,12 @@ raisevv(Varvara *v)
 }
 
 static void
-lockvv(Varvara *v){
-	if(v){
-		
-	v->lock = 1;
-	
-	clear(pixels);
-		}
+lockvv(Varvara *v)
+{
+	if(v) {
+		v->lock = 1;
+		clear(pixels);
+	}
 }
 
 static void
@@ -502,7 +501,7 @@ init(void)
 	SDL_GetCurrentDisplayMode(0, &DM);
 	WIDTH = (DM.w >> 3 << 3) - 0x20;
 	HEIGHT = (DM.h >> 3 << 3) - 0x80;
-	printf("%dx%d\n",WIDTH,HEIGHT);
+	printf("%dx%d\n", WIDTH, HEIGHT);
 	gWindow = SDL_CreateWindow("Porporo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
 	if(gWindow == NULL)
 		return error("Window", SDL_GetError());
