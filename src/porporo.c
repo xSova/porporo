@@ -183,7 +183,7 @@ focusvv(Varvara *a)
 }
 
 static void
-raisevv(Varvara *v)
+order_raise(Varvara *v)
 {
 	int i, j = 0;
 	Varvara *a, *b;
@@ -202,7 +202,7 @@ raisevv(Varvara *v)
 static void
 order_pop(Varvara *p)
 {
-	raisevv(p);
+	order_raise(p);
 	p->live = 0;
 	olen--;
 }
@@ -295,7 +295,7 @@ static void
 lockvv(Varvara *v)
 {
 	if(v)
-		v->lock = 1;
+		v->lock = 1, focused = 0;
 	else {
 		int i;
 		for(i = 0; i < olen; i++) {
@@ -304,6 +304,16 @@ lockvv(Varvara *v)
 		}
 	}
 	clear(pixels);
+}
+
+static void
+centervv(Varvara *v)
+{
+	if(v) {
+		clear(pixels);
+		v->x = -camerax + WIDTH / 2 - v->screen.w / 2;
+		v->y = -cameray + HEIGHT / 2 - v->screen.h / 2;
+	}
 }
 
 static void
@@ -337,7 +347,7 @@ connect(Varvara *a, Varvara *b)
 }
 
 static void
-softreboot(Varvara *v)
+restartvv(Varvara *v)
 {
 	screen_wipe(&v->screen);
 	system_boot(&v->u, 1);
@@ -412,7 +422,7 @@ on_mouse_down(int button, int x, int y)
 	}
 	u = &focused->u;
 	mouse_down(u, &u->dev[0x90], button);
-	raisevv(focused);
+	order_raise(focused);
 }
 
 static void
@@ -477,17 +487,12 @@ get_key(SDL_Event *event)
 }
 
 static int
-on_porporo_key(char c, int sym)
+on_porporo_key(char c)
 {
 	switch(c) {
 	case 0x1b: return setaction(NORMAL);
 	case 'd': return setaction(action == DRAW ? NORMAL : DRAW);
 	case 'm': return setaction(action == MOVE ? NORMAL : MOVE);
-	}
-	switch(sym) {
-	case SDLK_F5:
-		if(focused) softreboot(focused);
-		break;
 	}
 	return 1;
 }
@@ -497,7 +502,7 @@ on_controller_input(char c)
 {
 	Uxn *u;
 	if(!focused || action)
-		return on_porporo_key(c, 0);
+		return on_porporo_key(c);
 	u = &focused->u;
 	controller_key(u, &u->dev[0x80], c);
 	return 1;
@@ -507,12 +512,14 @@ static int
 on_controller_down(Uint8 key, Uint8 button, int sym)
 {
 	Uxn *u;
-	if(sym == SDLK_F1)
-		lockvv(focused);
-	if(sym == SDLK_F4)
-		remvv(focused);
+	switch(sym) {
+	case SDLK_F1: lockvv(focused); return 0;
+	case SDLK_F2: centervv(focused); return 0;
+	case SDLK_F4: remvv(focused); return 0;
+	case SDLK_F5: restartvv(focused); return 0;
+	}
 	if(!focused || action)
-		return on_porporo_key(key, sym);
+		return on_porporo_key(key);
 	u = &focused->u;
 	if(key)
 		controller_key(u, &u->dev[0x80], key);
