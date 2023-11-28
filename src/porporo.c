@@ -107,7 +107,7 @@ drawconnections(Uint32 *dst, Varvara *a, int color)
 static void
 drawpixels(Uint32 *dst, Varvara *p)
 {
-	int w = p->screen.w, h = p->screen.h, x = p->x + (!p->lock ? camerax : 0), y = p->y + (!p->lock ? cameray : 0);
+	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
 	if(!p->live)
 		return;
 	drawconnections(dst, p, 2 - action);
@@ -295,7 +295,7 @@ static void
 lockvv(Varvara *v)
 {
 	if(v)
-		v->lock = 1, focused = 0;
+		v->lock = !v->lock, focused = 0;
 	else {
 		int i;
 		for(i = 0; i < olen; i++) {
