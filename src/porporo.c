@@ -106,7 +106,7 @@ static void
 drawpixels(Uint32 *dst, Varvara *p)
 {
 	int w = p->screen.w, h = p->screen.h, x = p->x + (!p->lock ? camerax : 0), y = p->y + (!p->lock ? cameray : 0);
-	if(p->done)
+	if(!p->live)
 		return;
 	drawconnections(dst, p, 2 - action);
 	if(!p->lock)
@@ -173,7 +173,7 @@ static void
 showmenu(int x, int y)
 {
 	clear(pixels);
-	menu->done = 0;
+	menu->live = 1;
 	menu->u.dev[0x0f] = 0;
 	uxn_eval(&menu->u, 0x100);
 	menu->x = x, menu->y = y;
@@ -197,7 +197,7 @@ static void
 donevv(Varvara *p)
 {
 	p->clen = 0;
-	p->done = 1;
+	p->live = 0;
 	focusvv(0);
 	clear(pixels);
 }
@@ -212,6 +212,7 @@ addvv(int x, int y, char *rom, int eval)
 	p->x = x, p->y = y, p->rom = rom;
 	p->u.ram = ram + (plen - 1) * 0x10000;
 	p->u.id = plen - 1;
+	p->live = 1;
 	screen_resize(&p->screen, 128, 128);
 	system_init(&p->u, p->u.ram, rom);
 	if(eval)
@@ -224,7 +225,7 @@ withinvv(Varvara *p, int x, int y)
 {
 	Screen *s = &p->screen;
 	int xx = p->x, yy = p->y;
-	return !p->done && x > xx && x < xx + s->w && y > yy && y < yy + s->h;
+	return p->live && x > xx && x < xx + s->w && y > yy && y < yy + s->h;
 }
 
 static Varvara *
@@ -321,7 +322,7 @@ sendcmd(char c)
 {
 	if(c < 0x20) {
 		clear(pixels);
-		menu->done = 1;
+		menu->live = 0;
 		addvv(menu->x, menu->y, cmd, 1);
 		cmdlen = 0;
 		return;
@@ -583,7 +584,7 @@ main(int argc, char **argv)
 		return error("Init", "Failure");
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
 	menu = addvv(200, 150, "bin/menu.rom", 0);
-	menu->done = 1;
+	menu->live = 0;
 	for(i = 1; i < argc; i++) {
 		Varvara *a = addvv(anchor, 0x20 * i, argv[i], 1);
 		anchor += a->screen.w + 0x20;
