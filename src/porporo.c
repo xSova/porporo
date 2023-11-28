@@ -30,7 +30,7 @@ enum Action {
 };
 enum Action action;
 
-static Uint8 *ram, plen;
+static Uint8 *ram, olen;
 static Uint32 *pixels, theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
 static int WIDTH, HEIGHT, isdrag, reqdraw, dragx, dragy, camerax, cameray;
 static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *focused;
@@ -129,10 +129,10 @@ static void
 redraw(Uint32 *dst)
 {
 	int i;
-	for(i = 1; i < plen; i++)
+	for(i = 1; i < olen; i++)
 		if(order[i]->lock)
 			drawpixels(dst, order[i]);
-	for(i = 1; i < plen; i++)
+	for(i = 1; i < olen; i++)
 		if(!order[i]->lock)
 			drawpixels(dst, order[i]);
 	drawpixels(dst, menu);
@@ -202,15 +202,35 @@ donevv(Varvara *p)
 	clear(pixels);
 }
 
-static Varvara *
-setvv(Varvara *p, int x, int y, char *rom, int eval)
+static void
+order_print(void)
 {
-	if(!p) return 0;
-	order[plen++] = p;
+	int i;
+	if(!olen)
+		return;
+	printf("\n\n");
+	for(i = 0; i < olen; i++) {
+		printf("%d/%d -> %s\n", i, olen, order[i]->rom);
+	}
+}
+
+static void
+order_push(Varvara *p)
+{
+	order[olen++] = p;
+	order_print();
+}
+
+static Varvara *
+setvv(int id, int x, int y, char *rom, int eval)
+{
+	Varvara *p = &varvaras[id];
+	if(id == -1) return 0;
 	p->x = x, p->y = y, p->rom = rom;
-	p->u.ram = ram + (plen - 1) * 0x10000;
-	p->u.id = plen - 1;
+	p->u.ram = ram + id * 0x10000;
+	p->u.id = id;
 	p->live = 1;
+	order_push(p);
 	screen_resize(&p->screen, 128, 128);
 	system_init(&p->u, p->u.ram, rom);
 	if(eval)
@@ -218,16 +238,16 @@ setvv(Varvara *p, int x, int y, char *rom, int eval)
 	return p;
 }
 
-static Varvara *
+static int
 allocvv(void)
 {
 	int i;
 	for(i = 1; i < RAM_PAGES; i++) {
 		Varvara *p = &varvaras[i];
 		if(!p || !p->live)
-			return p;
+			return i;
 	}
-	return 0;
+	return -1;
 }
 
 static Varvara *
@@ -248,7 +268,7 @@ static Varvara *
 pickvv(int x, int y)
 {
 	int i;
-	for(i = plen - 1; i > -1; --i) {
+	for(i = olen - 1; i > -1; --i) {
 		Varvara *p = order[i];
 		if(withinvv(p, x, y))
 			return p;
@@ -261,16 +281,16 @@ raisevv(Varvara *v)
 {
 	int i, j = 0;
 	Varvara *a, *b;
-	for(i = 1; i < plen; i++) {
+	for(i = 1; i < olen; i++) {
 		if(v == order[i]) {
 			j = i;
 			break;
 		}
 	}
-	if(!j || j == plen - 1)
+	if(!j || j == olen - 1)
 		return;
-	a = order[j], b = order[plen - 1];
-	order[j] = b, order[plen - 1] = a;
+	a = order[j], b = order[olen - 1];
+	order[j] = b, order[olen - 1] = a;
 }
 
 static void
@@ -280,7 +300,7 @@ lockvv(Varvara *v)
 		v->lock = 1;
 	else {
 		int i;
-		for(i = 1; i < plen; i++) {
+		for(i = 1; i < olen; i++) {
 			order[i]->lock = 0;
 			break;
 		}
@@ -296,7 +316,7 @@ pickfocus(int x, int y)
 		focusvv(menu);
 		return;
 	}
-	for(i = plen - 1; i > -1; --i) {
+	for(i = olen - 1; i > -1; --i) {
 		Varvara *p = order[i];
 		if(withinvv(p, x, y) && !p->lock) {
 			focusvv(p);
@@ -599,7 +619,7 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
-	menu = setvv(&varvaras[0], 200, 150, "bin/menu.rom", 0);
+	menu = setvv(0, 200, 150, "bin/menu.rom", 0);
 	menu->live = 0;
 	for(i = 1; i < argc; i++) {
 		Varvara *a = addvv(anchor, 0x20 * i, argv[i], 1);
