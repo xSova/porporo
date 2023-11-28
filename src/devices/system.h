@@ -19,7 +19,7 @@ int system_load(Uxn *u, char *filename);
 void system_boot(Uxn *u, int soft);
 void system_inspect(Uxn *u);
 int system_error(char *msg, const char *err);
-int system_init(Uxn *u, Uint8 *ram, char *rom);
+int system_init(Varvara *v, Uxn *u, Uint8 *ram, char *rom);
 
 Uint8 system_dei(Uxn *u, Uint8 addr);
 void system_deo(Uxn *u, Uint8 *d, Uint8 port);

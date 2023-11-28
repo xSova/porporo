@@ -41,8 +41,9 @@ typedef struct Screen {
 } Screen;
 
 typedef struct Varvara {
-	char *rom;
-	int x, y, clen, live, lock;
+	char rom[0x40];
+	int x, y, clen;
+	Uint8 live, lock;
 	Uxn u;
 	Screen screen;
 	struct Varvara *routes[0x10];

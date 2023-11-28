@@ -244,10 +244,10 @@ setvv(int id, int x, int y, char *rom, int eval)
 	Varvara *p;
 	if(id == -1) return 0;
 	p = &varvaras[id];
-	p->x = x, p->y = y, p->rom = rom;
+	p->x = x, p->y = y;
 	p->u.id = id, p->u.ram = ram + id * 0x10000;
 	screen_resize(&p->screen, 128, 128);
-	system_init(&p->u, p->u.ram, rom);
+	system_init(p, &p->u, p->u.ram, rom);
 	if(eval)
 		uxn_eval(&p->u, 0x100);
 	return p;

@@ -15,6 +15,15 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 WITH REGARD TO THIS SOFTWARE.
 */
 
+static char *
+scpy(char *src, char *dst, int len)
+{
+	int i = 0;
+	while((dst[i] = src[i]) && i < len - 2) i++;
+	dst[i] = 0;
+	return dst;
+}
+
 static void
 system_print(Stack *s, char *name)
 {
@@ -71,13 +80,13 @@ system_boot(Uxn *u, int soft)
 }
 
 int
-system_init(Uxn *u, Uint8 *ram, char *rom)
+system_init(Varvara *v, Uxn *u, Uint8 *ram, char *rom)
 {
 	u->ram = ram;
 	system_boot(u, 0);
 	if(!system_load(u, rom))
-		if(!system_load(u, "boot.rom"))
-			return system_error("Init", "Failed to load rom.");
+		return system_error("Init", "Failed to load rom.");
+	scpy(rom, v->rom, 0x40);
 	return 1;
 }
 
