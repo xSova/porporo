@@ -93,12 +93,14 @@ drawborders(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
 void
 drawconnections(Uint32 *dst, Varvara *a, int color)
 {
-	int i;
+	int i, x1, x2, y1, y2;
 	for(i = 0; i < a->clen; i++) {
-		Varvara *b = a->routes[i];
-		int x1 = a->x + 1 + camerax + a->screen.w, y1 = a->y - 2 + cameray;
-		int x2 = b->x - 2 + camerax, y2 = b->y - 2 + cameray;
-		line(dst, x1, y1, x2, y2, color);
+		Varvara *b;
+		if(b->live) {
+			x1 = a->x + 1 + camerax + a->screen.w, y1 = a->y - 2 + cameray;
+			x2 = b->x - 2 + camerax, y2 = b->y - 2 + cameray;
+			line(dst, x1, y1, x2, y2, color);
+		}
 	}
 }
 
@@ -181,26 +183,6 @@ focusvv(Varvara *a)
 }
 
 static void
-order_print(void)
-{
-	int i;
-	if(!olen)
-		return;
-	printf("\n\n");
-	for(i = 0; i < olen; i++)
-		printf("%d/%d -> %d\n", i, olen, order[i]->u.id);
-}
-
-static Varvara *
-order_push(Varvara *p)
-{
-	p->live = 1;
-	order[olen++] = p;
-	order_print();
-	return p;
-}
-
-static void
 raisevv(Varvara *v)
 {
 	int i, j = 0;
@@ -223,7 +205,14 @@ order_pop(Varvara *p)
 	raisevv(p);
 	p->live = 0;
 	olen--;
-	order_print();
+}
+
+static Varvara *
+order_push(Varvara *p)
+{
+	p->live = 1;
+	order[olen++] = p;
+	return p;
 }
 
 static void
