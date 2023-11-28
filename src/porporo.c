@@ -203,6 +203,21 @@ donevv(Varvara *p)
 }
 
 static Varvara *
+setvv(Varvara *p, int x, int y, char *rom, int eval)
+{
+	order[plen++] = p;
+	p->x = x, p->y = y, p->rom = rom;
+	p->u.ram = ram + (plen - 1) * 0x10000;
+	p->u.id = plen - 1;
+	p->live = 1;
+	screen_resize(&p->screen, 128, 128);
+	system_init(&p->u, p->u.ram, rom);
+	if(eval)
+		uxn_eval(&p->u, 0x100);
+	return p;
+}
+
+static Varvara *
 addvv(int x, int y, char *rom, int eval)
 {
 	Varvara *p;
@@ -583,7 +598,7 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
-	menu = addvv(200, 150, "bin/menu.rom", 0);
+	menu = setvv(&varvaras[0], 200, 150, "bin/menu.rom", 0);
 	menu->live = 0;
 	for(i = 1; i < argc; i++) {
 		Varvara *a = addvv(anchor, 0x20 * i, argv[i], 1);
