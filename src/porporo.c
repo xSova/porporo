@@ -577,22 +577,16 @@ main(int argc, char **argv)
 {
 	int i, anchor = 0x20;
 	Uint32 begintime = 0, endtime = 0, delta = 0;
-
-	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
-
 	if(!init())
 		return error("Init", "Failure");
-
+	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
 	menu = addvv(200, 150, "bin/menu.rom", 0);
 	menu->done = 1;
-
 	for(i = 1; i < argc; i++) {
 		Varvara *a = addvv(anchor, 0x20 * i, argv[i], 1);
 		anchor += a->screen.w + 0x20;
 	}
-
-	fflush(stdout);
-
+	/* event loop */
 	while(1) {
 		SDL_Event event;
 		if(!begintime)

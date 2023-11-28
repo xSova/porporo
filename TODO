@@ -8,7 +8,6 @@ Devices
 Window Manager
 	- only draw program screens that are visible
 	- Global pointer, Hide pointer
-	- Toggle borders
 	- Clear windows
 
 Menu.rom
