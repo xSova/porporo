@@ -108,13 +108,10 @@ static void
 drawpixels(Uint32 *dst, Varvara *p)
 {
 	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
-	if(!p->live)
-		return;
-	drawconnections(dst, p, 2 - action);
-	if(!p->lock)
-		drawborders(dst, x, y, x + w, y + h, 2 - action);
-	if(p->screen.x2)
-		screen_redraw(&p->screen);
+	if(!p->live) return;
+	if(p->clen) drawconnections(dst, p, 2 - action);
+	if(!p->lock) drawborders(dst, x, y, x + w, y + h, 2 - action);
+	if(p->screen.x2) screen_redraw(&p->screen);
 	drawscreen(pixels, &p->screen, x, y);
 }
 
@@ -122,8 +119,7 @@ static void
 clear(Uint32 *dst)
 {
 	int i, l = WIDTH * HEIGHT, c = theme[4];
-	for(i = 0; i < l; i++)
-		dst[i] = c;
+	for(i = 0; i < l; i++) dst[i] = c;
 	reqdraw = 1;
 }
 
@@ -132,11 +128,9 @@ redraw(Uint32 *dst)
 {
 	int i;
 	for(i = 0; i < olen; i++)
-		if(order[i]->lock)
-			drawpixels(dst, order[i]);
+		if(order[i]->lock) drawpixels(dst, order[i]);
 	for(i = 0; i < olen; i++)
-		if(!order[i]->lock)
-			drawpixels(dst, order[i]);
+		if(!order[i]->lock) drawpixels(dst, order[i]);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
 	SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
@@ -163,11 +157,10 @@ quit(void)
 	exit(0);
 }
 
-static int
+static void
 setaction(enum Action a)
 {
-	action = a;
-	return reqdraw = 1;
+	action = a, reqdraw = 1;
 }
 
 static void
@@ -486,23 +479,24 @@ get_key(SDL_Event *event)
 	return 0;
 }
 
-static int
+static void
 on_porporo_key(char c)
 {
 	switch(c) {
-	case 0x1b: return setaction(NORMAL);
-	case 'd': return setaction(action == DRAW ? NORMAL : DRAW);
-	case 'm': return setaction(action == MOVE ? NORMAL : MOVE);
+	case 0x1b: setaction(NORMAL); return;
+	case 'd': setaction(action == DRAW ? NORMAL : DRAW); return;
+	case 'm': setaction(action == MOVE ? NORMAL : MOVE); return;
 	}
-	return 1;
 }
 
 static int
 on_controller_input(char c)
 {
 	Uxn *u;
-	if(!focused || action)
-		return on_porporo_key(c);
+	if(!focused || action) {
+		on_porporo_key(c);
+		return 1;
+	}
 	u = &focused->u;
 	controller_key(u, &u->dev[0x80], c);
 	return 1;
@@ -518,8 +512,10 @@ on_controller_down(Uint8 key, Uint8 button, int sym)
 	case SDLK_F4: remvv(focused); return 0;
 	case SDLK_F5: restartvv(focused); return 0;
 	}
-	if(!focused || action)
-		return on_porporo_key(key);
+	if(!focused || action) {
+		on_porporo_key(key);
+		return 1;
+	}
 	u = &focused->u;
 	if(key)
 		controller_key(u, &u->dev[0x80], key);
