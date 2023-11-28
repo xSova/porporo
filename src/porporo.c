@@ -205,6 +205,7 @@ donevv(Varvara *p)
 static Varvara *
 setvv(Varvara *p, int x, int y, char *rom, int eval)
 {
+	if(!p) return 0;
 	order[plen++] = p;
 	p->x = x, p->y = y, p->rom = rom;
 	p->u.ram = ram + (plen - 1) * 0x10000;
@@ -218,21 +219,21 @@ setvv(Varvara *p, int x, int y, char *rom, int eval)
 }
 
 static Varvara *
+allocvv(void)
+{
+	int i;
+	for(i = 1; i < RAM_PAGES; i++) {
+		Varvara *p = &varvaras[i];
+		if(!p || !p->live)
+			return p;
+	}
+	return 0;
+}
+
+static Varvara *
 addvv(int x, int y, char *rom, int eval)
 {
-	Varvara *p;
-	if(plen >= RAM_PAGES)
-		return 0;
-	p = &varvaras[plen], order[plen++] = p;
-	p->x = x, p->y = y, p->rom = rom;
-	p->u.ram = ram + (plen - 1) * 0x10000;
-	p->u.id = plen - 1;
-	p->live = 1;
-	screen_resize(&p->screen, 128, 128);
-	system_init(&p->u, p->u.ram, rom);
-	if(eval)
-		uxn_eval(&p->u, 0x100);
-	return p;
+	return setvv(allocvv(), x, y, rom, eval);
 }
 
 static int
