@@ -105,11 +105,12 @@ drawconnections(Uint32 *dst, Varvara *a, int color)
 static void
 drawpixels(Uint32 *dst, Varvara *p)
 {
-	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
+	int w = p->screen.w, h = p->screen.h, x = p->x + (!p->lock ? camerax : 0), y = p->y + (!p->lock ? cameray : 0);
 	if(p->done)
 		return;
 	drawconnections(dst, p, 2 - action);
-	drawborders(dst, x, y, x + w, y + h, 2 - action);
+	if(!p->lock)
+		drawborders(dst, x, y, x + w, y + h, 2 - action);
 	if(p->screen.x2)
 		screen_redraw(&p->screen);
 	drawscreen(pixels, &p->screen, x, y);
@@ -128,8 +129,14 @@ static void
 redraw(Uint32 *dst)
 {
 	int i;
-	for(i = 1; i < plen; i++)
+	for(i = 1; i < plen; i++){
+		if(order[i]->lock)
 		drawpixels(dst, order[i]);
+		}
+	for(i = 1; i < plen; i++){
+		if(!order[i]->lock)
+		drawpixels(dst, order[i]);
+		}
 	drawpixels(dst, menu);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
@@ -251,6 +258,16 @@ raisevv(Varvara *v)
 }
 
 static void
+lockvv(Varvara *v){
+	if(v){
+		
+	v->lock = 1;
+	
+	clear(pixels);
+		}
+}
+
+static void
 pickfocus(int x, int y)
 {
 	int i;
@@ -260,7 +277,7 @@ pickfocus(int x, int y)
 	}
 	for(i = plen - 1; i > -1; --i) {
 		Varvara *p = order[i];
-		if(withinvv(p, x, y)) {
+		if(withinvv(p, x, y) && !p->lock) {
 			focusvv(p);
 			return;
 		}
@@ -451,6 +468,8 @@ static int
 on_controller_down(Uint8 key, Uint8 button, int sym)
 {
 	Uxn *u;
+	if(sym == SDLK_F1)
+		lockvv(focused);
 	if(!focused || action)
 		return on_porporo_key(key, sym);
 	u = &focused->u;

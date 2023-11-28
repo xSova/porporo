@@ -42,7 +42,7 @@ typedef struct Screen {
 
 typedef struct Varvara {
 	char *rom;
-	int x, y, clen, done;
+	int x, y, clen, done, lock;
 	Uxn u;
 	Screen screen;
 	struct Varvara *routes[0x10];
