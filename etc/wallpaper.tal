@@ -1,9 +1,6 @@
-
 |00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
 |10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
 |20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
-|80 @Controller &vector $2 &button $1 &key $1
-|90 @Mouse &vector $2 &x $2 &y $2 &state $1 &chord $1 &pad $4 &scrolly &scrolly-hb $1 &scrolly-lb $1
 |a0 @File &vector $2 &success $2 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
 
 |0000
@@ -23,7 +20,7 @@
 	( | default file )
 	.Screen/width DEI2 #03 SFT2 NIP
 	( ) .Screen/height DEI2 #03 SFT2 NIP <set-size>
-	;dict/default <draw-wallpaper>
+	.Console/type DEI ?{ ;dict/default <draw-wallpaper> }
 	;await-src .Console/vector DEO2
 	BRK
 
@@ -42,6 +39,15 @@
 	( ) DUP2 <draw-wallpaper>
 	( ) <sclr>
 	BRK
+
+@read-size ( 00x00* -- )
+	DUP2 sbyte #00 EQU ?&cancel
+	INC2k INC2 LDA [ LIT "x ] NEQ ?&cancel
+	INC2k INC2 INC2 sbyte #00 EQU ?&cancel
+	( y ) INC2k INC2 INC2 sbyte STH
+	( x ) sbyte STHr JMP2r
+	&cancel ( -- )
+		POP2 #1010 JMP2r
 
 @<set-size> ( w h -- )
 	DUP2 .size STZ2
@@ -79,15 +85,6 @@
 (
 @|stdlib )
 
-@read-size ( 00x00* -- )
-	DUP2 sbyte #00 EQU ?&cancel
-	INC2k INC2 LDA [ LIT "x ] NEQ ?&cancel
-	INC2k INC2 INC2 sbyte #00 EQU ?&cancel
-	( y ) INC2k INC2 INC2 sbyte STH
-	( x ) sbyte STHr JMP2r
-	&cancel ( -- )
-		POP2 #1010 JMP2r
-
 @sbyte ( str* -- byte )
 	LDAk chex #40 SFT STH
 	INC2 LDA chex STHr ADD JMP2r
@@ -100,7 +97,8 @@
 
 @skey ( key buf -- proc )
 	OVR #21 LTH ?{
-		#00 SWP sput #00 JMP2r }
+		#00 SWP <sput>
+		#00 JMP2r }
 	POP2 #01 JMP2r
 
 @scap ( str* -- end* )
@@ -108,7 +106,7 @@
 		INC2 & LDAk ?&w
 	JMP2r
 
-@sput ( chr str* -- )
+@<sput> ( chr str* -- )
 	scap/ STA
 	JMP2r
 
