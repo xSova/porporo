@@ -108,6 +108,12 @@ static void
 drawvarvara(Uint32 *dst, Varvara *p)
 {
 	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
+
+	if(p->lock) {
+		x = p->x;
+		y = p->y;
+	}
+
 	if(!p->live) return;
 	if(p->clen) drawconnections(dst, p, 2 - action);
 	if(!p->lock) drawborders(dst, x, y, x + w, y + h, 2 - action);
@@ -287,21 +293,6 @@ pickvv(int x, int y)
 }
 
 static void
-lockvv(Varvara *v)
-{
-	if(v)
-		v->lock = !v->lock, focused = 0;
-	else {
-		int i;
-		for(i = 0; i < olen; i++) {
-			order[i]->lock = 0;
-			break;
-		}
-	}
-	clear(pixels);
-}
-
-static void
 centervv(Varvara *v)
 {
 	if(v) {
@@ -309,6 +300,26 @@ centervv(Varvara *v)
 		v->x = -camerax + WIDTH / 2 - v->screen.w / 2;
 		v->y = -cameray + HEIGHT / 2 - v->screen.h / 2;
 	}
+}
+
+static void
+lockvv(Varvara *v)
+{
+	if(v && !v->lock) {
+		v->lock = 1, focused = 0;
+		v->x += camerax, v->y += cameray;
+	} else {
+		int i;
+		for(i = olen - 1; i > -1; i--) {
+			Varvara *a = order[i];
+			if(a->lock) {
+				a->lock = 0;
+				a->x -= camerax, a->y -= cameray;
+				break;
+			}
+		}
+	}
+	clear(pixels);
 }
 
 static void

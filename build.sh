@@ -10,18 +10,16 @@ rm -f bin/porporo
 mkdir -p bin
 
 # debug(slow)
-cc -std=c89 -DDEBUG -Wall -Wno-unknown-pragmas -Wpedantic -Wshadow -Wextra -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=int-conversion -Wvla -g -Og -fsanitize=address -fsanitize=undefined $SRC -L/usr/local/lib -lSDL2 -o bin/porporo
+# cc -std=c89 -DDEBUG -Wall -Wno-unknown-pragmas -Wpedantic -Wshadow -Wextra -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=int-conversion -Wvla -g -Og -fsanitize=address -fsanitize=undefined $SRC -L/usr/local/lib -lSDL2 -o bin/porporo
 
 # build(fast)
-# cc main.c -std=c89 -Os -DNDEBUG -g0 -s -Wall -Wno-unknown-pragmas -L/usr/local/lib -lSDL2 -lportmidi -o porporo
+cc $SRC -std=c89 -Os -DNDEBUG -g0 -s -Wall -Wno-unknown-pragmas -L/usr/local/lib -lSDL2 -o bin/porporo
 
 # roms
 cc src/uxnasm.c -o bin/uxnasm
 bin/uxnasm etc/menu.tal bin/menu.rom
-bin/uxnasm etc/screen.pixel.tal bin/screen.pixel.rom
-bin/uxnasm etc/catclock.tal bin/catclock.rom
-bin/uxnasm etc/log.tal bin/log.rom
-bin/uxnasm etc/hello.tal bin/hello.rom
 bin/uxnasm etc/wallpaper.tal bin/wallpaper.rom
+bin/uxnasm etc/log.tal bin/log.rom
+
 # run
-./bin/porporo bin/log.rom ~/roms/left.rom ~/roms/cccc.rom 
+./bin/porporo bin/log.rom

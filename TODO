@@ -1,22 +1,19 @@
 # TODOs
 
+- File device pointers should be assoc with Varvaras
 - Map connection data to porporo's ram
 - Automatic reqdraw, use screen
-- Find way of automating connection setup
-
-Devices
-	- File device pointers should be assoc with Varvaras
 
 Window Manager
 	- only draw program screens that are visible
 	- Global pointer, Hide pointer
-	- Clear windows
+	- Transluscent windows
 
 Menu.rom
 	- Navigate into folders
 	- MODE: Only display roms
 	- MODE: All files mode
-	
+
 Log.rom
 	- Toggle binary/ascii mode
 	- Scroll buffer
