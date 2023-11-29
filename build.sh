@@ -22,6 +22,6 @@ bin/uxnasm etc/screen.pixel.tal bin/screen.pixel.rom
 bin/uxnasm etc/catclock.tal bin/catclock.rom
 bin/uxnasm etc/log.tal bin/log.rom
 bin/uxnasm etc/hello.tal bin/hello.rom
-bin/uxnasm etc/wallpaper.tal wallpaper.rom
+bin/uxnasm etc/wallpaper.tal bin/wallpaper.rom
 # run
 ./bin/porporo bin/log.rom ~/roms/left.rom ~/roms/cccc.rom 

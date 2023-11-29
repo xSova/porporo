@@ -33,7 +33,7 @@ enum Action action;
 static Uint8 *ram, olen;
 static Uint32 *pixels, theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
 static int WIDTH, HEIGHT, isdrag, reqdraw, dragx, dragy, camerax, cameray;
-static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *focused;
+static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *wallpaper, *focused;
 
 static SDL_DisplayMode DM;
 static SDL_Window *gWindow = NULL;
@@ -241,7 +241,7 @@ setvv(int id, int x, int y, char *rom, int eval)
 	p = &varvaras[id];
 	p->x = x, p->y = y;
 	p->u.id = id, p->u.ram = ram + id * 0x10000;
-	screen_resize(&p->screen, 128, 128);
+	screen_resize(&p->screen, 640, 320);
 	system_init(p, &p->u, p->u.ram, rom);
 	if(eval)
 		uxn_eval(&p->u, 0x100);
@@ -344,11 +344,13 @@ connect(Varvara *a, Varvara *b)
 static void
 restartvv(Varvara *v)
 {
-	screen_wipe(&v->screen);
-	system_boot(&v->u, 1);
-	system_load(&v->u, focused->rom);
-	uxn_eval(&v->u, PAGE_PROGRAM);
-	reqdraw = 1;
+	if(v) {
+		screen_wipe(&v->screen);
+		system_boot(&v->u, 1);
+		system_load(&v->u, focused->rom);
+		uxn_eval(&v->u, PAGE_PROGRAM);
+		reqdraw = 1;
+	}
 }
 
 /* = COMMAND ===================================== */
@@ -590,6 +592,14 @@ Uint8
 emu_dei(Uxn *u, Uint8 addr)
 {
 	switch(addr & 0xf0) {
+	case 0x20:
+		switch(addr) {
+		case 0x22: return WIDTH >> 8;
+		case 0x23: return WIDTH;
+		case 0x24: return HEIGHT >> 8;
+		case 0x25: return HEIGHT;
+		}
+		break;
 	case 0xc0: return datetime_dei(u, addr); break;
 	}
 	return u->dev[addr];
@@ -622,6 +632,8 @@ main(int argc, char **argv)
 		return error("Init", "Failure");
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
 	menu = setvv(0, 200, 150, "bin/menu.rom", 0);
+	wallpaper = order_push(setvv(1, 10, 10, "bin/wallpaper.rom", 1));
+	wallpaper->lock = 1;
 	for(i = 1; i < argc; i++) {
 		Varvara *a = order_push(addvv(anchor, 0x20 * i, argv[i], 1));
 		anchor += a->screen.w + 0x20;

@@ -12,6 +12,7 @@
 *.rom.sym
 *.tga
 *.chr
+.wallpaper
 
 *snarf
 *theme
