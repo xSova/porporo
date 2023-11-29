@@ -7,6 +7,8 @@
 
 |0000
 
+	@1bpp $1
+	@size &w $1 &h $1
 	@src $40
 
 |0100
@@ -29,35 +31,40 @@
 	( name ) "Wallpaper 0a
 	( desc ) "Image 20 "Viewer 0a
 	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
-	( date ) "27 20 "Nov 20 "2023 $1
+	( date ) "28 20 "Nov 20 "2023 $1
 	( exts ) 00
 
 @await-src ( -> )
 	.Console/read DEI .src skey ?{ BRK }
-	;src scap/ #0009 SUB2 read-size
+	( | format )
+	;src scap/ #0003 SUB2 ;&icn-ext scmp3 .1bpp STZ
 	( | resize )
-	#00 SWP #30 SFT2 .Screen/height DEO2
-	#00 SWP STH2k #30 SFT2 STH2k .Screen/width DEO2
+	;src scap/ #0009 SUB2 read-size DUP2 .size STZ2
+	( h ) #00 SWP #30 SFT2 .Screen/height DEO2
+	( w ) #00 SWP #30 SFT2 .Screen/width DEO2
 	( | stream )
 	#0000 DUP2 .Screen/x DEO2
 	.Screen/y DEO2
 	#05 .Screen/auto DEO
 	;src .File/name DEO2
-	STH2r #10 SFT2 .File/length DEO2
+	#00 .size/w LDZ #30 SFT2 DUP2 .1bpp LDZ ?{
+		#85 ;<draw-row>/blend STA
+		#10 SFT2 }
+	.File/length DEO2
+	;<draw-row>/count STA2
 	&s ( -- )
-		;row .File/read DEO2
-		.File/success DEI2 #0000 EQU2 ?&eof
-		STH2kr <draw-row>
+		;row feof ?&eof
+		<draw-row>
 		!&s
 	&eof ( -- )
 		POP2r ;src <sclr>
-		BRK
+		BRK &icn-ext "icn $1
 
-@<draw-row> ( width* -- )
-	#20 SFT2 ;row .Screen/addr DEO2
-	#0000
+@<draw-row> ( -- )
+	;row .Screen/addr DEO2
+	[ LIT2 &count $2 ] #0000
 	&l ( -- )
-		#85 .Screen/sprite DEO
+		[ LIT2 &blend 0f -Screen/sprite ] DEO
 		INC2 GTH2k ?&l
 	POP2 POP2
 	( | next row )
@@ -115,6 +122,11 @@
 	scap/ STA
 	JMP2r
 
+@scmp3 ( a* b* -- f )
+	STH2
+	LDAkr LDAk STHr NEQ ?{ INC2r INC2 }
+	LDA2r LDA2 STH2r EQU2 JMP2r
+
 @<sclr> ( str* -- )
 	#00 ROT ROT
 	&w ( -- )
@@ -127,12 +139,15 @@
 	#0002 .File/length DEO2
 	[ LIT2 -System/debug -System/r ]
 	&l ( -- )
-		;&buf .File/read DEO2
-		.File/success DEI2 #0000 EQU2 ?{
+		;&buf feof ?{
 			STHk [ LIT2 &buf $2 ] STHr DEO2
 			INC INC NEQk ?&l }
 	POP2 JMP2r
 	&path ".theme $1
+
+@feof ( buf* -- f )
+	.File/read DEO2
+	.File/success DEI2 #0000 EQU2 JMP2r
 
 (
 @|assets )
