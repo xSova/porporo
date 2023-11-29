@@ -2,6 +2,7 @@
 
 - Map connection data to porporo's ram
 - Automatic reqdraw, use screen
+- Find way of automating connection setup
 
 Devices
 	- File device pointers should be assoc with Varvaras
@@ -10,8 +11,6 @@ Window Manager
 	- only draw program screens that are visible
 	- Global pointer, Hide pointer
 	- Clear windows
-	- Stick window issue with position w/ camera
-	- End applications
 
 Menu.rom
 	- Navigate into folders

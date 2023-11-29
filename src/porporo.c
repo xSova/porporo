@@ -105,7 +105,7 @@ drawconnections(Uint32 *dst, Varvara *a, int color)
 }
 
 static void
-drawpixels(Uint32 *dst, Varvara *p)
+drawvarvara(Uint32 *dst, Varvara *p)
 {
 	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
 	if(!p->live) return;
@@ -128,9 +128,9 @@ redraw(Uint32 *dst)
 {
 	int i;
 	for(i = 0; i < olen; i++)
-		if(order[i]->lock) drawpixels(dst, order[i]);
+		if(order[i]->lock) drawvarvara(dst, order[i]);
 	for(i = 0; i < olen; i++)
-		if(!order[i]->lock) drawpixels(dst, order[i]);
+		if(!order[i]->lock) drawvarvara(dst, order[i]);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
 	SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
@@ -178,7 +178,7 @@ focusvv(Varvara *a)
 static void
 order_raise(Varvara *v)
 {
-	int i, j = 0;
+	int i, j = 0, last = olen - 1;
 	Varvara *a, *b;
 	for(i = 0; i < olen; i++) {
 		if(v == order[i]) {
@@ -186,18 +186,10 @@ order_raise(Varvara *v)
 			break;
 		}
 	}
-	if(!j || j == olen - 1)
+	if(j == last)
 		return;
-	a = order[j], b = order[olen - 1];
-	order[j] = b, order[olen - 1] = a;
-}
-
-static void
-order_pop(Varvara *p)
-{
-	order_raise(p);
-	p->live = 0;
-	olen--;
+	a = order[j], b = order[last];
+	order[j] = b, order[last] = a;
 }
 
 static Varvara *
@@ -209,12 +201,22 @@ order_push(Varvara *p)
 }
 
 static void
+order_pop(Varvara *p)
+{
+	p->live = 0;
+	order_raise(p);
+	olen--;
+}
+
+static void
 remvv(Varvara *p)
 {
-	p->clen = 0;
-	focusvv(0);
-	clear(pixels);
-	order_pop(p);
+	if(p) {
+		p->clen = 0;
+		focusvv(0);
+		clear(pixels);
+		order_pop(p);
+	}
 }
 
 static void
@@ -602,8 +604,7 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	switch(d) {
 	case 0x00:
 		if(p > 0x7 && p < 0xe) screen_palette(&prg->screen, &u->dev[0x8]);
-		if(p == 0xf)
-			remvv(prg);
+		if(p == 0xf) remvv(prg);
 		break;
 	case 0x10: console_deo(prg, addr, value); break;
 	case 0x20: screen_deo(prg, u->ram, &u->dev[d], p); break;

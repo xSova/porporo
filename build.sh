@@ -24,4 +24,4 @@ bin/uxnasm etc/log.tal bin/log.rom
 bin/uxnasm etc/hello.tal bin/hello.rom
 bin/uxnasm etc/wallpaper.tal wallpaper.rom
 # run
-./bin/porporo bin/log.rom
+./bin/porporo bin/log.rom 
