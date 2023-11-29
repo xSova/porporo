@@ -19,6 +19,10 @@
 	#26ae .System/g DEO2
 	#26ae .System/b DEO2
 	<load-theme>
+	( | default file )
+	.Screen/width DEI2 #03 SFT2 NIP
+	( ) .Screen/height DEI2 #03 SFT2 NIP <set-size>
+	;dict/default <draw-wallpaper>
 	;await-src .Console/vector DEO2
 	;on-mouse .Mouse/vector DEO2
 	BRK
@@ -36,15 +40,18 @@
 
 @await-src ( -> )
 	.Console/read DEI .src skey ?{ BRK }
-	( | format )
-	;src scap/ #0003 SUB2 ;dict/icn-ext scmp3 .1bpp STZ
-	( | resize )
-	;src scap/ #0009 SUB2 read-size DUP2 .size STZ2
+	;src
+	( ) DUP2 scap/ #0009 SUB2 read-size <set-size>
+	( ) DUP2 scap/ #0003 SUB2 ;dict/icn-ext scmp3 .1bpp STZ
+	( ) DUP2 <draw-wallpaper>
+	( ) <sclr>
+	BRK
+
+@<set-size> ( w h -- )
+	DUP2 .size STZ2
 	( h ) #00 SWP #30 SFT2 .Screen/height DEO2
 	( w ) #00 SWP #30 SFT2 .Screen/width DEO2
-	;src <draw-wallpaper>
-	;src <sclr>
-	BRK
+	JMP2r
 
 @<draw-wallpaper> ( src* -- )
 	.File/name DEO2
@@ -57,11 +64,9 @@
 	.File/length DEO2
 	;<draw-row>/count STA2
 	&s ( -- )
-		;row feof ?&eof
-		<draw-row>
-		!&s
-	&eof ( -- )
-		POP2r JMP2r
+		;row feof ?{ <draw-row>
+			!&s }
+	JMP2r
 
 @<draw-row> ( -- )
 	;row .Screen/addr DEO2
@@ -163,6 +168,7 @@
 @fill-icn [ ffff ffff ffff ffff ]
 
 @dict &icn-ext "icn $1
+	&default ".wallpaper $1
 
 (
 @|memory )
