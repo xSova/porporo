@@ -24,6 +24,7 @@
 	;mem/folders <perr>
 	;mem/roms <perr>
 	( #010e DEO ) BRK
+	( TODO: Add meta )
 
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
@@ -40,6 +41,7 @@
 	DUP2 #8000 GTH2 ?&outside
 	( | spacer )
 	DUP2 #00 .lines/folders LDZ #40 SFT2 SUB2 #0008 LTH2 ?&outside
+	( TODO: optimize ) DUP2 #00 .lines/folders LDZ #40 SFT2 GTH2 #00 SWP #30 SFT2 SUB2
 	( | TODO: catch below )
 	#04 SFT2 NIP JMP2r
 	&outside ( y* -- id )
@@ -140,7 +142,8 @@
 @<draw-highlight> ( id -- )
 	;fill-icn .Screen/addr DEO2
 	#0000 .Screen/x DEO2
-	#00 OVR #40 SFT2 #0003 ADD2 .Screen/y DEO2
+	( spacer ) #00 OVR INC2 .lines/folders LDZ GTH #30 SFT2 STH2
+	#00 OVR #40 SFT2 #0003 ADD2 STH2r ADD2 .Screen/y DEO2
 	#f2 .Screen/auto DEO
 	.lines/folders LDZ LTH #02 ADD .Screen/sprite DEOk DEO
 	JMP2r
