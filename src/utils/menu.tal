@@ -13,7 +13,7 @@
 	#f0b2 .System/b DEO2
 	<load-theme>
 	#0080 .Screen/width DEO2
-	<load-dir>
+	;dict/home-path <load-dir>
 	;dir count-lines #40 SFT2 #0010 ADD2 .Screen/height DEO2
 	<redraw>
 	;on-mouse .Mouse/vector DEO2
@@ -23,7 +23,7 @@
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
 	.Mouse/y DEI2 #0008 SUB2 #04 SFT2 NIP .Mouse/state DEI ?{ <hover>
-	BRK }
+		BRK }
 	<select>
 	#00 .Mouse/state DEO
 	BRK
@@ -33,16 +33,33 @@
 	( esc ) DUP #1b NEQ ?{ <exit> }
 	POP BRK
 
+(
+@|core )
+
 @<exit> ( -- )
 	#ff ;<hover>/last STA
 	#800f DEO
 	JMP2r
 
-@<load-dir> ( -- )
-	{ ". 00 }
-	STH2r .File/name DEO2
+@<load-dir> ( path* -- )
+	.File/name DEO2
 	#1000 .File/length DEO2
 	;dir .File/read DEO2
+	( | parse )
+	;dir <clip-line>
+	;dir <perr>
+	#0a19 DEO
+	;dir <unclip-line>
+	JMP2r
+
+@<clip-line> ( path * -- )
+	&w INC2 LDAk #0a NEQ ?&w
+	#00 ROT ROT STA
+	JMP2r
+
+@<unclip-line> ( path * -- )
+	&w INC2 LDAk #00 NEQ ?&w
+	#0a ROT ROT STA
 	JMP2r
 
 @count-lines ( str* -- lines* )
@@ -55,12 +72,12 @@
 @<select> ( id -- )
 	.Mouse/state DEI #01 NEQ ?<exit>
 	DUP ?{
-	;dir #0005 ADD2 <print-word>/ }
+		;dir #0005 ADD2 <print-word>/ }
 	STH
 	[ LITr 00 ] ;dir #0005 ADD2
 	&w ( -- )
 		LDAk #0a NEQ ?{
-		#0006 ADD2 INCr EQUkr STHr ?&found }
+			#0006 ADD2 INCr EQUkr STHr ?&found }
 		INC2 LDAk ?&w
 	POP2r !<exit>
 	&found ( str* | a b -- )
@@ -98,9 +115,9 @@
 	;dir #0005 ADD2
 	&w ( -- )
 		LDAk #0a NEQ ?{
-		.Screen/y DEI2k #0010 ADD2 ROT DEO2
-		[ LIT2 &anchor $2 ] .Screen/x DEO2
-		#0006 ADD2 !&resume }
+			.Screen/y DEI2k #0010 ADD2 ROT DEO2
+			[ LIT2 &anchor $2 ] .Screen/x DEO2
+			#0006 ADD2 !&resume }
 		LDAk #20 SUB #00 SWP
 		( ) DUP2 #50 SFT2 ;font-uf2/glyphs ADD2 .Screen/addr DEO2
 		( ) ;font-uf2 ADD2 LDA #00 SWP .Screen/x DEI2 ADD2
@@ -123,6 +140,18 @@
 	.Screen/sprite DEO
 	JMP2r
 
+(
+@|stdlib )
+
+@<perr> ( str* -- )
+	&w ( -- )
+		LDAk #19 DEO
+		INC2 & LDAk #20 GTH ?&w
+	POP2 JMP2r
+
+(
+@|theme )
+
 @<load-theme> ( -- )
 	;&path .File/name DEO2
 	#0002 .File/length DEO2
@@ -130,8 +159,8 @@
 	&l ( -- )
 		;&buf .File/read DEO2
 		.File/success DEI2 #0000 EQU2 ?{
-		STHk [ LIT2 &buf $2 ] STHr DEO2
-		INC INC NEQk ?&l }
+			STHk [ LIT2 &buf $2 ] STHr DEO2
+			INC INC NEQk ?&l }
 	POP2 JMP2r
 	&path ".theme $1
 
@@ -142,7 +171,11 @@
 
 @fill-icn [ ffff ffff ffff ffff ]
 
+@dict &home-path ". $1
+
 @dir $1000
+
+@options $1000
 
 ~src/utils/font_losangeles.tal
 

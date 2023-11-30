@@ -574,8 +574,7 @@ void
 console_deo(Varvara *a, Uint8 addr, Uint8 value)
 {
 	int i;
-	(void)addr;
-	if(a == menu && !menu->clen) {
+	if(addr == 0x18 && a == menu && !menu->clen) {
 		sendcmd(value);
 		return;
 	}
