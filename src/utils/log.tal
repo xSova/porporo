@@ -76,5 +76,5 @@
 @buf
 	">ASCII 20 "Mode, 20 "ready. 0a $1000
 
-~src/font_816.tal
+~src/utils/font_816.tal
 

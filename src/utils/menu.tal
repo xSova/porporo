@@ -144,5 +144,5 @@
 
 @dir $1000
 
-~src/font_losangeles.tal
+~src/utils/font_losangeles.tal
 
