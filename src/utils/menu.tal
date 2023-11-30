@@ -8,7 +8,7 @@
 |0000
 
 	@lines &folders $1 &roms $1
-	@path
+	@path $2 &null
 
 |0100
 
@@ -49,16 +49,25 @@
 
 @on-control ( -> )
 	.Controller/key DEI
-	( esc ) DUP #1b NEQ ?{ <exit> }
+	( esc ) DUP #1b NEQ ?{ <leave> }
 	( TODO: Arrows controls ) POP BRK
 
 (
 @|core )
 
-@<exit> ( -- )
-	#ff ;<hover>/last STA
-	#800f DEO
-	JMP2r
+@<leave> ( -- )
+	;path/null LDA ?{ JMP2r }
+	;path DUP2 scap/ #0001 SUB2 EQU2k ?&skip
+	&w ( -- )
+		#0001 SUB2 LDAk LIT "/ NEQ ?&>no-path
+			NIP2
+			( null ) LITr 00 STH2
+			INC2r STAr
+			!<enter>
+			&>no-path
+		NEQ2k ?&w
+	&skip POP2 LIT2 ". 00 SWP2 STA2
+	!<enter>
 
 @<update-dir> ( path* -- )
 	.File/name DEO2
