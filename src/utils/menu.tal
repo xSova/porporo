@@ -55,20 +55,6 @@
 (
 @|core )
 
-@<leave> ( -- )
-	;path/null LDA ?{ JMP2r }
-	;path DUP2 scap/ #0001 SUB2 EQU2k ?&skip
-	&w ( -- )
-		#0001 SUB2 LDAk LIT "/ NEQ ?&>no-path
-			NIP2
-			( null ) LITr 00 STH2
-			INC2r STAr
-			!<enter>
-			&>no-path
-		NEQ2k ?&w
-	&skip POP2 LIT2 ". 00 SWP2 STA2
-	!<enter>
-
 @<update-dir> ( path* -- )
 	.File/name DEO2
 	#1000 .File/length DEO2
@@ -84,7 +70,10 @@
 	POP2
 	( | fit window )
 	#00 .lines/folders LDZ .lines/roms LDZ ADD
-	( ) #40 SFT2 #0010 ADD2 .Screen/height DEO2
+	( empty ) DUP #00 EQU ADD
+	( ) #40 SFT2
+	( no-folder spacer ) .lines/roms LDZ #00 EQU ?{ #0008 ADD2 }
+	( padding ) #0006 ADD2 .Screen/height DEO2
 	JMP2r
 
 @<parse-line> ( line* -- )
@@ -121,10 +110,26 @@
 	!<redraw>
 
 @<enter> ( folder* -- )
+	#ff <hover>
 	( cat ) ;path scap/ <scpy>
 	;path <update-dir>
 	<redraw>
 	JMP2r
+
+@<leave> ( -- )
+	#ff <hover>
+	;path/null LDA ?{ JMP2r }
+	;path DUP2 scap/ #0001 SUB2 EQU2k ?&skip
+	&w ( -- )
+		#0001 SUB2 LDAk LIT "/ NEQ ?&>no-path
+			NIP2
+			( null ) LITr 00 STH2
+			INC2r STAr
+			!<enter>
+			&>no-path
+		NEQ2k ?&w
+	&skip POP2 LIT2 ". 00 SWP2 STA2
+	!<enter>
 
 @is-folder ( line* -- line* f )
 	DUP2 lcap/ #0001 SUB2 LDA [ LIT "/ ] EQU JMP2r
