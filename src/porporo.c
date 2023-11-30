@@ -367,6 +367,7 @@ sendcmd(char c)
 	if(c < 0x20) {
 		clear(pixels);
 		order_pop(menu);
+		/* TODO: Handle invalid rom */
 		order_push(setvv(allocvv(), menu->x, menu->y, cmd, 1));
 		cmdlen = 0;
 		return;
@@ -574,8 +575,9 @@ void
 console_deo(Varvara *a, Uint8 addr, Uint8 value)
 {
 	int i;
-	if(addr == 0x18 && a == menu && !menu->clen) {
-		sendcmd(value);
+	if(a == menu && !menu->clen) {
+		if(addr == 0x18) sendcmd(value);
+		else printf("%c", value);
 		return;
 	}
 	for(i = 0; i < a->clen; i++) {
