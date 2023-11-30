@@ -21,9 +21,8 @@
 	<redraw>
 	;on-mouse .Mouse/vector DEO2
 	;on-control .Controller/vector DEO2
-	;mem/folders <perr>
-	;mem/roms <perr>
-	( #010e DEO ) BRK
+	#010e DEO
+	BRK
 	( TODO: Add meta )
 
 @on-mouse ( -> )
@@ -105,7 +104,9 @@
 	( | rom )
 	POP JMP2r
 	&folder ( id -- )
-		POP JMP2r
+		#00 SWP #40 SFT2 ;mem/folders ADD2 <pstr>
+		#0a18 DEO
+		JMP2r
 
 @<hover> ( id -- )
 	[ LIT &last ff ] NEQk ?{ POP2 JMP2r }
@@ -147,17 +148,13 @@
 
 @<draw-list> ( addr* length -- )
 	#0008 .Screen/x DEO2
-	#00
+	#00 SWP2 ,&t STR2
 	&l ( -- )
-		STHk OVR2 #00 STHr #40 SFT ADD2 <draw-uf2>
-		<draw-lb>
+		#00 OVR #40 SFT [ LIT2 &t $2 ] ADD2 <draw-uf2>
+		#0008 .Screen/x DEO2
+		.Screen/y DEI2k #0010 ADD2 ROT DEO2
 		INC GTHk ?&l
 	POP2 JMP2r
-
-@<draw-lb> ( -- )
-	#0008 .Screen/x DEO2
-	.Screen/y DEI2k #0010 ADD2 ROT DEO2
-	JMP2r
 
 @<draw-uf2> ( addr* -- )
 	#15 .Screen/auto DEO
@@ -207,7 +204,7 @@
 	STH2
 	&w ( -- )
 		LDAk #1f GTH ?{
-			LDA #00 STH2r STA2
+			POP2 #00 STH2r STA
 			JMP2r }
 		LDAk #00 STH2kr STA2
 		INC2r INC2 !&w
@@ -218,10 +215,10 @@
 		INC2 & LDAk ?&w
 	POP2 JMP2r
 
-@<pword> ( str* -- )
+@<pstr> ( str* -- )
 	&w ( -- )
 		LDAk #18 DEO
-		INC2 & LDAk #20 GTH ?&w
+		INC2 & LDAk ?&w
 	POP2 JMP2r
 
 @<phex> ( short* -- )
@@ -231,7 +228,7 @@
 	&c ( -- )
 		#0f AND DUP #09 GTH #27 MUL ADD [ LIT "0 ] ADD #18 DEO
 		JMP2r
-	
+
 (
 @|theme )
 
