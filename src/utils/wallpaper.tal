@@ -18,9 +18,10 @@
 	#26ae .System/b DEO2
 	<load-theme>
 	( | default file )
-	.Screen/width DEI2 #03 SFT2 NIP
-	( ) .Screen/height DEI2 #03 SFT2 NIP <set-size>
-	.Console/type DEI ?{ ;dict/default <draw-wallpaper> }
+	.Console/type DEI ?{
+		.Screen/width DEI2 #03 SFT2 NIP
+		( ) .Screen/height DEI2 #03 SFT2 NIP <set-size>
+		;dict/default <draw-wallpaper> }
 	;await-src .Console/vector DEO2
 	BRK
 

@@ -33,7 +33,7 @@ enum Action action;
 static Uint8 *ram, olen;
 static Uint32 *pixels, theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
 static int WIDTH, HEIGHT, isdrag, reqdraw, dragx, dragy, camerax, cameray;
-static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *wallpaper, *focused;
+static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *focused;
 
 static SDL_DisplayMode DM;
 static SDL_Window *gWindow = NULL;
@@ -201,8 +201,10 @@ order_raise(Varvara *v)
 static Varvara *
 order_push(Varvara *p)
 {
-	p->live = 1;
-	order[olen++] = p;
+	if(p) {
+		p->live = 1;
+		order[olen++] = p;
+	}
 	return p;
 }
 
@@ -248,7 +250,8 @@ setvv(int id, int x, int y, char *rom, int eval)
 	p->x = x, p->y = y;
 	p->u.id = id, p->u.ram = ram + id * 0x10000;
 	screen_resize(&p->screen, 640, 320);
-	system_init(p, &p->u, p->u.ram, rom);
+	if(!system_init(p, &p->u, p->u.ram, rom))
+		return 0;
 	if(eval)
 		uxn_eval(&p->u, 0x100);
 	return p;
@@ -264,12 +267,6 @@ allocvv(void)
 			return i;
 	}
 	return -1;
-}
-
-static Varvara *
-addvv(int x, int y, char *rom, int eval)
-{
-	return setvv(allocvv(), x, y, rom, eval);
 }
 
 static int
@@ -375,7 +372,7 @@ sendcmd(char c)
 	if(c < 0x20) {
 		clear(pixels);
 		order_pop(menu);
-		order_push(addvv(menu->x, menu->y, cmd, 1));
+		order_push(setvv(allocvv(), menu->x, menu->y, cmd, 1));
 		cmdlen = 0;
 		return;
 	}
@@ -637,17 +634,26 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 int
 main(int argc, char **argv)
 {
-	int i, anchor = 0x20;
+	int i, anchor = 0, lock = 0;
 	Uint32 begintime = 0, endtime = 0, delta = 0;
 	if(!init())
 		return error("Init", "Failure");
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
 	menu = setvv(0, 200, 150, "bin/menu.rom", 0);
-	wallpaper = order_push(setvv(1, 10, 10, "bin/wallpaper.rom", 1));
-	wallpaper->lock = 1;
+	/* load from arguments */
 	for(i = 1; i < argc; i++) {
-		Varvara *a = order_push(addvv(anchor, 0x20 * i, argv[i], 1));
-		anchor += a->screen.w + 0x20;
+		Varvara *a;
+		if(argv[i][0] == ':') {
+			lock = 1;
+			continue;
+		}
+		a = order_push(setvv(allocvv(), anchor, 0, argv[i], 1));
+		if(!a)
+			return error("Payload", argv[i]);
+		if(lock)
+			a->lock = 1, lock--;
+		else
+			anchor += a->screen.w + 0x20;
 	}
 	/* event loop */
 	while(1) {

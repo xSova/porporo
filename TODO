@@ -3,6 +3,7 @@
 - File device pointers should be assoc with Varvaras
 - Map connection data to porporo's ram
 - Automatic reqdraw, use screen
+- Fail if cannot find menu?
 
 Window Manager
 	- only draw program screens that are visible
