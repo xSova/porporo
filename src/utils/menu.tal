@@ -14,6 +14,7 @@
 |0100
 
 @on-reset ( -> )
+	;meta #06 DEO2
 	#f07a .System/r DEO2
 	#f0da .System/g DEO2
 	#f0ba .System/b DEO2
@@ -23,7 +24,13 @@
 	;on-mouse .Mouse/vector DEO2
 	;on-control .Controller/vector DEO2
 	( #010e DEO ) BRK
-	( TODO: Add meta )
+
+@meta $1
+	( name ) "Porporo(menu) 0a
+	( desc ) "File 20 "Browser 0a
+	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
+	( date ) "30 20 "Nov 20 "2023 $1
+	( exts ) 00
 
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
