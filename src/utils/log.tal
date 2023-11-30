@@ -7,9 +7,9 @@
 |0100
 
 @on-reset ( -> )
-	#7f0f .System/r DEO2
-	#df06 .System/g DEO2
-	#bf02 .System/b DEO2
+	#cf0f .System/r DEO2
+	#cf06 .System/g DEO2
+	#cf02 .System/b DEO2
 	#0180 .Screen/width DEO2
 	#00c0 .Screen/height DEO2
 	<redraw>

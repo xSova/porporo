@@ -204,21 +204,13 @@ order_push(Varvara *p)
 }
 
 static void
-order_pop(Varvara *p)
-{
-	p->live = 0;
-	order_raise(p);
-	olen--;
-}
-
-static void
 remvv(Varvara *p)
 {
 	if(p) {
-		p->clen = 0;
-		focusvv(0);
+		p->clen = 0, p->live = 0;
 		clear(pixels);
-		order_pop(p);
+		order_raise(p);
+		olen--;
 	}
 }
 
@@ -278,7 +270,7 @@ pickvv(int x, int y)
 	int i;
 	for(i = olen - 1; i > -1; --i) {
 		Varvara *p = order[i];
-		if(withinvv(p, x, y))
+		if(!p->lock && withinvv(p, x, y))
 			return p;
 	}
 	return 0;
@@ -366,7 +358,6 @@ sendcmd(char c)
 {
 	if(c < 0x20) {
 		clear(pixels);
-		order_pop(menu);
 		/* TODO: Handle invalid rom */
 		order_push(setvv(allocvv(), menu->x, menu->y, cmd, 1));
 		cmdlen = 0;
@@ -576,8 +567,10 @@ console_deo(Varvara *a, Uint8 addr, Uint8 value)
 {
 	int i;
 	if(a == menu && !menu->clen) {
-		if(addr == 0x18) sendcmd(value);
-		else printf("%c", value);
+		if(addr == 0x18)
+			sendcmd(value);
+		else
+			printf("%c", value);
 		return;
 	}
 	for(i = 0; i < a->clen; i++) {
