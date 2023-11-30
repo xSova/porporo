@@ -42,14 +42,16 @@
 	has-spacer #00 EQU ?{
 		DUP2 #00 .lines/folders LDZ #40 SFT2 SUB2 #0008 LTH2 ?&outside
 		DUP2 #00 .lines/folders LDZ #40 SFT2 GTH2 #00 SWP #30 SFT2 SUB2 }
-	( | TODO: catch below )
-	#04 SFT2 NIP JMP2r
+	#04 SFT2 NIP
+	( | below )
+	DUP count-lines LTH ?{ POP #ff JMP2r }
+	JMP2r
 	&outside ( y* -- id )
 		POP2 #ff JMP2r
 
 @on-control ( -> )
 	.Controller/key DEI
-	( esc ) DUP #1b NEQ ?{ <leave> }
+	( esc ) DUP #1b NEQ ?{ <escape> }
 	( tab ) DUP #09 NEQ ?{ <toggle-misc> }
 	( TODO: Arrows controls ) POP BRK
 
@@ -58,7 +60,7 @@
 
 @<refresh-dir> ( -- )
 	;path .File/name DEO2
-	#1000 .File/length DEO2
+	#0800 .File/length DEO2
 	;mem/dir .File/read DEO2
 	( | clean )
 	#00 .lines/folders STZ
@@ -103,17 +105,17 @@
 	.lines/roms LDZ SUB DUP .lines/misc LDZ LTH ?&misc
 	POP JMP2r
 	&roms ( id -- )
-		;path <pstr>
-		#00 SWP #40 SFT2 ;mem/roms ADD2 <pstr>
-		#0a18 DEO
-		JMP2r
+		#00 SWP #40 SFT2 ;mem/roms ADD2 !<send-file>
 	&misc ( id -- )
-		;path <pstr>
-		#00 SWP #40 SFT2 ;mem/misc ADD2 <pstr>
-		#0a18 DEO
-		JMP2r
+		#00 SWP #40 SFT2 ;mem/misc ADD2 !<send-file>
 	&folder ( id -- )
 		#00 SWP #40 SFT2 ;mem/folders ADD2 !<enter>
+
+@<send-file> ( file* -- )
+	;path <pstr>
+	<pstr>
+	#0a18 DEO
+	!<exit>
 
 @<hover> ( id -- )
 	[ LIT &last ff ] NEQk ?{ POP2 JMP2r }
@@ -126,10 +128,16 @@
 @<leave> ( -- )
 	pop-path !<refresh-dir>
 
+@<escape> ( -- )
+	;path/null LDA ?<leave>
+	( >> )
+
+@<exit> ( -- )
+	#800f DEO
+	JMP2r
+
 @<toggle-misc> ( -- )
 	.misc LDZ #00 EQU .misc STZ
-	.misc LDZ <phex>/b
-	#0a18 DEO
 	!fit-window
 
 @count-lines ( -- lines )
@@ -138,7 +146,11 @@
 	JMP2r
 
 @has-spacer ( -- f )
-	.lines/folders LDZ #00 NEQ .lines/roms LDZ #00 NEQ AND JMP2r
+	.lines/folders LDZ #00 NEQ
+	( ) .lines/roms LDZ #00 NEQ
+	( ) .misc LDZ #00 EQU ?{
+		.lines/misc LDZ #00 NEQ ORA }
+	AND JMP2r
 
 @is-folder ( line* -- line* f )
 	DUP2 lcap/ #0001 SUB2 LDA [ LIT "/ ] EQU JMP2r
@@ -212,7 +224,7 @@
 
 @<draw-list> ( addr* length color -- )
 	,&color STR
-	DUP ?{ POP2 JMP2r }
+	DUP ?{ POP2 POP JMP2r }
 	#0008 .Screen/x DEO2
 	#00 SWP2 ,&t STR2
 	&l ( -- )
@@ -295,14 +307,6 @@
 		INC2 & LDAk ?&w
 	POP2 JMP2r
 
-@<phex> ( short* -- )
-	SWP <phex>/b
-	&b ( -- )
-		DUP #04 SFT <phex>/c
-	&c ( -- )
-		#0f AND DUP #09 GTH #27 MUL ADD [ LIT "0 ] ADD #18 DEO
-		JMP2r
-
 (
 @|theme )
 
@@ -331,10 +335,10 @@
 	&rom-ext "rom $1
 	&empty "(empty) $1
 
-@mem &dir $1000
-	&folders $800
-	&roms $800
-	&misc $800
+@mem &dir $800
+	&folders $200
+	&roms $200
+	&misc $200
 
 ~src/utils/font_losangeles.tal
 
