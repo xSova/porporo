@@ -10,9 +10,9 @@ all: dest bin/uxnasm bin/porporo
 dest:
 	@ mkdir -p bin
 rom:
-	@ bin/uxnasm etc/menu.tal bin/menu.rom
-	@ bin/uxnasm etc/wallpaper.tal bin/wallpaper.rom
-	@ bin/uxnasm etc/log.tal bin/log.rom
+	@ bin/uxnasm src/menu.tal bin/menu.rom
+	@ bin/uxnasm src/wallpaper.tal bin/wallpaper.rom
+	@ bin/uxnasm src/log.tal bin/log.rom
 run: bin/uxnasm bin/porporo rom
 	@ bin/porporo bin/log.rom
 install: bin/uxnasm bin/porporo
