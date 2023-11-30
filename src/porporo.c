@@ -634,8 +634,10 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 int
 main(int argc, char **argv)
 {
-	int i, anchor = 0, lock = 0;
+	int i, anchor = 0;
 	Uint32 begintime = 0, endtime = 0, delta = 0;
+	if(argc == 2 && argv[1][0] == '-' && argv[1][1] == 'v')
+		return !fprintf(stdout, "Porporo - Varvara Multiplexer, 29 Nov 2023.\n");
 	if(!init())
 		return error("Init", "Failure");
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
@@ -643,17 +645,13 @@ main(int argc, char **argv)
 	/* load from arguments */
 	for(i = 1; i < argc; i++) {
 		Varvara *a;
-		if(argv[i][0] == ':') {
-			lock = 1;
+		if(argv[i][0] == '-') {
+			a = order_push(setvv(allocvv(), anchor, 0, argv[++i], 1));
+			a->lock = 1;
 			continue;
 		}
-		a = order_push(setvv(allocvv(), anchor, 0, argv[i], 1));
-		if(!a)
-			return error("Payload", argv[i]);
-		if(lock)
-			a->lock = 1, lock--;
-		else
-			anchor += a->screen.w + 0x20;
+		a = order_push(setvv(allocvv(), anchor + 0x10, 0x10, argv[i], 1));
+		anchor += a->screen.w + 0x20;
 	}
 	/* event loop */
 	while(1) {

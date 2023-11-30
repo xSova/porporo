@@ -14,7 +14,7 @@ rom:
 	@ bin/uxnasm src/utils/wallpaper.tal bin/wallpaper.rom
 	@ bin/uxnasm src/utils/log.tal bin/log.rom
 run: bin/uxnasm bin/porporo rom
-	@ bin/porporo : bin/wallpaper.rom bin/log.rom
+	@ bin/porporo - bin/wallpaper.rom bin/log.rom
 install: bin/uxnasm bin/porporo
 	@ cp bin/porporo ~/bin/
 uninstall:
