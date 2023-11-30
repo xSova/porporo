@@ -18,7 +18,7 @@
 	#f0ba .System/b DEO2
 	<load-theme>
 	#0080 .Screen/width DEO2
-	;dict/home-path set-path <update-dir>
+	;dict/home-path set-path <refresh-dir>
 	;on-mouse .Mouse/vector DEO2
 	;on-control .Controller/vector DEO2
 	( #010e DEO ) BRK
@@ -54,7 +54,7 @@
 (
 @|core )
 
-@<update-dir> ( -- )
+@<refresh-dir> ( -- )
 	;path .File/name DEO2
 	#1000 .File/length DEO2
 	;mem/dir .File/read DEO2
@@ -68,7 +68,7 @@
 		lcap/ INC2 LDAk ?&w
 	POP2
 	( | fit window )
-	#00 .lines/folders LDZ .lines/roms LDZ ADD
+	#00 count-lines
 	( empty ) DUP #00 EQU ADD
 	( ) #40 SFT2
 	( no-folder spacer ) has-spacer #00 EQU ?{ #0008 ADD2 }
@@ -110,10 +110,13 @@
 	!<redraw>
 
 @<enter> ( folder* -- )
-	push-path !<update-dir>
+	push-path !<refresh-dir>
 
 @<leave> ( -- )
-	pop-path !<update-dir>
+	pop-path !<refresh-dir>
+
+@count-lines ( -- lines )
+	.lines/folders LDZ .lines/roms LDZ ADD JMP2r
 
 @has-spacer ( -- f )
 	.lines/folders LDZ #00 NEQ .lines/roms LDZ #00 NEQ AND JMP2r
@@ -155,9 +158,9 @@
 	;<hover>/last LDA <draw-highlight>
 	( | content )
 	#0004 .Screen/y DEO2
-	.lines/folders LDZ .lines/roms LDZ ADD ?{
+	( empty ) count-lines ?{
 		#0008 .Screen/x DEO2
-		( empty ) ;dict/empty #0f !<draw-uf2> }
+		;dict/empty #0f !<draw-uf2> }
 	( | folders )
 	;mem/folders .lines/folders LDZ <draw-list>
 	.lines/folders LDZ #00 EQU ?{ <draw-spacer> }
@@ -172,7 +175,7 @@
 	JMP2r
 
 @<draw-highlight> ( id -- )
-	( empty ) .lines/folders LDZ .lines/roms LDZ ADD ?{ POP JMP2r }
+	( empty ) count-lines ?{ POP JMP2r }
 	;fill-icn .Screen/addr DEO2
 	#f2 .Screen/auto DEO
 	#0000 .Screen/x DEO2
@@ -276,7 +279,7 @@
 	&c ( -- )
 		#0f AND DUP #09 GTH #27 MUL ADD [ LIT "0 ] ADD #18 DEO
 		JMP2r
-
+	
 (
 @|theme )
 
