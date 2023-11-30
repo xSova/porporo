@@ -7,8 +7,9 @@
 
 |0000
 
+	@misc $1
 	@path $2 &null $80
-	@lines &folders $1 &roms $1
+	@lines &folders $1 &roms $1 &misc $1
 
 |0100
 
@@ -49,6 +50,7 @@
 @on-control ( -> )
 	.Controller/key DEI
 	( esc ) DUP #1b NEQ ?{ <leave> }
+	( tab ) DUP #09 NEQ ?{ <toggle-misc> }
 	( TODO: Arrows controls ) POP BRK
 
 (
@@ -61,16 +63,18 @@
 	( | clean )
 	#00 .lines/folders STZ
 	#00 .lines/roms STZ
+	#00 .lines/misc STZ
 	( | parse )
 	;mem/dir
 	&w ( -- )
 		DUP2 <parse-line>
 		lcap/ INC2 LDAk ?&w
 	POP2
-	( | fit window )
+	( >> )
+
+@fit-window ( -- )
 	#00 count-lines
-	( empty ) DUP #00 EQU ADD
-	( ) #40 SFT2
+	( empty ) DUP #00 EQU ADD #40 SFT2
 	( no-folder spacer ) has-spacer #00 EQU ?{ #0008 ADD2 }
 	( padding ) #0006 ADD2 .Screen/height DEO2
 	!<redraw>
@@ -79,8 +83,9 @@
 	#0005 ADD2 LDAk [ LIT ". ] EQU ?&hidden
 	is-folder ?&folder
 	is-rom ?&rom
-	POP2 JMP2r
-	;mem/misc scap/ !<lcpy>
+	;mem/misc #00 .lines/misc LDZ #40 SFT2 ADD2 <lcpy>
+	.lines/misc LDZ INC .lines/misc STZ
+	JMP2r
 	&folder ( line* -- )
 		;mem/folders #00 .lines/folders LDZ #40 SFT2 ADD2 <lcpy>
 		.lines/folders LDZ INC .lines/folders STZ
@@ -95,10 +100,16 @@
 @<select> ( id -- )
 	DUP .lines/folders LDZ LTH ?&folder
 	.lines/folders LDZ SUB DUP .lines/roms LDZ LTH ?&roms
+	.lines/roms LDZ SUB DUP .lines/misc LDZ LTH ?&misc
 	POP JMP2r
 	&roms ( id -- )
 		;path <pstr>
 		#00 SWP #40 SFT2 ;mem/roms ADD2 <pstr>
+		#0a18 DEO
+		JMP2r
+	&misc ( id -- )
+		;path <pstr>
+		#00 SWP #40 SFT2 ;mem/misc ADD2 <pstr>
 		#0a18 DEO
 		JMP2r
 	&folder ( id -- )
@@ -115,8 +126,16 @@
 @<leave> ( -- )
 	pop-path !<refresh-dir>
 
+@<toggle-misc> ( -- )
+	.misc LDZ #00 EQU .misc STZ
+	.misc LDZ <phex>/b
+	#0a18 DEO
+	!fit-window
+
 @count-lines ( -- lines )
-	.lines/folders LDZ .lines/roms LDZ ADD JMP2r
+	.lines/folders LDZ .lines/roms LDZ ADD
+	( ) .misc LDZ #00 EQU ?{ .lines/misc LDZ ADD }
+	JMP2r
 
 @has-spacer ( -- f )
 	.lines/folders LDZ #00 NEQ .lines/roms LDZ #00 NEQ AND JMP2r
@@ -158,13 +177,16 @@
 	;<hover>/last LDA <draw-highlight>
 	( | content )
 	#0004 .Screen/y DEO2
-	( empty ) count-lines ?{
+	( | empty )
+	count-lines ?{
 		#0008 .Screen/x DEO2
 		;dict/empty #0f !<draw-uf2> }
 	( | folders )
-	;mem/folders .lines/folders LDZ <draw-list>
+	;mem/folders .lines/folders LDZ #05 <draw-list>
 	.lines/folders LDZ #00 EQU ?{ <draw-spacer> }
-	;mem/roms .lines/roms LDZ <draw-list>
+	;mem/roms .lines/roms LDZ #05 <draw-list>
+	.misc LDZ #00 EQU ?{
+		;mem/misc .lines/misc LDZ #0f <draw-list> }
 	JMP2r
 
 @<draw-spacer> ( -- )
@@ -188,12 +210,13 @@
 	#02 .Screen/sprite DEOk DEO
 	POPr JMP2r
 
-@<draw-list> ( addr* length -- )
+@<draw-list> ( addr* length color -- )
+	,&color STR
 	DUP ?{ POP2 JMP2r }
 	#0008 .Screen/x DEO2
 	#00 SWP2 ,&t STR2
 	&l ( -- )
-		#00 OVR #40 SFT [ LIT2 &t $2 ] ADD2 #05 <draw-uf2>
+		#00 OVR #40 SFT [ LIT2 &t $2 ] ADD2 [ LIT &color $1 ] <draw-uf2>
 		#0008 .Screen/x DEO2
 		.Screen/y DEI2k #0010 ADD2 ROT DEO2
 		INC GTHk ?&l
@@ -279,7 +302,7 @@
 	&c ( -- )
 		#0f AND DUP #09 GTH #27 MUL ADD [ LIT "0 ] ADD #18 DEO
 		JMP2r
-	
+
 (
 @|theme )
 
