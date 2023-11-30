@@ -19,7 +19,6 @@
 	<load-theme>
 	#0080 .Screen/width DEO2
 	;dict/home-path set-path <update-dir>
-	<redraw>
 	;on-mouse .Mouse/vector DEO2
 	;on-control .Controller/vector DEO2
 	( #010e DEO ) BRK
@@ -28,6 +27,8 @@
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
 	.Mouse/y DEI2 <y-id>
+	DUP <phex>/b
+	#0a18 DEO
 	.Mouse/state DEI ?{ <hover>
 		BRK }
 	<select>
@@ -39,8 +40,9 @@
 	( | above )
 	DUP2 #8000 GTH2 ?&outside
 	( | spacer )
-	DUP2 #00 .lines/folders LDZ #40 SFT2 SUB2 #0008 LTH2 ?&outside
-	( TODO: optimize ) DUP2 #00 .lines/folders LDZ #40 SFT2 GTH2 #00 SWP #30 SFT2 SUB2
+	has-spacer #00 EQU ?{
+		DUP2 #00 .lines/folders LDZ #40 SFT2 SUB2 #0008 LTH2 ?&outside
+		DUP2 #00 .lines/folders LDZ #40 SFT2 GTH2 #00 SWP #30 SFT2 SUB2 }
 	( | TODO: catch below )
 	#04 SFT2 NIP JMP2r
 	&outside ( y* -- id )
@@ -73,7 +75,7 @@
 	( ) #40 SFT2
 	( no-folder spacer ) .lines/roms LDZ #00 EQU ?{ #0008 ADD2 }
 	( padding ) #0006 ADD2 .Screen/height DEO2
-	JMP2r
+	!<redraw>
 
 @<parse-line> ( line* -- )
 	#0005 ADD2 LDAk [ LIT ". ] EQU ?&hidden
@@ -110,12 +112,13 @@
 	!<redraw>
 
 @<enter> ( folder* -- )
-	push-path <update-dir>
-	!<redraw>
+	push-path !<update-dir>
 
 @<leave> ( -- )
-	pop-path <update-dir>
-	!<redraw>
+	pop-path !<update-dir>
+
+@has-spacer ( -- f )
+	.lines/folders LDZ #00 NEQ .lines/roms LDZ #00 NEQ AND JMP2r
 
 @is-folder ( line* -- line* f )
 	DUP2 lcap/ #0001 SUB2 LDA [ LIT "/ ] EQU JMP2r
@@ -159,7 +162,7 @@
 		( empty ) ;dict/empty #0f !<draw-uf2> }
 	( | folders )
 	;mem/folders .lines/folders LDZ <draw-list>
-	<draw-spacer>
+	.lines/folders LDZ #00 EQU ?{ <draw-spacer> }
 	;mem/roms .lines/roms LDZ <draw-list>
 	JMP2r
 
@@ -171,13 +174,17 @@
 	JMP2r
 
 @<draw-highlight> ( id -- )
-	.lines/folders LDZ .lines/roms LDZ ADD ?{ POP JMP2r }
+	( empty ) .lines/folders LDZ .lines/roms LDZ ADD ?{ POP JMP2r }
 	;fill-icn .Screen/addr DEO2
-	#0000 .Screen/x DEO2
-	( spacer ) #00 OVR INC2 .lines/folders LDZ GTH #30 SFT2 STH2
-	#00 OVR #40 SFT2 #0003 ADD2 STH2r ADD2 .Screen/y DEO2
 	#f2 .Screen/auto DEO
-	.lines/folders LDZ LTH #02 ADD .Screen/sprite DEOk DEO
+	#0000 .Screen/x DEO2
+	STH
+	( | spacer )
+	.lines/folders LDZ #00 EQU ?{
+		#00 STHkr INC .lines/folders LDZ GTH #30 SFT2 }
+	( lines ) #00 STHr #40 SFT2 ADD2
+	( padding ) #0003 ADD2 .Screen/y DEO2
+	#02 .Screen/sprite DEOk DEO
 	JMP2r
 
 @<draw-list> ( addr* length -- )
@@ -271,7 +278,7 @@
 	&c ( -- )
 		#0f AND DUP #09 GTH #27 MUL ADD [ LIT "0 ] ADD #18 DEO
 		JMP2r
-
+	
 (
 @|theme )
 
