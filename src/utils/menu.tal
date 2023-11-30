@@ -18,7 +18,17 @@
 	<redraw>
 	;on-mouse .Mouse/vector DEO2
 	;on-control .Controller/vector DEO2
+	;mem/folders <perr>
+	;mem/roms <perr>
+	#010e DEO
 	BRK
+
+@<print-entries> ( addr* -- )
+	&w ( -- )
+		LDAk ?{ POP2 JMP2r }
+		DUP2 <perr>
+		#0a19 DEO
+		scap/ INC2 !&w
 
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
@@ -48,30 +58,36 @@
 	( | parse )
 	;mem/dir
 	&w ( -- )
-		( clip ) DUP2 lcap/ STH2k #00 ROT ROT STA
 		DUP2 <parse-line>
-		( unclip ) #0a STH2r STA
 		lcap/ INC2 LDAk ?&w
 	POP2 JMP2r
 
 @<parse-line> ( line* -- )
-	DUP2 <perr>
-	#0a19 DEO
-	DUP2 is-folder ?&folder
-	DUP2 is-rom ?&rom
-	( misc ) JMP2r
+	#0005 ADD2 LDAk [ LIT ". ] EQU ?&hidden
+	( ) is-folder ?&folder
+	( ) is-rom ?&rom
+	;mem/misc scap/ !<append-line>
 	&folder ( line* -- )
-		POP2 JMP2r
+		;mem/folders scap/ !<append-line>
 	&rom ( line* -- )
-		POP2 JMP2r
-	&misc ( line* -- )
+		;mem/roms scap/ !<append-line>
+	&hidden ( line* -- )
 		POP2 JMP2r
 
-@is-folder ( line* -- f )
-	LDA [ LIT "- ] EQU JMP2r
+@<append-line> ( src* dst* -- )
+	STH2
+	&w ( -- )
+		LDAk #1f GTH ?{
+			LDA #00 STH2r STA2
+			JMP2r }
+		LDAk #00 STH2kr STA2
+		INC2r INC2 !&w
 
-@is-rom ( line* -- f )
-	scap/ #0003 SUB2 ;dict/rom-ext !scmp3
+@is-folder ( line* -- line* f )
+	DUP2 lcap/ #0001 SUB2 LDA [ LIT "/ ] EQU JMP2r
+
+@is-rom ( line* -- line*f )
+	DUP2 lcap/ #0003 SUB2 ;dict/rom-ext !scmp3
 
 @count-lines ( str* -- lines* )
 	[ LIT2r 0000 ]
@@ -148,6 +164,16 @@
 (
 @|stdlib )
 
+@<scpy> ( src* dst* -- )
+	STH2
+	&w ( -- )
+		LDAk #00 STH2kr STA2
+		INC2r INC2 LDAk ?&w
+	POP2 POP2r JMP2r
+
+@slen ( str* -- len* )
+	DUP2 scap/ SWP2 SUB2 JMP2r
+
 @scap ( str* -- end* )
 	&w ( -- )
 		INC2 & LDAk ?&w
@@ -199,13 +225,12 @@
 @fill-icn [ ffff ffff ffff ffff ]
 
 @dict &home-path ". $1
-&rom-ext "rom $1
+	&rom-ext "rom $1
 
 @mem &dir $1000
 	&folders $800
 	&roms $800
 	&misc $800
-
 
 ~src/utils/font_losangeles.tal
 
