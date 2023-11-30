@@ -122,7 +122,8 @@
 	;path <pstr>
 	<pstr>
 	#0a18 DEO
-	!<exit>
+	.Mouse/state DEI #01 EQU ?<exit>
+	JMP2r
 
 @<hover> ( id -- )
 	[ LIT &last ff ] NEQk ?{ POP2 JMP2r }
