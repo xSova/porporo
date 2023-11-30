@@ -107,13 +107,8 @@ drawconnections(Uint32 *dst, Varvara *a, int color)
 static void
 drawvarvara(Uint32 *dst, Varvara *p)
 {
-	int w = p->screen.w, h = p->screen.h, x = p->x + camerax, y = p->y + cameray;
-
-	if(p->lock) {
-		x = p->x;
-		y = p->y;
-	}
-
+	int w = p->screen.w, h = p->screen.h, x = p->x, y = p->y;
+	if(!p->lock) x += camerax, y += cameray;
 	if(!p->live) return;
 	if(p->clen) drawconnections(dst, p, 2 - action);
 	if(!p->lock) drawborders(dst, x, y, x + w, y + h, 2 - action);
@@ -646,7 +641,8 @@ main(int argc, char **argv)
 	for(i = 1; i < argc; i++) {
 		Varvara *a;
 		if(argv[i][0] == '-') {
-			a = order_push(setvv(i, anchor, 0, argv[++i], 1));
+			i += 1;
+			a = order_push(setvv(i, anchor, 0, argv[i], 1));
 			a->lock = 1;
 			continue;
 		}
