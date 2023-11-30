@@ -13,9 +13,9 @@
 |0100
 
 @on-reset ( -> )
-	#f07c .System/r DEO2
-	#f0dc .System/g DEO2
-	#f0bc .System/b DEO2
+	#f07a .System/r DEO2
+	#f0da .System/g DEO2
+	#f0ba .System/b DEO2
 	<load-theme>
 	#0080 .Screen/width DEO2
 	;dict/home-path set-path <update-dir>
@@ -97,12 +97,12 @@
 	.lines/folders LDZ SUB DUP .lines/roms LDZ LTH ?&roms
 	POP JMP2r
 	&roms ( id -- )
+		;path <pstr>
 		#00 SWP #40 SFT2 ;mem/roms ADD2 <pstr>
 		#0a18 DEO
 		JMP2r
 	&folder ( id -- )
-		#00 SWP #40 SFT2 ;mem/folders ADD2 <enter>
-		JMP2r
+		#00 SWP #40 SFT2 ;mem/folders ADD2 !<enter>
 
 @<hover> ( id -- )
 	[ LIT &last ff ] NEQk ?{ POP2 JMP2r }
@@ -156,7 +156,7 @@
 	#0004 .Screen/y DEO2
 	.lines/folders LDZ .lines/roms LDZ ADD ?{
 		#0008 .Screen/x DEO2
-		( empty ) ;dict/empty !<draw-uf2> }
+		( empty ) ;dict/empty #0f !<draw-uf2> }
 	( | folders )
 	;mem/folders .lines/folders LDZ <draw-list>
 	<draw-spacer>
@@ -171,6 +171,7 @@
 	JMP2r
 
 @<draw-highlight> ( id -- )
+	.lines/folders LDZ .lines/roms LDZ ADD ?{ POP JMP2r }
 	;fill-icn .Screen/addr DEO2
 	#0000 .Screen/x DEO2
 	( spacer ) #00 OVR INC2 .lines/folders LDZ GTH #30 SFT2 STH2
@@ -184,20 +185,21 @@
 	#0008 .Screen/x DEO2
 	#00 SWP2 ,&t STR2
 	&l ( -- )
-		#00 OVR #40 SFT [ LIT2 &t $2 ] ADD2 <draw-uf2>
+		#00 OVR #40 SFT [ LIT2 &t $2 ] ADD2 #05 <draw-uf2>
 		#0008 .Screen/x DEO2
 		.Screen/y DEI2k #0010 ADD2 ROT DEO2
 		INC GTHk ?&l
 	POP2 JMP2r
 
-@<draw-uf2> ( addr* -- )
+@<draw-uf2> ( addr* color -- )
+	,&color STR
 	#15 .Screen/auto DEO
 	&w ( -- )
 		LDAk #1f GTH ?{ POP2 JMP2r }
 		LDAk #20 SUB #00 SWP
 		( ) DUP2 #50 SFT2 ;font-uf2/glyphs ADD2 .Screen/addr DEO2
 		( ) ;font-uf2 ADD2 LDA #00 SWP .Screen/x DEI2 ADD2
-		( ) #05 .Screen/sprite DEOk DEO
+		( ) [ LIT &color 05 ] .Screen/sprite DEOk DEO
 		.Screen/x DEO2
 		INC2 !&w
 
