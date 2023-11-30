@@ -27,8 +27,6 @@
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
 	.Mouse/y DEI2 <y-id>
-	DUP <phex>/b
-	#0a18 DEO
 	.Mouse/state DEI ?{ <hover>
 		BRK }
 	<select>
@@ -73,7 +71,7 @@
 	#00 .lines/folders LDZ .lines/roms LDZ ADD
 	( empty ) DUP #00 EQU ADD
 	( ) #40 SFT2
-	( no-folder spacer ) .lines/roms LDZ #00 EQU ?{ #0008 ADD2 }
+	( no-folder spacer ) has-spacer #00 EQU ?{ #0008 ADD2 }
 	( padding ) #0006 ADD2 .Screen/height DEO2
 	!<redraw>
 
@@ -179,13 +177,13 @@
 	#f2 .Screen/auto DEO
 	#0000 .Screen/x DEO2
 	STH
+	( lines ) #00 STHkr #40 SFT2
 	( | spacer )
-	.lines/folders LDZ #00 EQU ?{
-		#00 STHkr INC .lines/folders LDZ GTH #30 SFT2 }
-	( lines ) #00 STHr #40 SFT2 ADD2
+	has-spacer #00 EQU ?{
+		#00 STHkr INC .lines/folders LDZ GTH #30 SFT2 ADD2 }
 	( padding ) #0003 ADD2 .Screen/y DEO2
 	#02 .Screen/sprite DEOk DEO
-	JMP2r
+	POPr JMP2r
 
 @<draw-list> ( addr* length -- )
 	DUP ?{ POP2 JMP2r }
@@ -278,7 +276,7 @@
 	&c ( -- )
 		#0f AND DUP #09 GTH #27 MUL ADD [ LIT "0 ] ADD #18 DEO
 		JMP2r
-	
+
 (
 @|theme )
 
