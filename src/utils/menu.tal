@@ -7,8 +7,8 @@
 
 |0000
 
+	@path $2 &null $80
 	@lines &folders $1 &roms $1
-	@path $2 &null
 
 |0100
 
@@ -18,8 +18,7 @@
 	#f0bc .System/b DEO2
 	<load-theme>
 	#0080 .Screen/width DEO2
-	;dict/home-path ;path <scpy>
-	;path <update-dir>
+	;dict/home-path set-path <update-dir>
 	<redraw>
 	;on-mouse .Mouse/vector DEO2
 	;on-control .Controller/vector DEO2
@@ -55,8 +54,8 @@
 (
 @|core )
 
-@<update-dir> ( path* -- )
-	.File/name DEO2
+@<update-dir> ( -- )
+	;path .File/name DEO2
 	#1000 .File/length DEO2
 	;mem/dir .File/read DEO2
 	( | clean )
@@ -80,6 +79,7 @@
 	#0005 ADD2 LDAk [ LIT ". ] EQU ?&hidden
 	is-folder ?&folder
 	is-rom ?&rom
+	POP2 JMP2r
 	;mem/misc scap/ !<lcpy>
 	&folder ( line* -- )
 		;mem/folders #00 .lines/folders LDZ #40 SFT2 ADD2 <lcpy>
@@ -110,32 +110,37 @@
 	!<redraw>
 
 @<enter> ( folder* -- )
-	#ff <hover>
-	( cat ) ;path scap/ <scpy>
-	;path <update-dir>
-	<redraw>
-	JMP2r
+	push-path <update-dir>
+	!<redraw>
 
 @<leave> ( -- )
-	#ff <hover>
-	;path/null LDA ?{ JMP2r }
-	;path DUP2 scap/ #0001 SUB2 EQU2k ?&skip
-	&w ( -- )
-		#0001 SUB2 LDAk LIT "/ NEQ ?&>no-path
-			NIP2
-			( null ) LITr 00 STH2
-			INC2r STAr
-			!<enter>
-			&>no-path
-		NEQ2k ?&w
-	&skip POP2 LIT2 ". 00 SWP2 STA2
-	!<enter>
+	pop-path <update-dir>
+	!<redraw>
 
 @is-folder ( line* -- line* f )
 	DUP2 lcap/ #0001 SUB2 LDA [ LIT "/ ] EQU JMP2r
 
 @is-rom ( line* -- line*f )
 	DUP2 lcap/ #0003 SUB2 ;dict/rom-ext !scmp3
+
+(
+@|path )
+
+@set-path ( path* -- )
+	;path !<scpy>
+
+@push-path ( subpath* -- )
+	;path scap/ !<scpy>
+
+@pop-path ( -- )
+	;path scap/ #0001 SUB2
+	&w ( -- )
+		;path/null LDA ?{ POP2 JMP2r }
+		#0001 SUB2 LDAk [ LIT "/ ] NEQ ?{
+			LITr 00 STH2
+			INC2r STAr
+			JMP2r }
+		!&w
 
 (
 @|drawing )
@@ -147,8 +152,12 @@
 	#80 .Screen/pixel DEO
 	( | highlight )
 	;<hover>/last LDA <draw-highlight>
-	( | folders )
+	( | content )
 	#0004 .Screen/y DEO2
+	.lines/folders LDZ .lines/roms LDZ ADD ?{
+		#0008 .Screen/x DEO2
+		( empty ) ;dict/empty !<draw-uf2> }
+	( | folders )
 	;mem/folders .lines/folders LDZ <draw-list>
 	<draw-spacer>
 	;mem/roms .lines/roms LDZ <draw-list>
@@ -171,6 +180,7 @@
 	JMP2r
 
 @<draw-list> ( addr* length -- )
+	DUP ?{ POP2 JMP2r }
 	#0008 .Screen/x DEO2
 	#00 SWP2 ,&t STR2
 	&l ( -- )
@@ -286,6 +296,7 @@
 
 @dict &home-path "./ $1
 	&rom-ext "rom $1
+	&empty "(empty) $1
 
 @mem &dir $1000
 	&folders $800
