@@ -646,12 +646,12 @@ main(int argc, char **argv)
 	for(i = 1; i < argc; i++) {
 		Varvara *a;
 		if(argv[i][0] == '-') {
-			a = order_push(setvv(allocvv(), anchor, 0, argv[++i], 1));
+			a = order_push(setvv(i, anchor, 0, argv[++i], 1));
 			a->lock = 1;
 			continue;
 		}
-		a = order_push(setvv(allocvv(), anchor + 0x10, 0x10, argv[i], 1));
-		anchor += a->screen.w + 0x20;
+		a = order_push(setvv(i, anchor + 0x10, 0x10, argv[i], 1));
+		anchor += a->screen.w + 0x10;
 	}
 	/* event loop */
 	while(1) {
