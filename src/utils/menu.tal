@@ -50,7 +50,7 @@
 @on-control ( -> )
 	.Controller/key DEI
 	( esc ) DUP #1b NEQ ?{ <exit> }
-	POP BRK
+	( TODO: Arrows controls ) POP BRK
 
 (
 @|core )
@@ -64,6 +64,9 @@
 	.File/name DEO2
 	#1000 .File/length DEO2
 	;mem/dir .File/read DEO2
+	( | clean )
+	#00 .lines/folders STZ
+	#00 .lines/roms STZ
 	( | parse )
 	;mem/dir
 	&w ( -- )
@@ -71,9 +74,8 @@
 		lcap/ INC2 LDAk ?&w
 	POP2
 	( | fit window )
-	( ) ;mem/folders count-lines DUP .lines/folders STZ
-	( ) ;mem/roms count-lines DUP .lines/roms STZ
-	( ) ADD2 #40 SFT2 #0010 ADD2 .Screen/height DEO2
+	#00 .lines/folders LDZ .lines/roms LDZ ADD
+	( ) #40 SFT2 #0010 ADD2 .Screen/height DEO2
 	JMP2r
 
 @<parse-line> ( line* -- )
@@ -82,9 +84,13 @@
 	( ) is-rom ?&rom
 	;mem/misc scap/ !<lcpy>
 	&folder ( line* -- )
-		;mem/folders scap/ !<lcpy>
+		;mem/folders #00 .lines/folders LDZ #40 SFT2 ADD2 <lcpy>
+		.lines/folders LDZ INC .lines/folders STZ
+		JMP2r
 	&rom ( line* -- )
-		;mem/roms scap/ !<lcpy>
+		;mem/roms #00 .lines/roms LDZ #40 SFT2 ADD2 <lcpy>
+		.lines/roms LDZ INC .lines/roms STZ
+		JMP2r
 	&hidden ( line* -- )
 		POP2 JMP2r
 
@@ -94,15 +100,7 @@
 @is-rom ( line* -- line*f )
 	DUP2 lcap/ #0003 SUB2 ;dict/rom-ext !scmp3
 
-@count-lines ( str* -- lines* )
-	[ LIT2r 0000 ]
-	&w ( -- )
-		LDAk #0a NEQ ?{ INC2r }
-		INC2 LDAk ?&w
-	POP2 STH2r JMP2r
-
 @<select> ( id -- )
-	( TODO !!!!!!!!!!! ) POP JMP2r
 	DUP .lines/folders LDZ LTH ?&folder
 	( | rom )
 	POP JMP2r
@@ -125,11 +123,10 @@
 	( | highlight )
 	;<hover>/last LDA <draw-highlight>
 	( | folders )
-	#0008 .Screen/x DEO2
 	#0004 .Screen/y DEO2
-	;mem/folders <draw-list>
+	;mem/folders .lines/folders LDZ <draw-list>
 	<draw-spacer>
-	;mem/roms <draw-list>
+	;mem/roms .lines/roms LDZ <draw-list>
 	JMP2r
 
 @<draw-spacer> ( -- )
@@ -148,21 +145,30 @@
 	.lines/folders LDZ LTH #02 ADD .Screen/sprite DEOk DEO
 	JMP2r
 
-@<draw-list> ( addr* -- )
+@<draw-list> ( addr* length -- )
 	#0008 .Screen/x DEO2
+	#00
+	&l ( -- )
+		STHk OVR2 #00 STHr #40 SFT ADD2 <draw-uf2>
+		<draw-lb>
+		INC GTHk ?&l
+	POP2 JMP2r
+
+@<draw-lb> ( -- )
+	#0008 .Screen/x DEO2
+	.Screen/y DEI2k #0010 ADD2 ROT DEO2
+	JMP2r
+
+@<draw-uf2> ( addr* -- )
 	#15 .Screen/auto DEO
 	&w ( -- )
-		LDAk #0a NEQ ?{
-			.Screen/y DEI2k #0010 ADD2 ROT DEO2
-			#0008 .Screen/x DEO2
-			INC2 !&resume }
+		LDAk #1f GTH ?{ POP2 JMP2r }
 		LDAk #20 SUB #00 SWP
 		( ) DUP2 #50 SFT2 ;font-uf2/glyphs ADD2 .Screen/addr DEO2
 		( ) ;font-uf2 ADD2 LDA #00 SWP .Screen/x DEI2 ADD2
 		( ) #05 .Screen/sprite DEOk DEO
 		.Screen/x DEO2
-		INC2 &resume LDAk ?&w
-	POP2 JMP2r
+		INC2 !&w
 
 @<update-cursor> ( color addr* -- )
 	[ LIT2 00 -Screen/auto ] DEO
@@ -218,6 +224,14 @@
 		INC2 & LDAk #20 GTH ?&w
 	POP2 JMP2r
 
+@<phex> ( short* -- )
+	SWP <phex>/b
+	&b ( -- )
+		DUP #04 SFT <phex>/c
+	&c ( -- )
+		#0f AND DUP #09 GTH #27 MUL ADD [ LIT "0 ] ADD #18 DEO
+		JMP2r
+	
 (
 @|theme )
 
