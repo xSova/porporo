@@ -8,6 +8,7 @@
 |0000
 
 	@lines &folders $1 &roms $1
+	@path
 
 |0100
 
@@ -17,12 +18,12 @@
 	#f0bc .System/b DEO2
 	<load-theme>
 	#0080 .Screen/width DEO2
-	;dict/home-path <update-dir>
+	;dict/home-path ;path <scpy>
+	;path <update-dir>
 	<redraw>
 	;on-mouse .Mouse/vector DEO2
 	;on-control .Controller/vector DEO2
-	#010e DEO
-	BRK
+	( #010e DEO ) BRK
 	( TODO: Add meta )
 
 @on-mouse ( -> )
@@ -79,8 +80,8 @@
 
 @<parse-line> ( line* -- )
 	#0005 ADD2 LDAk [ LIT ". ] EQU ?&hidden
-	( ) is-folder ?&folder
-	( ) is-rom ?&rom
+	is-folder ?&folder
+	is-rom ?&rom
 	;mem/misc scap/ !<lcpy>
 	&folder ( line* -- )
 		;mem/folders #00 .lines/folders LDZ #40 SFT2 ADD2 <lcpy>
@@ -93,25 +94,34 @@
 	&hidden ( line* -- )
 		POP2 JMP2r
 
-@is-folder ( line* -- line* f )
-	DUP2 lcap/ #0001 SUB2 LDA [ LIT "/ ] EQU JMP2r
-
-@is-rom ( line* -- line*f )
-	DUP2 lcap/ #0003 SUB2 ;dict/rom-ext !scmp3
-
 @<select> ( id -- )
 	DUP .lines/folders LDZ LTH ?&folder
-	( | rom )
+	.lines/folders LDZ SUB DUP .lines/roms LDZ LTH ?&roms
 	POP JMP2r
-	&folder ( id -- )
-		#00 SWP #40 SFT2 ;mem/folders ADD2 <pstr>
+	&roms ( id -- )
+		#00 SWP #40 SFT2 ;mem/roms ADD2 <pstr>
 		#0a18 DEO
+		JMP2r
+	&folder ( id -- )
+		#00 SWP #40 SFT2 ;mem/folders ADD2 <enter>
 		JMP2r
 
 @<hover> ( id -- )
 	[ LIT &last ff ] NEQk ?{ POP2 JMP2r }
 	POP ,&last STR
 	!<redraw>
+
+@<enter> ( folder* -- )
+	( cat ) ;path scap/ <scpy>
+	;path <update-dir>
+	<redraw>
+	JMP2r
+
+@is-folder ( line* -- line* f )
+	DUP2 lcap/ #0001 SUB2 LDA [ LIT "/ ] EQU JMP2r
+
+@is-rom ( line* -- line*f )
+	DUP2 lcap/ #0003 SUB2 ;dict/rom-ext !scmp3
 
 (
 @|drawing )
@@ -209,6 +219,13 @@
 		LDAk #00 STH2kr STA2
 		INC2r INC2 !&w
 
+@<scpy> ( src* dst* -- )
+	STH2
+	&w ( -- )
+		LDAk #00 STH2kr STA2
+		INC2r INC2 LDAk ?&w
+	POP2 POP2r JMP2r
+
 @<perr> ( str* -- )
 	&w ( -- )
 		LDAk #19 DEO
@@ -253,7 +270,7 @@
 
 @dash-icn [ 0000 00aa 0000 0000 ]
 
-@dict &home-path ". $1
+@dict &home-path "./ $1
 	&rom-ext "rom $1
 
 @mem &dir $1000
