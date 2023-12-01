@@ -24,7 +24,7 @@ format:
 clean:
 	@ rm -f bin/*
 
-bin/uxnasm: src/uxnasm.c
-	@ cc ${RELEASE_flags} src/uxnasm.c -o bin/uxnasm
+bin/uxnasm: etc/uxnasm.c
+	@ cc ${RELEASE_flags} etc/uxnasm.c -o bin/uxnasm
 bin/porporo: ${SRC} src/porporo.c
 	@ cc ${DEBUG_flags} ${SRC} -o bin/porporo
