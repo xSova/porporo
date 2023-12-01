@@ -236,9 +236,14 @@ setvv(int id, int x, int y, char *rom, int eval)
 	p = &varvaras[id];
 	p->x = x, p->y = y;
 	p->u.id = id, p->u.ram = ram + id * 0x10000;
-	screen_resize(&p->screen, 640, 320);
 	if(!system_init(p, &p->u, p->u.ram, rom))
 		return 0;
+	/* write size of porporo */
+	/* TODO: write in memory during screen_resize(&p->screen, 640, 320); */
+	p->u.dev[0x22] = WIDTH >> 8;
+	p->u.dev[0x23] = WIDTH;
+	p->u.dev[0x24] = HEIGHT >> 8;
+	p->u.dev[0x25] = HEIGHT;
 	if(eval)
 		uxn_eval(&p->u, 0x100);
 	return p;
@@ -591,14 +596,6 @@ Uint8
 emu_dei(Uxn *u, Uint8 addr)
 {
 	switch(addr & 0xf0) {
-	case 0x20:
-		switch(addr) {
-		case 0x22: return WIDTH >> 8;
-		case 0x23: return WIDTH;
-		case 0x24: return HEIGHT >> 8;
-		case 0x25: return HEIGHT;
-		}
-		break;
 	case 0xc0: return datetime_dei(u, addr); break;
 	}
 	return u->dev[addr];
