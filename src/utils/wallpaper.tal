@@ -13,9 +13,9 @@
 
 @on-reset ( -> )
 	;meta #06 DEO2
-	#26ae .System/r DEO2
-	#26ae .System/g DEO2
-	#26ae .System/b DEO2
+	#16ae .System/r DEO2
+	#16ae .System/g DEO2
+	#16ae .System/b DEO2
 	<load-theme>
 	( | default file )
 	.Console/type DEI ?{ <load-default> }
@@ -26,7 +26,7 @@
 	( name ) "Wallpaper(Porporo) 0a
 	( desc ) "Image 20 "Viewer 0a
 	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
-	( date ) "30 20 "Nov 20 "2023 $1
+	( date ) "1 20 "Dec 20 "2023 $1
 	( exts ) 00
 
 @await-src ( -> )
@@ -68,6 +68,7 @@
 	#0000 DUP2 .Screen/x DEO2
 	.Screen/y DEO2
 	#05 .Screen/auto DEO
+	#0c ;<draw-row>/blend STA
 	#00 .size/w LDZ #30 SFT2 DUP2 .1bpp LDZ ?{
 		#85 ;<draw-row>/blend STA
 		#10 SFT2 }
