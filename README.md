@@ -1,43 +1,58 @@
 # Porporo
 
-Porporo is a [Varvara](https://wiki.xxiivv.com/site/varvara.html) operating system.
+Porporo is a [Varvara](https://wiki.xxiivv.com/site/varvara.html) operating system, written in ANSI C.
 
-## Roms
+## Build
 
-- `menu.rom` spawned on right-click.
-- `wallpaper.rom` locked by default on start, expects `.wallpaper`.
-- `log.rom` normal.
+To build the Uxn emulator, you must install [SDL2](https://wiki.libsdl.org/) for your distro. If you are using a package manager:
+
+```sh
+sudo pacman -Sy sdl2             # Arch
+sudo apt install libsdl2-dev     # Ubuntu
+sudo xbps-install SDL2-devel     # Void Linux
+brew install sdl2                # OS X
+```
+
+To build Porporo and the required roms:
+
+```
+make run
+```
 
 ## Controls
 
-- `d`, draw mode.
-- `m`, move mode.
 - `F1`, lock varvara.
 - `F2`, center varvara.
 - `F4`, exit varvara.
 - `F5`, soft-reboot varvara.
+- `d`, draw mode.
+- `m`, move mode.
+
+### Menu.rom
+
+- `tab`, see all files.
+- `esc`, exit.
 
 ## TODOs
 
 - File device pointers should be assoc with Varvaras
 - Map connection data to porporo's ram
 - Automatic reqdraw, use screen
-- Fail if cannot find menu?
+- Fail if cannot find menu
+- Fail when menu command is invalid
 
 Window Manager
-	- only draw program screens that are visible
-	- Global pointer, Hide pointer
-	- Transluscent windows
+- only draw program screens that are visible
+- Global pointer, Hide pointer
+- Transluscent windows
 
 Menu.rom
-	- Navigate into folders
-	- MODE: Only display roms
-	- MODE: All files mode
+- Arrow controls
+
+Wallpaper.rom
+- No tasks.
 
 Log.rom
-	- Toggle binary/ascii mode
-	- Scroll buffer
-	- Support theme
-
-Misc
-	- Fixed time program
+- Toggle binary/ascii mode
+- Scroll buffer
+- Support theme
