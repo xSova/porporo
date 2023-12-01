@@ -440,7 +440,9 @@ on_mouse_up(int button, int x, int y)
 static void
 on_mouse_wheel(int x, int y)
 {
-	Uxn *u = &focused->u;
+	Uxn *u;
+	if(!focused) return;
+	u = &focused->u;
 	mouse_scroll(u, &u->dev[0x90], x, y);
 }
 
