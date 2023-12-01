@@ -18,10 +18,7 @@
 	#26ae .System/b DEO2
 	<load-theme>
 	( | default file )
-	.Console/type DEI ?{
-		.Screen/width DEI2 #03 SFT2 NIP
-		( ) .Screen/height DEI2 #03 SFT2 NIP <set-size>
-		;dict/default <draw-wallpaper> }
+	.Console/type DEI ?{ <load-default> }
 	;await-src .Console/vector DEO2
 	BRK
 
@@ -40,6 +37,16 @@
 	( ) DUP2 <draw-wallpaper>
 	( ) <sclr>
 	BRK
+
+@<load-default> ( -- )
+	;dict/default .File/name DEO2
+	#0020 .File/length DEO2
+	;stat .File/stat DEO2
+	.File/success DEI2 ORA ?{ JMP2r }
+	( | fill screen )
+	.Screen/width DEI2 #03 SFT2 NIP
+	( ) .Screen/height DEI2 #03 SFT2 NIP <set-size>
+	;dict/default !<draw-wallpaper>
 
 @read-size ( 00x00* -- )
 	DUP2 sbyte #00 EQU ?&cancel
@@ -149,6 +156,8 @@
 
 (
 @|memory )
+
+@stat $20
 
 @row
 
