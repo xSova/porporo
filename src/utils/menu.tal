@@ -8,6 +8,7 @@
 |0000
 
 	@misc $1
+	@selection $1
 	@path $2 &null $80
 	@lines &folders $1 &roms $1 &misc $1
 
@@ -29,15 +30,15 @@
 	( name ) "Menu(Porporo) 0a
 	( desc ) "File 20 "Browser 0a
 	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
-	( date ) "30 20 "Nov 20 "2023 $1
+	( date ) "1 20 "Dec 20 "2023 $1
 	( exts ) 00
 
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
 	.Mouse/y DEI2 <y-id>
-	.Mouse/state DEI ?{ <hover>
+	.Mouse/state DEI ?{ <select>
 		BRK }
-	<select>
+	<pick>
 	#00 .Mouse/state DEO
 	BRK
 
@@ -57,10 +58,18 @@
 		POP2 #ff JMP2r
 
 @on-control ( -> )
+	( | key )
 	.Controller/key DEI
 	( esc ) DUP #1b NEQ ?{ <escape> }
 	( tab ) DUP #09 NEQ ?{ <toggle-misc> }
-	( TODO: Arrows controls ) POP BRK
+	( tab ) DUP #0d NEQ ?{ .selection LDZ <pick> }
+	POP
+	( | button )
+	.Controller/button DEI
+	( up ) DUP #10 NEQ ?{ #ff <move> }
+	( down ) DUP #20 NEQ ?{ #01 <move> }
+	( A ) DUP #01 NEQ ?{ .selection LDZ <pick> }
+	POP BRK
 
 (
 @|core )
@@ -106,7 +115,19 @@
 	&hidden ( line* -- )
 		POP2 JMP2r
 
+@<move> ( mod -- )
+	.selection LDZ ADD DUP #ff NEQ ?{
+		POP count-lines #01 SUB !<select> }
+	count-lines DIVk MUL SUB
+	( >> )
+
 @<select> ( id -- )
+	[ LIT &last ff ] NEQk ?{ POP2 JMP2r }
+	POP DUP ,&last STR
+	.selection STZ
+	!<redraw>
+
+@<pick> ( id -- )
 	DUP .lines/folders LDZ LTH ?&folder
 	.lines/folders LDZ SUB DUP .lines/roms LDZ LTH ?&roms
 	.lines/roms LDZ SUB DUP .lines/misc LDZ LTH ?&misc
@@ -124,11 +145,6 @@
 	#0a18 DEO
 	.Mouse/state DEI #01 EQU ?<exit>
 	JMP2r
-
-@<hover> ( id -- )
-	[ LIT &last ff ] NEQk ?{ POP2 JMP2r }
-	POP ,&last STR
-	!<redraw>
 
 @<enter> ( folder* -- )
 	push-path !<refresh-dir>
@@ -194,7 +210,7 @@
 	.Screen/y DEO2
 	#80 .Screen/pixel DEO
 	( | highlight )
-	;<hover>/last LDA <draw-highlight>
+	.selection LDZ <draw-highlight>
 	( | content )
 	#0004 .Screen/y DEO2
 	( | empty )
