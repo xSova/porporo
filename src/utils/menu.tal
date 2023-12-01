@@ -343,10 +343,5 @@
 	&rom-ext "rom $1
 	&empty "(empty) $1
 
-@mem &dir $800
-	&folders $200
-	&roms $200
-	&misc $200
-
-~src/utils/font_losangeles.tal
+~src/utils/menu.assets.tal
 
