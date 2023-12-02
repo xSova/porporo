@@ -364,7 +364,7 @@ sendcmd(char c)
 	if(c < 0x20) {
 		clear(pixels);
 		/* TODO: Handle invalid rom */
-		order_push(setvv(allocvv(), menu->x, menu->y, cmd, 1));
+		focused = order_push(setvv(allocvv(), menu->x, menu->y, cmd, 1));
 		cmdlen = 0;
 		return;
 	}

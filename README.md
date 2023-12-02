@@ -47,7 +47,7 @@ Window Manager
 - Transluscent windows
 
 Menu.rom
-- Arrow controls
+- No tasks.
 
 Wallpaper.rom
 - No tasks.
