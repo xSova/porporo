@@ -361,10 +361,13 @@ static char cmd[0x40];
 static void
 sendcmd(char c)
 {
+	int i;
 	if(c < 0x20) {
 		clear(pixels);
 		/* TODO: Handle invalid rom */
 		focused = order_push(setvv(allocvv(), menu->x, menu->y, cmd, 1));
+		for(i = 0; i < menu->clen; i++)
+			connect(focused, menu->routes[i]);
 		cmdlen = 0;
 		return;
 	}
@@ -573,12 +576,11 @@ void
 console_deo(Varvara *a, Uint8 addr, Uint8 value)
 {
 	int i;
-	if(a == menu && !menu->clen) {
-		if(addr == 0x18)
+	if(a == menu) {
+		if(addr == 0x19) {
 			sendcmd(value);
-		else
-			printf("%c", value);
-		return;
+			return;
+		}
 	}
 	for(i = 0; i < a->clen; i++) {
 		Varvara *b = a->routes[i];

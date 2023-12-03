@@ -95,10 +95,5 @@ f010 1010 1010 1010 1010 1010 1010 10f0
 c020 2020 2020 1008 1020 2020 2020 20c0
 6092 0c00 0000 0000 0000 0000 0000 0000 ]
 
-@buf [ 
-	"a) 20 "hello 20 "there 20 "long 20 "sentence 20
-"b) 20 "hello 20 "there 20 "long 20 "sentence 20
-"c) 20 "hello 20 "there 20 "long 20 "sentence 20 ]
-
-
+@buf
 	$1000
