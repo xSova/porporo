@@ -7,10 +7,12 @@
 |0100
 
 @on-reset ( -> )
-	#cf0f .System/r DEO2
-	#cf06 .System/g DEO2
-	#cf02 .System/b DEO2
-	#0180 .Screen/width DEO2
+	( | theme )
+	#f00f .System/r DEO2
+	#f006 .System/g DEO2
+	#f002 .System/b DEO2
+	( | size )
+	#0200 .Screen/width DEO2
 	#00c0 .Screen/height DEO2
 	<redraw>
 	;on-mouse .Mouse/vector DEO2
@@ -28,21 +30,61 @@
 	BRK
 
 @<redraw> ( -- )
-	#0008 .Screen/x DEO2
-	#0008 .Screen/y DEO2
+	#0014 .Screen/x DEO2
+	#0004 .Screen/y DEO2
 	;buf <draw-text>
+	<draw-scrollbar>
 	JMP2r
 
 @<draw-text> ( str* -- )
 	#15 .Screen/auto DEO
 	&w ( -- )
-		LDAk #0a NEQ ?{
-			.Screen/y DEI2k #0010 ADD2 ROT DEO2
-			[ LIT2 &anchor $2 ] .Screen/x DEO2 }
-		LDAk #20 SUB #00 SWP #40 SFT2 ;font-icn ADD2 .Screen/addr DEO2
+		handle-wrap LDAk #20 SUB #00 SWP #40 SFT2 ;font-icn ADD2 .Screen/addr DEO2
 		#0a .Screen/sprite DEO
-		INC2 LDAk ?&w
+		&res INC2 LDAk ?&w
 	POP2 JMP2r
+
+@handle-wrap ( str* -- str* )
+	LDAk #20 GTH ?{
+		INC2k word-fits ?{ <draw-lb>
+			!<draw-text>/res }
+		}
+	LDAk #0a NEQ ?{ <draw-lb>
+		!<draw-text>/res }
+	JMP2r
+
+@word-fits ( str* -- f )
+	.Screen/x DEI2 STH2
+	&w ( -- )
+		STH2kr .Screen/width DEI2 GTH2 ?&fail
+		LDAk #20 GTH ?{
+			POP2 POP2r #01 JMP2r }
+		[ LIT2r 0008 ADD2r ] INC2 !&w
+	JMP2r
+	&fail POP2 POP2r #00 JMP2r
+
+@<draw-lb> ( -- )
+	.Screen/y DEI2k #0010 ADD2 ROT DEO2
+	#0014 .Screen/x DEO2
+	JMP2r
+
+@<draw-scrollbar> ( -- )
+	#0000 DUP2 .Screen/x DEO2
+	.Screen/y DEO2
+	( | fill )
+	#12 .Screen/auto DEO
+	;halftone-icn .Screen/addr DEO2
+	#00 .Screen/height DEI2 #03 SFT2 NIP SUB
+	&times ( -- )
+		[ LIT2 01 -Screen/sprite ] DEO
+		INC DUP ?&times
+	POP
+	( | icon )
+	#0000 .Screen/y DEO2
+	;resize-icn .Screen/addr DEO2
+	#16 .Screen/auto DEO
+	[ LIT2 01 -Screen/sprite ] DEOk DEO
+	JMP2r
 
 @<update-cursor> ( color addr* -- )
 	[ LIT2 00 -Screen/auto ] DEO
@@ -66,6 +108,20 @@
 		INC2 & LDAk ?&w
 	JMP2r
 
+@<pword> ( str* -- )
+	&w ( -- )
+		LDAk #18 DEO
+		INC2 LDAk #20 GTH ?&w
+	POP2 JMP2r
+
+@<phex> ( short* -- )
+	SWP <phex>/b
+	&b ( -- )
+		DUP #04 SFT <phex>/c
+	&c ( -- )
+		#0f AND DUP #09 GTH #27 MUL ADD [ LIT "0 ] ADD #18 DEO
+		JMP2r
+
 (
 @|assets )
 
@@ -73,5 +129,10 @@
 
 @fill-icn [ ffff ffff ffff ffff ]
 
+@halftone-icn [ aa55 aa55 aa55 aa55 ]
+
+@resize-icn [
+	aa55 805f 9051 9357 aa55 02f9 0a89 cae9
+	9753 9150 9f40 aa55 eac9 8a09 fa01 aa55 ]
 ~src/utils/log.assets.tal
 

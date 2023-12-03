@@ -25,10 +25,10 @@ bin/uxnasm: etc/uxnasm.c
 bin/porporo: ${SRC} src/porporo.c
 	@ cc ${DEBUG_flags} ${SRC} -o bin/porporo
 
-bin/menu.rom: src/utils/menu.tal
+bin/menu.rom: src/utils/menu.tal src/utils/menu.assets.tal
 	@ ${ASM} src/utils/menu.tal bin/menu.rom
 bin/wallpaper.rom: src/utils/wallpaper.tal
 	@ ${ASM} src/utils/wallpaper.tal bin/wallpaper.rom
-bin/log.rom: src/utils/log.tal
+bin/log.rom: src/utils/log.tal src/utils/log.assets.tal
 	@ ${ASM} src/utils/log.tal bin/log.rom
 	
