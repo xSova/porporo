@@ -7,12 +7,14 @@
 *io.bit
 *.bak
 /*-test
-/screenshot-*.bmp
+*.bmp
 *.rom
 *.rom.sym
 *.tga
 *.chr
+
 .wallpaper
+.notepad
 
 *snarf
 *theme
