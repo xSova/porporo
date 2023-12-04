@@ -30,7 +30,7 @@
 	( name ) "Menu(Porporo) 0a
 	( desc ) "File 20 "Browser 0a
 	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
-	( date ) "1 20 "Dec 20 "2023 $1
+	( date ) "4 20 "Dec 20 "2023 $1
 	( exts ) 00
 
 @on-mouse ( -> )
@@ -254,8 +254,13 @@
 	has-spacer #00 EQU ?{
 		#00 STHkr INC .lines/folders LDZ GTH #30 SFT2 ADD2 }
 	( padding ) #0003 ADD2 .Screen/y DEO2
-	#02 .Screen/sprite DEOk DEO
-	POPr JMP2r
+	STHr get-bg .Screen/sprite DEOk DEO
+	JMP2r
+
+@get-bg ( id -- color )
+	INC .lines/folders LDZ GTHk ?{ POP2 #03 JMP2r }
+	SUB .lines/roms LDZ GTH ?{ #02 JMP2r }
+	#01 JMP2r
 
 @<draw-list> ( addr* length color -- )
 	,&color STR
