@@ -253,6 +253,7 @@ setvv(int id, int x, int y, char *rom, int eval)
 		return 0;
 	/* write size of porporo */
 	/* TODO: write in memory during screen_resize(&p->screen, 640, 320); */
+	screen_resize(&p->screen, 0x10, 0x10);
 	p->u.dev[0x22] = WIDTH >> 8;
 	p->u.dev[0x23] = WIDTH;
 	p->u.dev[0x24] = HEIGHT >> 8;
@@ -429,6 +430,10 @@ on_mouse_move(int x, int y)
 	}
 	u = &focused->u;
 	mouse_move(u, &u->dev[0x90], relx - focused->x, rely - focused->y);
+	if(!PEEK2(&u->dev[0x90])) { /* draw mouse when no mouse vector */
+		cursorx = x, cursory = y, cursorc = 2;
+		reqdraw |= 1;
+	}
 }
 
 static void
