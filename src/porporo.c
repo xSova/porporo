@@ -31,8 +31,9 @@ enum Action {
 enum Action action;
 
 static Uint8 *ram, olen;
+static Uint8 cursor[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
 static Uint32 *pixels, theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
-static int WIDTH, HEIGHT, isdrag, reqdraw, dragx, dragy, camerax, cameray;
+static int WIDTH, HEIGHT, isdrag, reqdraw, dragx, dragy, camerax, cameray, cursorx, cursory, cursorc;
 static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *focused;
 
 static SDL_DisplayMode DM;
@@ -47,6 +48,16 @@ putpixel(Uint32 *dst, int x, int y, int color)
 {
 	if(x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT)
 		dst[y * WIDTH + x] = theme[color];
+}
+
+void
+drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int color)
+{
+	int v, h;
+	for(v = 0; v < 8; v++)
+		for(h = 0; h < 8; h++)
+			if((sprite[v] >> (7 - h)) & 0x1)
+				putpixel(dst, x + h, y + v, color);
 }
 
 void
@@ -133,6 +144,8 @@ redraw(Uint32 *dst)
 		if(order[i]->lock) drawvarvara(dst, order[i]);
 	for(i = 0; i < olen; i++)
 		if(!order[i]->lock) drawvarvara(dst, order[i]);
+	if(cursorc)
+		drawicn(pixels, cursorx, cursory, cursor, cursorc);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
 	SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
@@ -163,7 +176,7 @@ quit(void)
 static void
 setaction(enum Action a)
 {
-	action = a, reqdraw = 1;
+	action = a, reqdraw |= 1;
 }
 
 static void
@@ -349,7 +362,7 @@ restartvv(Varvara *v)
 		system_boot(&v->u, 1);
 		system_load(&v->u, focused->rom);
 		uxn_eval(&v->u, PAGE_PROGRAM);
-		reqdraw = 1;
+		reqdraw |= 1;
 	}
 }
 
@@ -385,7 +398,13 @@ on_mouse_move(int x, int y)
 {
 	Uxn *u;
 	int relx = x - camerax, rely = y - cameray;
-	if(action == DRAW && isdrag) return;
+	cursorc = 0;
+	if(action == DRAW) {
+		cursorx = x, cursory = y, cursorc = 2;
+		reqdraw |= 1;
+
+		return;
+	}
 	if(!isdrag)
 		pickfocus(relx, rely);
 	if(!focused) {
@@ -394,6 +413,8 @@ on_mouse_move(int x, int y)
 			dragx = x, dragy = y;
 			reqdraw |= 2;
 		}
+		cursorx = x, cursory = y, cursorc = 2;
+		reqdraw |= 1;
 		return;
 	}
 	if(action) {
@@ -402,6 +423,8 @@ on_mouse_move(int x, int y)
 			dragx = x, dragy = y;
 			reqdraw |= 2;
 		}
+		cursorx = x, cursory = y, cursorc = 1;
+		reqdraw |= 1;
 		return;
 	}
 	u = &focused->u;
@@ -567,6 +590,7 @@ init(void)
 	pixels = (Uint32 *)malloc(WIDTH * HEIGHT * sizeof(Uint32));
 	if(pixels == NULL)
 		return error("Pixels", "Failed to allocate memory");
+	SDL_ShowCursor(0);
 	clear(pixels);
 	return 1;
 }
@@ -650,8 +674,8 @@ main(int argc, char **argv)
 			begintime = SDL_GetTicks();
 		else
 			delta = endtime - begintime;
-		if(delta < 40)
-			SDL_Delay(40 - delta);
+		if(delta < 30)
+			SDL_Delay(30 - delta);
 		while(SDL_PollEvent(&event) != 0) {
 			switch(event.type) {
 			case SDL_QUIT: quit(); break;
@@ -663,7 +687,7 @@ main(int argc, char **argv)
 			case SDL_KEYDOWN: on_controller_down(get_key(&event), get_button(&event), event.key.keysym.sym); break;
 			case SDL_KEYUP: on_controller_up(get_button(&event)); break;
 			case SDL_WINDOWEVENT:
-				if(event.window.event == SDL_WINDOWEVENT_EXPOSED) reqdraw = 1;
+				if(event.window.event == SDL_WINDOWEVENT_EXPOSED) reqdraw |= 1;
 				break;
 			}
 		}
