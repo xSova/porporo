@@ -105,22 +105,22 @@ drawconnections(Uint32 *dst, Varvara *a, int color)
 }
 
 static void
-drawvarvara(Uint32 *dst, Varvara *p)
-{
-	int w = p->screen.w, h = p->screen.h, x = p->x, y = p->y;
-	if(!p->lock) x += camerax, y += cameray;
-	if(!p->live) return;
-	if(p->clen) drawconnections(dst, p, 2 - action);
-	if(!p->lock) drawborders(dst, x, y, x + w, y + h, 2 - action);
-	drawscreen(pixels, &p->screen, x, y);
-}
-
-static void
 clear(Uint32 *dst)
 {
 	int i, l = WIDTH * HEIGHT, c = theme[4];
 	for(i = 0; i < l; i++) dst[i] = c;
-	reqdraw = 1;
+}
+
+static void
+drawvarvara(Uint32 *dst, Varvara *p)
+{
+	int w = p->screen.w, h = p->screen.h, x = p->x, y = p->y;
+	if(!p->lock) {
+		x += camerax, y += cameray;
+		drawborders(dst, x, y, x + w, y + h, 2 - action);
+		if(p->clen) drawconnections(dst, p, 2 - action);
+	}
+	drawscreen(pixels, &p->screen, x, y);
 }
 
 static void
@@ -205,7 +205,7 @@ remvv(Varvara *p)
 {
 	if(p) {
 		p->clen = 0, p->live = 0;
-		clear(pixels);
+		reqdraw |= 2;
 		order_raise(p);
 		olen--;
 	}
@@ -216,7 +216,7 @@ showmenu(int x, int y)
 {
 	if(menu->live)
 		remvv(menu);
-	clear(pixels);
+	reqdraw |= 2;
 	menu->u.dev[0x0f] = 0;
 	uxn_eval(&menu->u, 0x100);
 	menu->x = x, menu->y = y;
@@ -282,7 +282,7 @@ static void
 centervv(Varvara *v)
 {
 	if(v) {
-		clear(pixels);
+		reqdraw |= 2;
 		v->x = -camerax + WIDTH / 2 - v->screen.w / 2;
 		v->y = -cameray + HEIGHT / 2 - v->screen.h / 2;
 	}
@@ -305,7 +305,7 @@ lockvv(Varvara *v)
 			}
 		}
 	}
-	clear(pixels);
+	reqdraw |= 2;
 }
 
 static void
@@ -330,7 +330,7 @@ static int
 connect(Varvara *a, Varvara *b)
 {
 	int i;
-	clear(pixels);
+	reqdraw |= 2;
 	for(i = 0; i < a->clen; i++)
 		if(b == a->routes[i])
 			return a->clen = 0;
@@ -360,7 +360,7 @@ sendcmd(char c)
 {
 	int i;
 	if(c < 0x20) {
-		clear(pixels);
+		reqdraw |= 2;
 		/* TODO: Handle invalid rom */
 		focused = order_push(setvv(allocvv(), menu->x, menu->y, cmd, 1));
 		for(i = 0; i < menu->clen; i++)
@@ -389,7 +389,7 @@ on_mouse_move(int x, int y)
 		if(isdrag) {
 			camerax += x - dragx, cameray += y - dragy;
 			dragx = x, dragy = y;
-			clear(pixels);
+			reqdraw |= 2;
 		}
 		return;
 	}
@@ -397,7 +397,7 @@ on_mouse_move(int x, int y)
 		if(isdrag) {
 			focused->x += x - dragx, focused->y += y - dragy;
 			dragx = x, dragy = y;
-			clear(pixels);
+			reqdraw |= 2;
 		}
 		return;
 	}
@@ -679,6 +679,8 @@ main(int argc, char **argv)
 		}
 		/* refresh */
 		if(reqdraw) {
+			if(reqdraw & 2)
+				clear(pixels);
 			redraw(pixels);
 			reqdraw = 0;
 		}
