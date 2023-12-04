@@ -112,7 +112,6 @@ drawvarvara(Uint32 *dst, Varvara *p)
 	if(!p->live) return;
 	if(p->clen) drawconnections(dst, p, 2 - action);
 	if(!p->lock) drawborders(dst, x, y, x + w, y + h, 2 - action);
-	if(p->screen.x2) screen_redraw(&p->screen);
 	drawscreen(pixels, &p->screen, x, y);
 }
 
@@ -169,10 +168,8 @@ focusvv(Varvara *a)
 {
 	if(focused == a)
 		return;
-	if(focused) {
+	if(focused)
 		mouse_move(&focused->u, &focused->u.dev[0x90], 0x8000, 0x8000);
-		reqdraw = 1;
-	}
 	focused = a;
 }
 
@@ -511,38 +508,37 @@ on_controller_input(char c)
 	return 1;
 }
 
-static int
+static void
 on_controller_down(Uint8 key, Uint8 button, int sym)
 {
 	Uxn *u;
 	switch(sym) {
-	case SDLK_F1: lockvv(focused); return 0;
-	case SDLK_F2: centervv(focused); return 0;
-	case SDLK_F4: remvv(focused); return 0;
-	case SDLK_F5: restartvv(focused); return 0;
+	case SDLK_F1: lockvv(focused); return;
+	case SDLK_F2: centervv(focused); return;
+	case SDLK_F4: remvv(focused); return;
+	case SDLK_F5: restartvv(focused); return;
 	}
 	if(!focused || action) {
 		on_porporo_key(key);
-		return 1;
+		return;
 	}
 	u = &focused->u;
 	if(key)
 		controller_key(u, &u->dev[0x80], key);
 	else
 		controller_down(u, &u->dev[0x80], button);
-	return (reqdraw = 1);
+	return;
 }
 
-static int
+static void
 on_controller_up(Uint8 button)
 {
 	Uxn *u;
 	if(focused) {
 		u = &focused->u;
 		controller_up(u, &u->dev[0x80], button);
-		reqdraw = 1;
 	}
-	return 1;
+	return;
 }
 
 /* =============================================== */
@@ -653,15 +649,6 @@ main(int argc, char **argv)
 			delta = endtime - begintime;
 		if(delta < 40)
 			SDL_Delay(40 - delta);
-		if(focused) {
-			Uint8 *address = &focused->u.dev[0x20];
-			uxn_eval(&focused->u, PEEK2(address));
-			reqdraw = 1;
-		}
-		if(reqdraw) {
-			redraw(pixels);
-			reqdraw = 0;
-		}
 		while(SDL_PollEvent(&event) != 0) {
 			switch(event.type) {
 			case SDL_QUIT: quit(); break;
@@ -676,6 +663,24 @@ main(int argc, char **argv)
 				if(event.window.event == SDL_WINDOWEVENT_EXPOSED) reqdraw = 1;
 				break;
 			}
+		}
+		/* screen vector */
+		for(i = 0; i < olen; i++) {
+			Varvara *v = order[i];
+			Uxn *u = &v->u;
+			Uint8 *address = &u->dev[0x20];
+			Uint16 vector = PEEK2(address);
+			if(vector)
+				uxn_eval(u, vector);
+			if(v->screen.x2) {
+				screen_redraw(&v->screen);
+				reqdraw |= 1;
+			}
+		}
+		/* refresh */
+		if(reqdraw) {
+			redraw(pixels);
+			reqdraw = 0;
 		}
 		begintime = endtime;
 		endtime = SDL_GetTicks();
