@@ -127,6 +127,8 @@ static void
 redraw(Uint32 *dst)
 {
 	int i;
+	if(reqdraw & 2)
+		clear(pixels);
 	for(i = 0; i < olen; i++)
 		if(order[i]->lock) drawvarvara(dst, order[i]);
 	for(i = 0; i < olen; i++)
@@ -135,6 +137,7 @@ redraw(Uint32 *dst)
 	SDL_RenderClear(gRenderer);
 	SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
 	SDL_RenderPresent(gRenderer);
+	reqdraw = 0;
 }
 
 /* = OPTIONS ===================================== */
@@ -678,12 +681,8 @@ main(int argc, char **argv)
 			}
 		}
 		/* refresh */
-		if(reqdraw) {
-			if(reqdraw & 2)
-				clear(pixels);
+		if(reqdraw)
 			redraw(pixels);
-			reqdraw = 0;
-		}
 		begintime = endtime;
 		endtime = SDL_GetTicks();
 	}
