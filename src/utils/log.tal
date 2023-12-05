@@ -14,7 +14,7 @@
 	#f002 .System/b DEO2
 	( | size )
 	#0200 .Screen/width DEO2
-	#00c0 .Screen/height DEO2
+	#0028 .Screen/height DEO2
 	<redraw>
 	;on-mouse .Mouse/vector DEO2
 	;on-console .Console/vector DEO2
@@ -24,24 +24,44 @@
 	( name ) "Log(Porporo) 0a
 	( desc ) "Log 20 "Viewer 0a
 	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
-	( date ) "2 20 "Dec 20 "2023 $1
+	( date ) "5 20 "Dec 20 "2023 $1
 	( exts ) 00
 
 @on-console ( -> )
 	( | append )
-	.Console/read DEI ;buf scap/ STA
+	.Console/read DEI #00 ;buf scap/ STA2
 	<redraw>
 	BRK
 
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
+	.Mouse/state DEI ?{ <draw-sidebar>
+		BRK }
+	.Mouse/x DEI2 #0010 LTH2 ?on-touch-sidebar
 	BRK
 
+@on-touch-sidebar ( -> )
+	.Mouse/y DEI2 #04 SFT2 NIP DUP #00 NEQ ?{ do-clear }
+	POP BRK
+
+@do-clear ( -- )
+	#0000 ;buf STA2
+	<redraw>
+	#0000 .Screen/x DEO2
+	#0000 .Screen/y DEO2
+	#04 ;clear-icn !<draw-icon>
+
 @<redraw> ( -- )
+	.Screen/height DEI2 #04 SFT2 NIP ;buf count-lines EQUk ?{
+		( min ) #02 GTHk [ JMP SWP POP ]
+		( scale ) #00 SWP #40 SFT2 #0008 ADD2 .Screen/height DEO2
+		!&resume }
+	POP2
+	( | clear )
 	#0014 .Screen/x DEO2
 	#0000 .Screen/y DEO2
 	[ LIT2 80 -Screen/pixel ] DEO
-	<draw-scrollbar>
+	&resume <draw-sidebar>
 	;buf
 	( >> )
 
@@ -62,6 +82,16 @@
 		&res INC2 LDAk ?&w
 	POP2 JMP2r
 
+@count-lines ( buf* -- lines )
+	[ LITr 00 ]
+	&w ( -- )
+		LDAk #20 GTH ?{
+			INC2k word-fits ?{ INCr !&res }
+			}
+		LDAk #0a NEQ ?{ INCr !&res }
+		&res INC2 LDAk ?&w
+	POP2 STHr INC JMP2r
+
 @word-fits ( str* -- f )
 	.Screen/x DEI2 #0008 ADD2 STH2
 	&w ( -- )
@@ -77,7 +107,7 @@
 	#0014 .Screen/x DEO2
 	JMP2r
 
-@<draw-scrollbar> ( -- )
+@<draw-sidebar> ( -- )
 	#0000 DUP2 .Screen/x DEO2
 	.Screen/y DEO2
 	( | fill )
@@ -89,10 +119,15 @@
 		INC DUP ?&times
 	POP
 	( | icon )
+	#0000 .Screen/x DEO2
 	#0000 .Screen/y DEO2
-	;resize-icn .Screen/addr DEO2
+	#01 ;clear-icn <draw-icon>
+	JMP2r
+
+@<draw-icon> ( addr* color -- )
 	#16 .Screen/auto DEO
-	[ LIT2 01 -Screen/sprite ] DEOk DEO
+	.Screen/addr DEO2
+	.Screen/sprite DEOk DEO
 	JMP2r
 
 @<update-cursor> ( color addr* -- )
@@ -140,8 +175,9 @@
 
 @halftone-icn [ aa55 aa55 aa55 aa55 ]
 
-@resize-icn [
+@clear-icn [
 	aa55 805f 9051 9357 aa55 02f9 0a89 cae9
 	9753 9150 9f40 aa55 eac9 8a09 fa01 aa55 ]
+
 ~src/utils/log.assets.tal
 
