@@ -405,11 +405,11 @@ static void
 on_mouse_down(int button, int x, int y)
 {
 	Uxn *u;
-	if(!focused && button > 1) {
-		showmenu(x - camera.x, y - camera.y);
-		return;
-	}
 	if(!focused || action) {
+		if(button > 1) {
+			showmenu(x - camera.x, y - camera.y);
+			return;
+		}
 		drag.mode = 1, drag.x = x, drag.y = y;
 		return;
 	}
