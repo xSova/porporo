@@ -31,15 +31,15 @@ enum Action {
 enum Action action;
 
 typedef struct {
-	int x, y;
+	int x, y, mode;
 } Point2d;
 
 static Uint8 *ram, olen;
-static Uint8 cursor[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
+static Uint8 cursor_icn[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
 static Uint32 *pixels, theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
-static int WIDTH, HEIGHT, isdrag, reqdraw, dragx, dragy, cursorx, cursory, cursorc;
+static int WIDTH, HEIGHT, reqdraw;
 static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *focused;
-static Point2d camera;
+static Point2d camera, drag, cursor;
 
 static SDL_DisplayMode DM;
 static SDL_Window *gWindow = NULL;
@@ -149,8 +149,8 @@ redraw(Uint32 *dst)
 		if(order[i]->lock) drawvarvara(dst, order[i]);
 	for(i = 0; i < olen; i++)
 		if(!order[i]->lock) drawvarvara(dst, order[i]);
-	if(cursorc)
-		drawicn(pixels, cursorx, cursory, cursor, cursorc);
+	if(cursor.mode)
+		drawicn(pixels, cursor.x, cursor.y, cursor_icn, cursor.mode);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
 	SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
@@ -239,7 +239,7 @@ showmenu(int x, int y)
 	menu->u.dev[0x0f] = 0;
 	uxn_eval(&menu->u, 0x100);
 	menu->x = x, menu->y = y;
-	isdrag = 0, reqdraw |= 2;
+	drag.mode = 0, reqdraw |= 2;
 	setaction(NORMAL);
 	order_push(menu);
 }
@@ -401,33 +401,33 @@ on_mouse_move(int x, int y)
 {
 	Uxn *u;
 	int relx = x - camera.x, rely = y - camera.y;
-	cursorc = 0;
+	cursor.mode = 0;
 	if(action == DRAW) {
-		cursorx = x, cursory = y, cursorc = 2, reqdraw |= 1;
+		cursor.x = x, cursor.y = y, cursor.mode = 2, reqdraw |= 1;
 		return;
 	}
-	if(!isdrag)
+	if(!drag.mode)
 		pickfocus(relx, rely);
 	if(!focused) {
-		if(isdrag) {
-			camera.x += x - dragx, camera.y += y - dragy;
-			dragx = x, dragy = y, reqdraw |= 2;
+		if(drag.mode) {
+			camera.x += x - drag.x, camera.y += y - drag.y;
+			drag.x = x, drag.y = y, reqdraw |= 2;
 		}
-		cursorx = x, cursory = y, cursorc = 2, reqdraw |= 1;
+		cursor.x = x, cursor.y = y, cursor.mode = 2, reqdraw |= 1;
 		return;
 	}
 	if(action) {
-		if(isdrag) {
-			focused->x += x - dragx, focused->y += y - dragy;
-			dragx = x, dragy = y, reqdraw |= 2;
+		if(drag.mode) {
+			focused->x += x - drag.x, focused->y += y - drag.y;
+			drag.x = x, drag.y = y, reqdraw |= 2;
 		}
-		cursorx = x, cursory = y, cursorc = 1, reqdraw |= 1;
+		cursor.x = x, cursor.y = y, cursor.mode = 1, reqdraw |= 1;
 		return;
 	}
 	u = &focused->u;
 	mouse_move(u, &u->dev[0x90], relx - focused->x, rely - focused->y);
 	if(!PEEK2(&u->dev[0x90])) /* draw mouse when no mouse vector */
-		cursorx = x, cursory = y, cursorc = 2, reqdraw |= 1;
+		cursor.x = x, cursor.y = y, cursor.mode = 2, reqdraw |= 1;
 }
 
 static void
@@ -439,7 +439,7 @@ on_mouse_down(int button, int x, int y)
 		return;
 	}
 	if(!focused || action) {
-		isdrag = 1, dragx = x, dragy = y;
+		drag.mode = 1, drag.x = x, drag.y = y;
 		return;
 	}
 	u = &focused->u;
@@ -452,15 +452,15 @@ on_mouse_up(int button, int x, int y)
 {
 	Uxn *u;
 	if(action == DRAW) {
-		Varvara *a = pickvv(dragx - camera.x, dragy - camera.y);
+		Varvara *a = pickvv(drag.x - camera.x, drag.y - camera.y);
 		Varvara *b = pickvv(x - camera.x, y - camera.y);
 		if(a && b && a != b)
 			connect(a, b);
-		isdrag = 0;
+		drag.mode = 0;
 		return;
 	}
 	if(!focused || action) {
-		isdrag = 0;
+		drag.mode = 0;
 		return;
 	}
 	u = &focused->u;
