@@ -45,37 +45,37 @@ static SDL_Texture *gTexture = NULL;
 /* = DRAWING ===================================== */
 
 static void
-drawclear(Uint32 *dst, Uint32 color)
+drawclear(Uint32 color)
 {
 	int i, l = WIDTH * HEIGHT;
-	for(i = 0; i < l; i++) dst[i] = color;
+	for(i = 0; i < l; i++) pixels[i] = color;
 }
 
 static void
-drawpixel(Uint32 *dst, int x, int y, Uint32 color)
+drawpixel(int x, int y, Uint32 color)
 {
 	if(x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT)
-		dst[y * WIDTH + x] = color;
+		pixels[y * WIDTH + x] = color;
 }
 
 static void
-drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, Uint32 color)
+drawicn(int x, int y, Uint8 *sprite, Uint32 color)
 {
 	int v, h;
 	for(v = 0; v < 8; v++)
 		for(h = 0; h < 8; h++)
 			if((sprite[v] >> (7 - h)) & 0x1)
-				drawpixel(dst, x + h, y + v, color);
+				drawpixel(x + h, y + v, color);
 }
 
 static void
-drawline(Uint32 *dst, int ax, int ay, int bx, int by, Uint32 color)
+drawline(int ax, int ay, int bx, int by, Uint32 color)
 {
 	int dx = abs(bx - ax), sx = ax < bx ? 1 : -1;
 	int dy = -abs(by - ay), sy = ay < by ? 1 : -1;
 	int err = dx + dy, e2;
 	for(;;) {
-		drawpixel(dst, ax, ay, color);
+		drawpixel(ax, ay, color);
 		if(ax == bx && ay == by) break;
 		e2 = 2 * err;
 		if(e2 >= dy) err += dy, ax += sx;
@@ -84,21 +84,21 @@ drawline(Uint32 *dst, int ax, int ay, int bx, int by, Uint32 color)
 }
 
 static void
-drawborders(Uint32 *dst, int x1, int y1, int x2, int y2, Uint32 color)
+drawborders(int x1, int y1, int x2, int y2, Uint32 color)
 {
 	int x, y;
 	for(y = y1 - 1; y < y2 + 1; y++) {
-		drawpixel(dst, x1 - 2, y, color), drawpixel(dst, x2, y, color);
-		drawpixel(dst, x1 - 1, y, color), drawpixel(dst, x2 + 1, y, color);
+		drawpixel(x1 - 2, y, color), drawpixel(x2, y, color);
+		drawpixel(x1 - 1, y, color), drawpixel(x2 + 1, y, color);
 	}
 	for(x = x1 - 2; x < x2 + 2; x++) {
-		drawpixel(dst, x, y1 - 2, color), drawpixel(dst, x, y2, color);
-		drawpixel(dst, x, y1 - 1, color), drawpixel(dst, x, y2 + 1, color);
+		drawpixel(x, y1 - 2, color), drawpixel(x, y2, color);
+		drawpixel(x, y1 - 1, color), drawpixel(x, y2 + 1, color);
 	}
 }
 
 static void
-drawconnections(Uint32 *dst, Varvara *a, Uint32 color)
+drawconnections(Varvara *a, Uint32 color)
 {
 	int i, x1, x2, y1, y2;
 	for(i = 0; i < a->clen; i++) {
@@ -106,43 +106,38 @@ drawconnections(Uint32 *dst, Varvara *a, Uint32 color)
 		if(b && b->live) {
 			x1 = a->x + 1 + camera.x + a->screen.w, y1 = a->y - 2 + camera.y;
 			x2 = b->x - 2 + camera.x, y2 = b->y - 2 + camera.y;
-			drawline(dst, x1, y1, x2, y2, color);
+			drawline(x1, y1, x2, y2, color);
 		}
 	}
 }
 
 static void
-drawscreen(Uint32 *dst, Screen *scr, int x1, int y1)
+drawvarvara(Varvara *p)
 {
-	int x, y, row, relrow, w = scr->w, x2 = x1 + w, y2 = y1 + scr->h;
+	Uint32 color;
+	Screen *scr = &p->screen;
+	int x, y, row, relrow, x2, y2, w = scr->w, h = scr->h, x1 = p->x, y1 = p->y;
+	if(!p->lock) {
+		x1 += camera.x, y1 += camera.y, color = theme[2 - action];
+		drawborders(x1, y1, x1 + w, y1 + h, color);
+		if(p->clen) drawconnections(p, color);
+	}
+	x2 = x1 + w, y2 = y1 + h;
 	for(y = y1; y < y2; y++) {
 		row = y * WIDTH, relrow = (y - y1) * w;
 		for(x = x1; x < x2; x++)
 			if(x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT)
-				dst[row + x] = scr->pixels[relrow + x - x1];
+				pixels[row + x] = scr->pixels[relrow + x - x1];
 	}
 }
 
 static void
-drawvarvara(Uint32 *dst, Varvara *p)
-{
-	int w = p->screen.w, h = p->screen.h, x = p->x, y = p->y;
-	Uint32 color;
-	if(!p->lock) {
-		x += camera.x, y += camera.y, color = theme[2 - action];
-		drawborders(dst, x, y, x + w, y + h, color);
-		if(p->clen) drawconnections(dst, p, color);
-	}
-	drawscreen(pixels, &p->screen, x, y);
-}
-
-static void
-redraw(Uint32 *dst)
+redraw(void)
 {
 	int i;
-	if(reqdraw & 2) drawclear(pixels, theme[4]);
-	for(i = 0; i < olen; i++) drawvarvara(dst, order[i]);
-	if(cursor.mode) drawicn(pixels, cursor.x, cursor.y, cursor_icn, theme[cursor.mode]);
+	if(reqdraw & 2) drawclear(theme[4]);
+	for(i = 0; i < olen; i++) drawvarvara(order[i]);
+	if(cursor.mode) drawicn(cursor.x, cursor.y, cursor_icn, theme[cursor.mode]);
 	reqdraw = 0;
 }
 
@@ -565,7 +560,7 @@ init(void)
 	if(pixels == NULL)
 		return error("Pixels", "Failed to allocate memory");
 	SDL_ShowCursor(0);
-	drawclear(pixels, theme[4]);
+	drawclear(theme[4]);
 	return 1;
 }
 
@@ -680,7 +675,7 @@ main(int argc, char **argv)
 		}
 		/* refresh */
 		if(reqdraw) {
-			redraw(pixels);
+			redraw();
 			SDL_UpdateTexture(gTexture, NULL, pixels, WIDTH * sizeof(Uint32));
 			SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
 			SDL_RenderPresent(gRenderer);
