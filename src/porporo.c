@@ -447,9 +447,25 @@ on_mouse_wheel(int x, int y)
 /* = CONTROL ===================================== */
 
 static Uint8
-get_button(SDL_Event *event)
+get_fkey(SDL_Event *e)
 {
-	switch(event->key.keysym.sym) {
+	switch(e->key.keysym.sym) {
+	case SDLK_F1: return 0x01;
+	case SDLK_F2: return 0x02;
+	case SDLK_F3: return 0x03;
+	case SDLK_F4: return 0x04;
+	case SDLK_F5: return 0x05;
+	case SDLK_F6: return 0x06;
+	case SDLK_F7: return 0x07;
+	case SDLK_F8: return 0x08;
+	}
+	return 0;
+}
+
+static Uint8
+get_button(SDL_Event *e)
+{
+	switch(e->key.keysym.sym) {
 	case SDLK_LCTRL: return 0x01;
 	case SDLK_LALT: return 0x02;
 	case SDLK_LSHIFT: return 0x04;
@@ -463,9 +479,9 @@ get_button(SDL_Event *event)
 }
 
 static Uint8
-get_key(SDL_Event *event)
+get_key(SDL_Event *e)
 {
-	int sym = event->key.keysym.sym;
+	int sym = e->key.keysym.sym;
 	SDL_Keymod mods = SDL_GetModState();
 	if(sym < 0x20 || sym == SDLK_DELETE)
 		return sym;
@@ -479,8 +495,14 @@ get_key(SDL_Event *event)
 }
 
 static void
-on_porporo_key(char c)
+on_controller_special(char c, Uint8 fkey)
 {
+	switch(fkey) {
+	case 1: lock(focused); return;
+	case 2: center(focused); return;
+	case 4: pop(focused); return;
+	case 5: restart(focused); return;
+	}
 	switch(c) {
 	case 0x1b: action = NORMAL, reqdraw |= 1; return;
 	case 'd': action = action == DRAW ? NORMAL : DRAW, reqdraw |= 1; return;
@@ -488,31 +510,25 @@ on_porporo_key(char c)
 	}
 }
 
-static int
+static void
 on_controller_input(char c)
 {
 	Uxn *u;
 	if(!focused || action) {
-		on_porporo_key(c);
-		return 1;
+		on_controller_special(c, 0);
+		return;
 	}
 	u = &focused->u;
 	controller_key(u, &u->dev[0x80], c);
-	return 1;
+	return;
 }
 
 static void
-on_controller_down(Uint8 key, Uint8 button, int sym)
+on_controller_down(Uint8 key, Uint8 button, Uint8 fkey)
 {
 	Uxn *u;
-	switch(sym) {
-	case SDLK_F1: lock(focused); return;
-	case SDLK_F2: center(focused); return;
-	case SDLK_F4: pop(focused); return;
-	case SDLK_F5: restart(focused); return;
-	}
-	if(!focused || action) {
-		on_porporo_key(key);
+	if(fkey || !focused || action) {
+		on_controller_special(key, fkey);
 		return;
 	}
 	u = &focused->u;
@@ -527,10 +543,10 @@ static void
 on_controller_up(Uint8 button)
 {
 	Uxn *u;
-	if(focused) {
-		u = &focused->u;
-		controller_up(u, &u->dev[0x80], button);
-	}
+	if(!focused)
+		return;
+	u = &focused->u;
+	controller_up(u, &u->dev[0x80], button);
 	return;
 }
 
@@ -630,25 +646,25 @@ main(int argc, char **argv)
 	}
 	/* event loop */
 	while(1) {
-		SDL_Event event;
+		SDL_Event e;
 		if(!begintime)
 			begintime = SDL_GetTicks();
 		else
 			delta = endtime - begintime;
 		if(delta < 30)
 			SDL_Delay(30 - delta);
-		while(SDL_PollEvent(&event) != 0) {
-			switch(event.type) {
+		while(SDL_PollEvent(&e) != 0) {
+			switch(e.type) {
 			case SDL_QUIT: quit(); break;
-			case SDL_MOUSEWHEEL: on_mouse_wheel(event.wheel.x, event.wheel.y); break;
-			case SDL_MOUSEMOTION: on_mouse_move(event.motion.x, event.motion.y); break;
-			case SDL_MOUSEBUTTONDOWN: on_mouse_down(SDL_BUTTON(event.button.button), event.motion.x, event.motion.y); break;
-			case SDL_MOUSEBUTTONUP: on_mouse_up(SDL_BUTTON(event.button.button), event.motion.x, event.motion.y); break;
-			case SDL_TEXTINPUT: on_controller_input(event.text.text[0]); break;
-			case SDL_KEYDOWN: on_controller_down(get_key(&event), get_button(&event), event.key.keysym.sym); break;
-			case SDL_KEYUP: on_controller_up(get_button(&event)); break;
+			case SDL_MOUSEWHEEL: on_mouse_wheel(e.wheel.x, e.wheel.y); break;
+			case SDL_MOUSEMOTION: on_mouse_move(e.motion.x, e.motion.y); break;
+			case SDL_MOUSEBUTTONDOWN: on_mouse_down(SDL_BUTTON(e.button.button), e.motion.x, e.motion.y); break;
+			case SDL_MOUSEBUTTONUP: on_mouse_up(SDL_BUTTON(e.button.button), e.motion.x, e.motion.y); break;
+			case SDL_TEXTINPUT: on_controller_input(e.text.text[0]); break;
+			case SDL_KEYDOWN: on_controller_down(get_key(&e), get_button(&e), get_fkey(&e)); break;
+			case SDL_KEYUP: on_controller_up(get_button(&e)); break;
 			case SDL_WINDOWEVENT:
-				if(event.window.event == SDL_WINDOWEVENT_EXPOSED) reqdraw |= 1;
+				if(e.window.event == SDL_WINDOWEVENT_EXPOSED) reqdraw |= 1;
 				break;
 			}
 		}
