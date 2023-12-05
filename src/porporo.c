@@ -174,7 +174,9 @@ raise(Varvara *v)
 {
 	int i, last = olen - 1;
 	Varvara *a, *b;
-	for(i = 0; i < olen - 1; i++) {
+	if(v == order[last])
+		return;
+	for(i = 0; i < last; i++) {
 		if(v == order[i]) {
 			a = order[i], b = order[last];
 			order[i] = b, order[last] = a;
