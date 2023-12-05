@@ -361,33 +361,29 @@ on_mouse_move(int x, int y)
 {
 	Uxn *u;
 	int relx = x - camera.x, rely = y - camera.y;
-	cursor.mode = 0;
-	if(action == DRAW) {
-		cursor.x = x, cursor.y = y, cursor.mode = 2, reqdraw |= 2;
+	cursor.x = x, cursor.y = y, cursor.mode = 2, reqdraw |= 2;
+	if(action == DRAW)
 		return;
-	}
 	if(!drag.mode)
 		pickfocus(relx, rely);
 	if(!focused) {
 		if(drag.mode) {
 			camera.x += x - drag.x, camera.y += y - drag.y;
-			drag.x = x, drag.y = y, reqdraw |= 2;
+			drag.x = x, drag.y = y;
 		}
-		cursor.x = x, cursor.y = y, cursor.mode = 2, reqdraw |= 2;
 		return;
 	}
 	if(action) {
 		if(drag.mode) {
 			focused->x += x - drag.x, focused->y += y - drag.y;
-			drag.x = x, drag.y = y, reqdraw |= 2;
+			drag.x = x, drag.y = y;
 		}
-		cursor.x = x, cursor.y = y, cursor.mode = 1, reqdraw |= 2;
 		return;
 	}
 	u = &focused->u;
 	mouse_move(u, &u->dev[0x90], relx - focused->x, rely - focused->y);
-	if(!PEEK2(&u->dev[0x90])) /* draw mouse when no mouse vector */
-		cursor.x = x, cursor.y = y, cursor.mode = 2, reqdraw |= 1;
+	if(PEEK2(&u->dev[0x90])) /* draw mouse when no mouse vector */
+		cursor.mode = 0;
 }
 
 static void
