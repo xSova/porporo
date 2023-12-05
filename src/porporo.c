@@ -30,11 +30,16 @@ enum Action {
 };
 enum Action action;
 
+typedef struct {
+	int x, y;
+} Point2d;
+
 static Uint8 *ram, olen;
 static Uint8 cursor[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
 static Uint32 *pixels, theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
-static int WIDTH, HEIGHT, isdrag, reqdraw, dragx, dragy, camerax, cameray, cursorx, cursory, cursorc;
+static int WIDTH, HEIGHT, isdrag, reqdraw, dragx, dragy, cursorx, cursory, cursorc;
 static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *focused;
+static Point2d camera;
 
 static SDL_DisplayMode DM;
 static SDL_Window *gWindow = NULL;
@@ -108,8 +113,8 @@ drawconnections(Uint32 *dst, Varvara *a, int color)
 	for(i = 0; i < a->clen; i++) {
 		Varvara *b = a->routes[i];
 		if(b && b->live) {
-			x1 = a->x + 1 + camerax + a->screen.w, y1 = a->y - 2 + cameray;
-			x2 = b->x - 2 + camerax, y2 = b->y - 2 + cameray;
+			x1 = a->x + 1 + camera.x + a->screen.w, y1 = a->y - 2 + camera.y;
+			x2 = b->x - 2 + camera.x, y2 = b->y - 2 + camera.y;
 			line(dst, x1, y1, x2, y2, color);
 		}
 	}
@@ -127,7 +132,7 @@ drawvarvara(Uint32 *dst, Varvara *p)
 {
 	int w = p->screen.w, h = p->screen.h, x = p->x, y = p->y;
 	if(!p->lock) {
-		x += camerax, y += cameray;
+		x += camera.x, y += camera.y;
 		drawborders(dst, x, y, x + w, y + h, 2 - action);
 		if(p->clen) drawconnections(dst, p, 2 - action);
 	}
@@ -220,8 +225,7 @@ static void
 remvv(Varvara *p)
 {
 	if(p) {
-		p->clen = 0, p->live = 0;
-		reqdraw |= 2;
+		p->clen = 0, p->live = 0, reqdraw |= 2;
 		order_raise(p);
 		olen--;
 	}
@@ -232,11 +236,10 @@ showmenu(int x, int y)
 {
 	if(menu->live)
 		remvv(menu);
-	reqdraw |= 2;
 	menu->u.dev[0x0f] = 0;
 	uxn_eval(&menu->u, 0x100);
 	menu->x = x, menu->y = y;
-	isdrag = 0;
+	isdrag = 0, reqdraw |= 2;
 	setaction(NORMAL);
 	order_push(menu);
 }
@@ -300,8 +303,8 @@ centervv(Varvara *v)
 {
 	if(v) {
 		reqdraw |= 2;
-		v->x = -camerax + WIDTH / 2 - v->screen.w / 2;
-		v->y = -cameray + HEIGHT / 2 - v->screen.h / 2;
+		v->x = -camera.x + WIDTH / 2 - v->screen.w / 2;
+		v->y = -camera.y + HEIGHT / 2 - v->screen.h / 2;
 	}
 }
 
@@ -310,14 +313,14 @@ lockvv(Varvara *v)
 {
 	if(v && !v->lock) {
 		v->lock = 1, focused = 0;
-		v->x += camerax, v->y += cameray;
+		v->x += camera.x, v->y += camera.y;
 	} else {
 		int i;
 		for(i = olen - 1; i > -1; i--) {
 			Varvara *a = order[i];
 			if(a->lock) {
 				a->lock = 0;
-				a->x -= camerax, a->y -= cameray;
+				a->x -= camera.x, a->y -= camera.y;
 				break;
 			}
 		}
@@ -377,7 +380,6 @@ sendcmd(char c)
 {
 	int i;
 	if(c < 0x20) {
-		reqdraw |= 2;
 		/* TODO: Handle invalid rom */
 		focused = order_push(setvv(allocvv(), menu->x, menu->y, cmd, 1));
 		for(i = 0; i < menu->clen; i++)
@@ -398,42 +400,34 @@ static void
 on_mouse_move(int x, int y)
 {
 	Uxn *u;
-	int relx = x - camerax, rely = y - cameray;
+	int relx = x - camera.x, rely = y - camera.y;
 	cursorc = 0;
 	if(action == DRAW) {
-		cursorx = x, cursory = y, cursorc = 2;
-		reqdraw |= 1;
-
+		cursorx = x, cursory = y, cursorc = 2, reqdraw |= 1;
 		return;
 	}
 	if(!isdrag)
 		pickfocus(relx, rely);
 	if(!focused) {
 		if(isdrag) {
-			camerax += x - dragx, cameray += y - dragy;
-			dragx = x, dragy = y;
-			reqdraw |= 2;
+			camera.x += x - dragx, camera.y += y - dragy;
+			dragx = x, dragy = y, reqdraw |= 2;
 		}
-		cursorx = x, cursory = y, cursorc = 2;
-		reqdraw |= 1;
+		cursorx = x, cursory = y, cursorc = 2, reqdraw |= 1;
 		return;
 	}
 	if(action) {
 		if(isdrag) {
 			focused->x += x - dragx, focused->y += y - dragy;
-			dragx = x, dragy = y;
-			reqdraw |= 2;
+			dragx = x, dragy = y, reqdraw |= 2;
 		}
-		cursorx = x, cursory = y, cursorc = 1;
-		reqdraw |= 1;
+		cursorx = x, cursory = y, cursorc = 1, reqdraw |= 1;
 		return;
 	}
 	u = &focused->u;
 	mouse_move(u, &u->dev[0x90], relx - focused->x, rely - focused->y);
-	if(!PEEK2(&u->dev[0x90])) { /* draw mouse when no mouse vector */
-		cursorx = x, cursory = y, cursorc = 2;
-		reqdraw |= 1;
-	}
+	if(!PEEK2(&u->dev[0x90])) /* draw mouse when no mouse vector */
+		cursorx = x, cursory = y, cursorc = 2, reqdraw |= 1;
 }
 
 static void
@@ -441,7 +435,7 @@ on_mouse_down(int button, int x, int y)
 {
 	Uxn *u;
 	if(!focused && button > 1) {
-		showmenu(x - camerax, y - cameray);
+		showmenu(x - camera.x, y - camera.y);
 		return;
 	}
 	if(!focused || action) {
@@ -458,8 +452,8 @@ on_mouse_up(int button, int x, int y)
 {
 	Uxn *u;
 	if(action == DRAW) {
-		Varvara *a = pickvv(dragx - camerax, dragy - cameray);
-		Varvara *b = pickvv(x - camerax, y - cameray);
+		Varvara *a = pickvv(dragx - camera.x, dragy - camera.y);
+		Varvara *b = pickvv(x - camera.x, y - camera.y);
 		if(a && b && a != b)
 			connect(a, b);
 		isdrag = 0;
