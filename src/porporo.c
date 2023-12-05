@@ -314,16 +314,19 @@ pickfocus(int x, int y)
 	focus(0);
 }
 
-static int
+static void
 connect(Varvara *a, Varvara *b)
 {
 	int i;
-	reqdraw |= 2;
-	for(i = 0; i < a->clen; i++)
-		if(b == a->routes[i])
-			return a->clen = 0;
-	a->routes[a->clen++] = b;
-	return 1;
+	if(a && b && a != b) {
+		reqdraw |= 2;
+		for(i = 0; i < a->clen; i++)
+			if(b == a->routes[i]) {
+				a->clen = 0;
+				return;
+			}
+		a->routes[a->clen++] = b;
+	}
 }
 
 static void
@@ -419,15 +422,12 @@ static void
 on_mouse_up(int button, int x, int y)
 {
 	Uxn *u;
-	if(action == DRAW) {
-		Varvara *a = pick(drag.x - camera.x, drag.y - camera.y);
-		Varvara *b = pick(x - camera.x, y - camera.y);
-		if(a && b && a != b)
-			connect(a, b);
-		drag.mode = 0;
-		return;
-	}
 	if(!focused || action) {
+		if(action == DRAW) {
+			Varvara *a = pick(drag.x - camera.x, drag.y - camera.y);
+			Varvara *b = pick(x - camera.x, y - camera.y);
+			connect(a, b);
+		}
 		drag.mode = 0;
 		return;
 	}
@@ -439,7 +439,10 @@ static void
 on_mouse_wheel(int x, int y)
 {
 	Uxn *u;
-	if(!focused) return;
+	if(!focused) {
+		camera.x += x << 4, camera.y -= y << 4, reqdraw |= 2;
+		return;
+	}
 	u = &focused->u;
 	mouse_scroll(u, &u->dev[0x90], x, y);
 }
