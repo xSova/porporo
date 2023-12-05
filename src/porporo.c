@@ -135,7 +135,7 @@ static void
 redraw(void)
 {
 	int i;
-	if(reqdraw & 2) drawclear(theme[4]);
+	if(reqdraw & 2 && !wallpaper->live) drawclear(theme[4]);
 	for(i = 0; i < olen; i++) drawvarvara(order[i]);
 	if(cursor.mode) drawicn(cursor.x, cursor.y, cursor_icn, theme[cursor.mode]);
 	reqdraw = 0;
@@ -210,8 +210,7 @@ showmenu(int x, int y)
 		pop(menu);
 	menu->u.dev[0x0f] = 0;
 	uxn_eval(&menu->u, 0x100);
-	drag.mode = 0, reqdraw |= 2;
-	action = NORMAL, reqdraw |= 1;
+	action = NORMAL, drag.mode = 0, reqdraw |= 1;
 	push(menu, x, y, 0);
 }
 
@@ -376,7 +375,7 @@ on_mouse_move(int x, int y)
 	int relx = x - camera.x, rely = y - camera.y;
 	cursor.mode = 0;
 	if(action == DRAW) {
-		cursor.x = x, cursor.y = y, cursor.mode = 2, reqdraw |= 1;
+		cursor.x = x, cursor.y = y, cursor.mode = 2, reqdraw |= 2;
 		return;
 	}
 	if(!drag.mode)
@@ -386,7 +385,7 @@ on_mouse_move(int x, int y)
 			camera.x += x - drag.x, camera.y += y - drag.y;
 			drag.x = x, drag.y = y, reqdraw |= 2;
 		}
-		cursor.x = x, cursor.y = y, cursor.mode = 2, reqdraw |= 1;
+		cursor.x = x, cursor.y = y, cursor.mode = 2, reqdraw |= 2;
 		return;
 	}
 	if(action) {
@@ -394,7 +393,7 @@ on_mouse_move(int x, int y)
 			focused->x += x - drag.x, focused->y += y - drag.y;
 			drag.x = x, drag.y = y, reqdraw |= 2;
 		}
-		cursor.x = x, cursor.y = y, cursor.mode = 1, reqdraw |= 1;
+		cursor.x = x, cursor.y = y, cursor.mode = 1, reqdraw |= 2;
 		return;
 	}
 	u = &focused->u;
