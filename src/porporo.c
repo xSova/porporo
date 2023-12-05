@@ -622,16 +622,10 @@ main(int argc, char **argv)
 		return error("Init", "Failure");
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
 	menu = spawn(0, "bin/menu.rom", 0);
-	wallpaper = spawn(1, "bin/wallpaper.rom", 1);
+	wallpaper = push(spawn(1, "bin/wallpaper.rom", 1), 0, 0, 1);
 	/* load from arguments */
 	for(i = 1; i < argc; i++) {
-		Varvara *a;
-		if(argv[i][0] == '-') {
-			i += 1;
-			a = push(spawn(i, argv[i], 1), anchor, 0, 1);
-			continue;
-		}
-		a = push(spawn(i, argv[i], 1), anchor + 0x10, 0x10, 0);
+		Varvara *a = push(spawn(i + 1, argv[i], 1), anchor + 0x10, 0x10, 0);
 		anchor += a->screen.w + 0x10;
 	}
 	/* event loop */
