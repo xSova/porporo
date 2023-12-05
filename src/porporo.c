@@ -184,12 +184,10 @@ raise(Varvara *v)
 }
 
 static Varvara *
-push(Varvara *p, int x, int y)
+push(Varvara *p, int x, int y, int lock)
 {
-	if(p) {
-		p->x = x, p->y = y;
-		order[olen++] = p, p->live = 1;
-	}
+	if(p)
+		p->x = x, p->y = y, p->lock = lock, p->live = 1, order[olen++] = p;
 	return p;
 }
 
@@ -212,7 +210,7 @@ showmenu(int x, int y)
 	uxn_eval(&menu->u, 0x100);
 	drag.mode = 0, reqdraw |= 2;
 	action = NORMAL, reqdraw |= 1;
-	push(menu, x, y);
+	push(menu, x, y, 0);
 }
 
 static Varvara *
@@ -351,7 +349,7 @@ sendcmd(char c)
 	int i;
 	if(c < 0x20) {
 		/* TODO: Handle invalid rom */
-		focused = push(spawn(alloc(), cmd, 1), menu->x, menu->y);
+		focused = push(spawn(alloc(), cmd, 1), menu->x, menu->y, 0);
 		for(i = 0; i < menu->clen; i++)
 			connect(focused, menu->routes[i]);
 		cmdlen = 0;
@@ -626,15 +624,14 @@ main(int argc, char **argv)
 	menu = spawn(0, "bin/menu.rom", 0);
 	wallpaper = spawn(1, "bin/wallpaper.rom", 1);
 	/* load from arguments */
-	for(i = 2; i < argc; i++) {
+	for(i = 1; i < argc; i++) {
 		Varvara *a;
 		if(argv[i][0] == '-') {
 			i += 1;
-			a = push(spawn(i, argv[i], 1), anchor, 0);
-			a->lock = 1;
+			a = push(spawn(i, argv[i], 1), anchor, 0, 1);
 			continue;
 		}
-		a = push(spawn(i, argv[i], 1), anchor + 0x10, 0x10);
+		a = push(spawn(i, argv[i], 1), anchor + 0x10, 0x10, 0);
 		anchor += a->screen.w + 0x10;
 	}
 	/* event loop */
