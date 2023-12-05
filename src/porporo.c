@@ -565,7 +565,7 @@ init(void)
 }
 
 void
-console_deo(Varvara *a, Uint8 addr, Uint8 value)
+graph_deo(Varvara *a, Uint8 addr, Uint8 value)
 {
 	int i;
 	if(a == menu) {
@@ -606,10 +606,10 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 		if(p > 0x7 && p < 0xe) screen_palette(&prg->screen, &u->dev[0x8]);
 		if(p == 0xf) pop(prg);
 		break;
-	case 0x10: console_deo(prg, addr, value); break;
+	case 0x10: graph_deo(prg, addr, value); break;
 	case 0x20: screen_deo(prg, u->ram, &u->dev[d], p); break;
-	case 0xa0: file_deo(prg, 0, u->ram, &u->dev[d], p); break;
-	case 0xb0: file_deo(prg, 1, u->ram, &u->dev[d], p); break;
+	case 0xa0: file_deo(0, u->ram, &u->dev[d], p); break;
+	case 0xb0: file_deo(1, u->ram, &u->dev[d], p); break;
 	}
 }
 
