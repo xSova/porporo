@@ -44,24 +44,31 @@ static SDL_Texture *gTexture = NULL;
 
 /* = DRAWING ===================================== */
 
-void
-putpixel(Uint32 *dst, int x, int y, int color)
+static void
+drawclear(Uint32 *dst)
+{
+	int i, l = WIDTH * HEIGHT, c = theme[4];
+	for(i = 0; i < l; i++) dst[i] = c;
+}
+
+static void
+drawpixel(Uint32 *dst, int x, int y, int color)
 {
 	if(x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT)
 		dst[y * WIDTH + x] = theme[color];
 }
 
-void
+static void
 drawicn(Uint32 *dst, int x, int y, Uint8 *sprite, int color)
 {
 	int v, h;
 	for(v = 0; v < 8; v++)
 		for(h = 0; h < 8; h++)
 			if((sprite[v] >> (7 - h)) & 0x1)
-				putpixel(dst, x + h, y + v, color);
+				drawpixel(dst, x + h, y + v, color);
 }
 
-void
+static void
 drawscreen(Uint32 *dst, Screen *scr, int x1, int y1)
 {
 	int x, y, row, relrow, w = scr->w, x2 = x1 + w, y2 = y1 + scr->h;
@@ -73,14 +80,14 @@ drawscreen(Uint32 *dst, Screen *scr, int x1, int y1)
 	}
 }
 
-void
-line(Uint32 *dst, int ax, int ay, int bx, int by, int color)
+static void
+drawline(Uint32 *dst, int ax, int ay, int bx, int by, int color)
 {
 	int dx = abs(bx - ax), sx = ax < bx ? 1 : -1;
 	int dy = -abs(by - ay), sy = ay < by ? 1 : -1;
 	int err = dx + dy, e2;
 	for(;;) {
-		putpixel(dst, ax, ay, color);
+		drawpixel(dst, ax, ay, color);
 		if(ax == bx && ay == by) break;
 		e2 = 2 * err;
 		if(e2 >= dy) err += dy, ax += sx;
@@ -93,16 +100,16 @@ drawborders(Uint32 *dst, int x1, int y1, int x2, int y2, int color)
 {
 	int x, y;
 	for(y = y1 - 1; y < y2 + 1; y++) {
-		putpixel(dst, x1 - 2, y, color), putpixel(dst, x2, y, color);
-		putpixel(dst, x1 - 1, y, color), putpixel(dst, x2 + 1, y, color);
+		drawpixel(dst, x1 - 2, y, color), drawpixel(dst, x2, y, color);
+		drawpixel(dst, x1 - 1, y, color), drawpixel(dst, x2 + 1, y, color);
 	}
 	for(x = x1 - 2; x < x2 + 2; x++) {
-		putpixel(dst, x, y1 - 2, color), putpixel(dst, x, y2, color);
-		putpixel(dst, x, y1 - 1, color), putpixel(dst, x, y2 + 1, color);
+		drawpixel(dst, x, y1 - 2, color), drawpixel(dst, x, y2, color);
+		drawpixel(dst, x, y1 - 1, color), drawpixel(dst, x, y2 + 1, color);
 	}
 }
 
-void
+static void
 drawconnections(Uint32 *dst, Varvara *a, int color)
 {
 	int i, x1, x2, y1, y2;
@@ -111,16 +118,9 @@ drawconnections(Uint32 *dst, Varvara *a, int color)
 		if(b && b->live) {
 			x1 = a->x + 1 + camera.x + a->screen.w, y1 = a->y - 2 + camera.y;
 			x2 = b->x - 2 + camera.x, y2 = b->y - 2 + camera.y;
-			line(dst, x1, y1, x2, y2, color);
+			drawline(dst, x1, y1, x2, y2, color);
 		}
 	}
-}
-
-static void
-clear(Uint32 *dst)
-{
-	int i, l = WIDTH * HEIGHT, c = theme[4];
-	for(i = 0; i < l; i++) dst[i] = c;
 }
 
 static void
@@ -139,14 +139,9 @@ static void
 redraw(Uint32 *dst)
 {
 	int i;
-	if(reqdraw & 2)
-		clear(pixels);
-	for(i = 0; i < olen; i++)
-		if(order[i]->lock) drawvarvara(dst, order[i]);
-	for(i = 0; i < olen; i++)
-		if(!order[i]->lock) drawvarvara(dst, order[i]);
-	if(cursor.mode)
-		drawicn(pixels, cursor.x, cursor.y, cursor_icn, cursor.mode);
+	if(reqdraw & 2) drawclear(pixels);
+	for(i = 0; i < olen; i++) drawvarvara(dst, order[i]);
+	if(cursor.mode) drawicn(pixels, cursor.x, cursor.y, cursor_icn, cursor.mode);
 	SDL_UpdateTexture(gTexture, NULL, dst, WIDTH * sizeof(Uint32));
 	SDL_RenderClear(gRenderer);
 	SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
@@ -175,54 +170,41 @@ quit(void)
 }
 
 static void
-setaction(enum Action a)
+focus(Varvara *a)
 {
-	action = a, reqdraw |= 1;
-}
-
-static void
-focusvv(Varvara *a)
-{
-	if(focused == a)
-		return;
-	if(focused)
-		mouse_move(&focused->u, &focused->u.dev[0x90], 0x8000, 0x8000);
+	if(focused == a) return;
+	if(focused) mouse_move(&focused->u, &focused->u.dev[0x90], 0x8000, 0x8000);
 	focused = a;
 }
 
 static void
-order_raise(Varvara *v)
+raise(Varvara *v)
 {
-	int i, j = 0, last = olen - 1;
+	int i, last = olen - 1;
 	Varvara *a, *b;
-	for(i = 0; i < olen; i++) {
+	for(i = 0; i < olen - 1; i++) {
 		if(v == order[i]) {
-			j = i;
-			break;
+			a = order[i], b = order[last];
+			order[i] = b, order[last] = a;
+			return;
 		}
 	}
-	if(j == last)
-		return;
-	a = order[j], b = order[last];
-	order[j] = b, order[last] = a;
 }
 
 static Varvara *
-order_push(Varvara *p)
+push(Varvara *p)
 {
-	if(p) {
-		p->live = 1;
-		order[olen++] = p;
-	}
+	if(p)
+		order[olen++] = p, p->live = 1;
 	return p;
 }
 
 static void
-remvv(Varvara *p)
+pop(Varvara *p)
 {
 	if(p) {
 		p->clen = 0, p->live = 0, reqdraw |= 2;
-		order_raise(p);
+		raise(p);
 		olen--;
 	}
 }
@@ -231,17 +213,17 @@ static void
 showmenu(int x, int y)
 {
 	if(menu->live)
-		remvv(menu);
+		pop(menu);
 	menu->u.dev[0x0f] = 0;
 	uxn_eval(&menu->u, 0x100);
 	menu->x = x, menu->y = y;
 	drag.mode = 0, reqdraw |= 2;
-	setaction(NORMAL);
-	order_push(menu);
+	action = NORMAL, reqdraw |= 1;
+	push(menu);
 }
 
 static Varvara *
-setvv(int id, int x, int y, char *rom, int eval)
+spawn(int id, int x, int y, char *rom, int eval)
 {
 	Varvara *p;
 	if(id == -1) return 0;
@@ -263,7 +245,7 @@ setvv(int id, int x, int y, char *rom, int eval)
 }
 
 static int
-allocvv(void)
+alloc(void)
 {
 	int i;
 	for(i = 1; i < RAM_PAGES; i++) {
@@ -275,7 +257,7 @@ allocvv(void)
 }
 
 static int
-withinvv(Varvara *p, int x, int y)
+within(Varvara *p, int x, int y)
 {
 	Screen *s = &p->screen;
 	int xx = p->x, yy = p->y;
@@ -283,19 +265,19 @@ withinvv(Varvara *p, int x, int y)
 }
 
 static Varvara *
-pickvv(int x, int y)
+pick(int x, int y)
 {
 	int i;
 	for(i = olen - 1; i > -1; --i) {
 		Varvara *p = order[i];
-		if(!p->lock && withinvv(p, x, y))
+		if(!p->lock && within(p, x, y))
 			return p;
 	}
 	return 0;
 }
 
 static void
-centervv(Varvara *v)
+center(Varvara *v)
 {
 	if(v) {
 		reqdraw |= 2;
@@ -305,7 +287,7 @@ centervv(Varvara *v)
 }
 
 static void
-lockvv(Varvara *v)
+lock(Varvara *v)
 {
 	if(v && !v->lock) {
 		v->lock = 1, focused = 0;
@@ -328,18 +310,18 @@ static void
 pickfocus(int x, int y)
 {
 	int i;
-	if(withinvv(menu, x, y)) {
-		focusvv(menu);
+	if(within(menu, x, y)) {
+		focus(menu);
 		return;
 	}
 	for(i = olen - 1; i > -1; --i) {
 		Varvara *p = order[i];
-		if(withinvv(p, x, y) && !p->lock) {
-			focusvv(p);
+		if(within(p, x, y) && !p->lock) {
+			focus(p);
 			return;
 		}
 	}
-	focusvv(0);
+	focus(0);
 }
 
 static int
@@ -355,7 +337,7 @@ connect(Varvara *a, Varvara *b)
 }
 
 static void
-restartvv(Varvara *v)
+restart(Varvara *v)
 {
 	if(v) {
 		screen_wipe(&v->screen);
@@ -377,7 +359,7 @@ sendcmd(char c)
 	int i;
 	if(c < 0x20) {
 		/* TODO: Handle invalid rom */
-		focused = order_push(setvv(allocvv(), menu->x, menu->y, cmd, 1));
+		focused = push(spawn(alloc(), menu->x, menu->y, cmd, 1));
 		for(i = 0; i < menu->clen; i++)
 			connect(focused, menu->routes[i]);
 		cmdlen = 0;
@@ -440,7 +422,7 @@ on_mouse_down(int button, int x, int y)
 	}
 	u = &focused->u;
 	mouse_down(u, &u->dev[0x90], button);
-	order_raise(focused);
+	raise(focused);
 }
 
 static void
@@ -448,8 +430,8 @@ on_mouse_up(int button, int x, int y)
 {
 	Uxn *u;
 	if(action == DRAW) {
-		Varvara *a = pickvv(drag.x - camera.x, drag.y - camera.y);
-		Varvara *b = pickvv(x - camera.x, y - camera.y);
+		Varvara *a = pick(drag.x - camera.x, drag.y - camera.y);
+		Varvara *b = pick(x - camera.x, y - camera.y);
 		if(a && b && a != b)
 			connect(a, b);
 		drag.mode = 0;
@@ -510,9 +492,9 @@ static void
 on_porporo_key(char c)
 {
 	switch(c) {
-	case 0x1b: setaction(NORMAL); return;
-	case 'd': setaction(action == DRAW ? NORMAL : DRAW); return;
-	case 'm': setaction(action == MOVE ? NORMAL : MOVE); return;
+	case 0x1b: action = NORMAL, reqdraw |= 1; return;
+	case 'd': action = action == DRAW ? NORMAL : DRAW, reqdraw |= 1; return;
+	case 'm': action = action == MOVE ? NORMAL : MOVE, reqdraw |= 1; return;
 	}
 }
 
@@ -534,10 +516,10 @@ on_controller_down(Uint8 key, Uint8 button, int sym)
 {
 	Uxn *u;
 	switch(sym) {
-	case SDLK_F1: lockvv(focused); return;
-	case SDLK_F2: centervv(focused); return;
-	case SDLK_F4: remvv(focused); return;
-	case SDLK_F5: restartvv(focused); return;
+	case SDLK_F1: lock(focused); return;
+	case SDLK_F2: center(focused); return;
+	case SDLK_F4: pop(focused); return;
+	case SDLK_F5: restart(focused); return;
 	}
 	if(!focused || action) {
 		on_porporo_key(key);
@@ -586,7 +568,7 @@ init(void)
 	if(pixels == NULL)
 		return error("Pixels", "Failed to allocate memory");
 	SDL_ShowCursor(0);
-	clear(pixels);
+	drawclear(pixels);
 	return 1;
 }
 
@@ -630,7 +612,7 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	switch(d) {
 	case 0x00:
 		if(p > 0x7 && p < 0xe) screen_palette(&prg->screen, &u->dev[0x8]);
-		if(p == 0xf) remvv(prg);
+		if(p == 0xf) pop(prg);
 		break;
 	case 0x10: console_deo(prg, addr, value); break;
 	case 0x20: screen_deo(prg, u->ram, &u->dev[d], p); break;
@@ -649,17 +631,17 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
-	menu = setvv(0, 200, 150, "bin/menu.rom", 0);
+	menu = spawn(0, 200, 150, "bin/menu.rom", 0);
 	/* load from arguments */
 	for(i = 1; i < argc; i++) {
 		Varvara *a;
 		if(argv[i][0] == '-') {
 			i += 1;
-			a = order_push(setvv(i, anchor, 0, argv[i], 1));
+			a = push(spawn(i, anchor, 0, argv[i], 1));
 			a->lock = 1;
 			continue;
 		}
-		a = order_push(setvv(i, anchor + 0x10, 0x10, argv[i], 1));
+		a = push(spawn(i, anchor + 0x10, 0x10, argv[i], 1));
 		anchor += a->screen.w + 0x10;
 	}
 	/* event loop */
