@@ -18,6 +18,7 @@
 	<redraw>
 	;on-mouse .Mouse/vector DEO2
 	;on-console .Console/vector DEO2
+	;on-screen .Screen/vector DEO2
 	BRK
 
 @meta $1
@@ -30,13 +31,19 @@
 @on-console ( -> )
 	( | append )
 	.Console/read DEI #00 ;buf scap/ STA2
+	#01 ;on-screen/reqdraw STA
+	BRK
+
+@on-screen ( -> )
+	[ LIT &reqdraw $1 ] ?{ BRK }
 	<redraw>
 	BRK
 
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
-	.Mouse/state DEI ?{ <draw-sidebar>
-		BRK }
+	[ LIT &last $1 ] .Mouse/state DEI #00 NEQ DUP ,&last STR
+	DUP2 #0100 NEQ2 ?{ #01 ;on-screen/reqdraw STA }
+	POP2 .Mouse/state DEI ?{ BRK }
 	.Mouse/x DEI2 #0010 LTH2 ?on-touch-sidebar
 	BRK
 
@@ -46,7 +53,6 @@
 
 @do-clear ( -- )
 	#0000 ;buf STA2
-	<redraw>
 	#0000 .Screen/x DEO2
 	#0000 .Screen/y DEO2
 	#04 ;clear-icn !<draw-icon>
@@ -55,7 +61,7 @@
 	.Screen/height DEI2 #04 SFT2 NIP ;buf count-lines EQUk ?{
 		( min ) #02 GTHk [ JMP SWP POP ]
 		( scale ) #00 SWP #40 SFT2 #0008 ADD2 .Screen/height DEO2
-		!&resume }
+		POP !&resume }
 	POP2
 	( | clear )
 	#0014 .Screen/x DEO2
