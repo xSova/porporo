@@ -151,17 +151,6 @@ error(char *msg, const char *err)
 }
 
 static void
-quit(void)
-{
-	free(pixels);
-	SDL_DestroyTexture(gTexture), gTexture = NULL;
-	SDL_DestroyRenderer(gRenderer), gRenderer = NULL;
-	SDL_DestroyWindow(gWindow), gWindow = NULL;
-	SDL_Quit();
-	exit(0);
-}
-
-static void
 focus(Varvara *a)
 {
 	if(focused == a) return;
@@ -180,6 +169,7 @@ raise(Varvara *v)
 		if(v == order[i]) {
 			a = order[i], b = order[last];
 			order[i] = b, order[last] = a;
+			reqdraw |= 1;
 			return;
 		}
 	}
@@ -188,8 +178,10 @@ raise(Varvara *v)
 static Varvara *
 push(Varvara *p, int x, int y, int lock)
 {
-	if(p)
-		p->x = x, p->y = y, p->lock = lock, p->live = 1, order[olen++] = p;
+	if(p) {
+		p->x = x, p->y = y, p->lock = lock, p->live = 1, reqdraw |= 1;
+		order[olen++] = p;
+	}
 	return p;
 }
 
@@ -210,7 +202,7 @@ showmenu(int x, int y)
 		pop(menu);
 	menu->u.dev[0x0f] = 0;
 	uxn_eval(&menu->u, 0x100);
-	action = NORMAL, drag.mode = 0, reqdraw |= 1;
+	action = NORMAL, drag.mode = 0;
 	push(menu, x, y, 0);
 }
 
@@ -218,7 +210,7 @@ static Varvara *
 spawn(int id, char *rom, int eval)
 {
 	Varvara *p;
-	if(id == -1) return 0;
+	if(id == -1 || id > RAM_PAGES) return 0;
 	p = &varvaras[id];
 	p->u.id = id, p->u.ram = ram + id * 0x10000;
 	if(!system_init(p, &p->u, p->u.ram, rom))
@@ -251,8 +243,8 @@ static int
 within(Varvara *p, int x, int y)
 {
 	Screen *s = &p->screen;
-	int xx = p->x, yy = p->y;
-	return p->live && x > xx && x < xx + s->w && y > yy && y < yy + s->h;
+	int x1 = p->x, y1 = p->y;
+	return p->live && x > x1 && x < x1 + s->w && y > y1 && y < y1 + s->h;
 }
 
 static Varvara *
@@ -271,9 +263,9 @@ static void
 center(Varvara *v)
 {
 	if(v) {
-		reqdraw |= 2;
 		v->x = -camera.x + WIDTH / 2 - v->screen.w / 2;
 		v->y = -camera.y + HEIGHT / 2 - v->screen.h / 2;
+		reqdraw |= 2;
 	}
 }
 
@@ -301,10 +293,6 @@ static void
 pickfocus(int x, int y)
 {
 	int i;
-	if(within(menu, x, y)) {
-		focus(menu);
-		return;
-	}
 	for(i = olen - 1; i > -1; --i) {
 		Varvara *p = order[i];
 		if(within(p, x, y) && !p->lock) {
@@ -555,6 +543,17 @@ on_controller_up(Uint8 button)
 }
 
 /* =============================================== */
+
+static void
+quit(void)
+{
+	free(pixels);
+	SDL_DestroyTexture(gTexture), gTexture = NULL;
+	SDL_DestroyRenderer(gRenderer), gRenderer = NULL;
+	SDL_DestroyWindow(gWindow), gWindow = NULL;
+	SDL_Quit();
+	exit(0);
+}
 
 static int
 init(void)
