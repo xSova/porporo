@@ -10,7 +10,7 @@ all: dest bin/uxnasm bin/porporo bin/menu.rom bin/wallpaper.rom bin/log.rom
 dest:
 	@ mkdir -p bin
 run: all
-	@ bin/porporo - bin/wallpaper.rom bin/log.rom
+	@ bin/porporo bin/log.rom
 install: all
 	@ cp bin/porporo ~/bin/
 uninstall:

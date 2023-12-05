@@ -34,7 +34,7 @@ typedef struct {
 static Uint8 *ram, cursor_icn[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
 static Uint32 *pixels, theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
 static int WIDTH, HEIGHT, reqdraw, olen;
-static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *focused;
+static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *wallpaper, *focused;
 static Point2d camera, drag, cursor;
 
 static SDL_DisplayMode DM;
@@ -184,10 +184,12 @@ raise(Varvara *v)
 }
 
 static Varvara *
-push(Varvara *p)
+push(Varvara *p, int x, int y)
 {
-	if(p)
+	if(p) {
+		p->x = x, p->y = y;
 		order[olen++] = p, p->live = 1;
+	}
 	return p;
 }
 
@@ -208,19 +210,17 @@ showmenu(int x, int y)
 		pop(menu);
 	menu->u.dev[0x0f] = 0;
 	uxn_eval(&menu->u, 0x100);
-	menu->x = x, menu->y = y;
 	drag.mode = 0, reqdraw |= 2;
 	action = NORMAL, reqdraw |= 1;
-	push(menu);
+	push(menu, x, y);
 }
 
 static Varvara *
-spawn(int id, int x, int y, char *rom, int eval)
+spawn(int id, char *rom, int eval)
 {
 	Varvara *p;
 	if(id == -1) return 0;
 	p = &varvaras[id];
-	p->x = x, p->y = y;
 	p->u.id = id, p->u.ram = ram + id * 0x10000;
 	if(!system_init(p, &p->u, p->u.ram, rom))
 		return 0;
@@ -351,7 +351,7 @@ sendcmd(char c)
 	int i;
 	if(c < 0x20) {
 		/* TODO: Handle invalid rom */
-		focused = push(spawn(alloc(), menu->x, menu->y, cmd, 1));
+		focused = push(spawn(alloc(), cmd, 1), menu->x, menu->y);
 		for(i = 0; i < menu->clen; i++)
 			connect(focused, menu->routes[i]);
 		cmdlen = 0;
@@ -623,17 +623,18 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
-	menu = spawn(0, 200, 150, "bin/menu.rom", 0);
+	menu = spawn(0, "bin/menu.rom", 0);
+	wallpaper = spawn(1, "bin/wallpaper.rom", 1);
 	/* load from arguments */
-	for(i = 1; i < argc; i++) {
+	for(i = 2; i < argc; i++) {
 		Varvara *a;
 		if(argv[i][0] == '-') {
 			i += 1;
-			a = push(spawn(i, anchor, 0, argv[i], 1));
+			a = push(spawn(i, argv[i], 1), anchor, 0);
 			a->lock = 1;
 			continue;
 		}
-		a = push(spawn(i, anchor + 0x10, 0x10, argv[i], 1));
+		a = push(spawn(i, argv[i], 1), anchor + 0x10, 0x10);
 		anchor += a->screen.w + 0x10;
 	}
 	/* event loop */
