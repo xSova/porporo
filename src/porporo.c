@@ -341,9 +341,10 @@ sendcmd(char c)
 	int i;
 	if(c < 0x20) {
 		/* TODO: Handle invalid rom */
-		focused = push(spawn(alloc(), cmd, 1), menu->x, menu->y, 0);
+		focused = push(spawn(alloc(), cmd, 0), menu->x, menu->y, 0);
 		for(i = 0; i < menu->clen; i++)
 			connect(focused, menu->routes[i]);
+		uxn_eval(&focused->u, 0x100);
 		cmdlen = 0;
 		return;
 	}
@@ -587,14 +588,16 @@ graph_deo(Varvara *a, Uint8 addr, Uint8 value)
 			return;
 		}
 	}
-	for(i = 0; i < a->clen; i++) {
-		Varvara *b = a->routes[i];
-		if(b) {
-			Uint8 *address = &b->u.dev[0x10];
-			Uint16 vector = PEEK2(address);
-			b->u.dev[0x12] = value;
-			if(vector)
-				uxn_eval(&b->u, vector);
+	if(addr == 0x18) {
+		for(i = 0; i < a->clen; i++) {
+			Varvara *b = a->routes[i];
+			if(b) {
+				Uint8 *address = &b->u.dev[0x10];
+				Uint16 vector = PEEK2(address);
+				b->u.dev[0x12] = value;
+				if(vector)
+					uxn_eval(&b->u, vector);
+			}
 		}
 	}
 }
