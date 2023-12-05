@@ -1,6 +1,6 @@
-SRC=src/uxn.c src/devices/system.c src/devices/screen.c src/devices/controller.c src/devices/mouse.c src/devices/file.c src/devices/datetime.c src/porporo.c
-RELEASE_flags=-std=c89 -Os -DNDEBUG -g0 -s -Wall -Wno-unknown-pragmas -L/usr/local/lib -lSDL2
-DEBUG_flags=-std=c89 -DDEBUG -Wall -Wno-unknown-pragmas -Wpedantic -Wshadow -Wextra -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=int-conversion -Wvla -g -Og -fsanitize=address -fsanitize=undefined -L/usr/local/lib -lSDL2
+SRC=src/uxn.c src/devices/system.c src/devices/screen.c src/devices/controller.c src/devices/mouse.c src/devices/file.c src/devices/datetime.c
+RELEASE_flags=-std=c89 -Os -DNDEBUG -g0 -s -Wall -Wno-unknown-pragmas
+DEBUG_flags=-std=c89 -DDEBUG -Wall -Wno-unknown-pragmas -Wpedantic -Wshadow -Wextra -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=int-conversion -Wvla -g -Og -fsanitize=address -fsanitize=undefined
 ASM=bin/uxnasm
 
 .PHONY: all dest run install uninstall format clean
@@ -23,7 +23,7 @@ clean:
 bin/uxnasm: etc/uxnasm.c
 	@ cc ${RELEASE_flags} etc/uxnasm.c -o bin/uxnasm
 bin/porporo: ${SRC} src/porporo.c
-	@ cc ${DEBUG_flags} ${SRC} -o bin/porporo
+	@ cc ${DEBUG_flags} ${SRC} src/porporo.c -L/usr/local/lib -lSDL2 -o bin/porporo
 
 bin/menu.rom: src/utils/menu.tal src/utils/menu.assets.tal
 	@ ${ASM} src/utils/menu.tal bin/menu.rom
