@@ -20,9 +20,6 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 WITH REGARD TO THIS SOFTWARE.
 */
 
-#define HOR 100
-#define VER 60
-
 enum Action {
 	NORMAL,
 	MOVE,
@@ -34,10 +31,9 @@ typedef struct {
 	int x, y, mode;
 } Point2d;
 
-static Uint8 *ram, olen;
-static Uint8 cursor_icn[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
+static Uint8 *ram, cursor_icn[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
 static Uint32 *pixels, theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
-static int WIDTH, HEIGHT, reqdraw;
+static int WIDTH, HEIGHT, reqdraw, olen;
 static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *focused;
 static Point2d camera, drag, cursor;
 
