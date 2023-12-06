@@ -316,7 +316,15 @@ restart(Varvara *v)
 	if(!v) return;
 	screen_wipe(&v->screen);
 	system_boot(&v->u, 1);
-	system_load(&v->u, focused->rom);
+	system_load(&v->u, v->rom);
+	
+	/* TODO ARGHHH */
+	screen_resize(&v->screen, 0x10, 0x10);
+	v->u.dev[0x22] = WIDTH >> 8;
+	v->u.dev[0x23] = WIDTH;
+	v->u.dev[0x24] = HEIGHT >> 8;
+	v->u.dev[0x25] = HEIGHT;
+	
 	uxn_eval(&v->u, PAGE_PROGRAM);
 	reqdraw |= 1;
 }
