@@ -1,3 +1,4 @@
+
 |00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
 |10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
 |20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
@@ -16,6 +17,7 @@
 	#f00f .System/r DEO2
 	#f006 .System/g DEO2
 	#f002 .System/b DEO2
+	<load-theme>
 	( | size )
 	#0190 .Screen/width DEO2
 	#0028 .Screen/height DEO2
@@ -197,13 +199,20 @@
 		INC2 LDAk #20 GTH ?&w
 	POP2 JMP2r
 
-@<phex> ( short* -- )
-	SWP <phex>/b
-	&b ( -- )
-		DUP #04 SFT <phex>/c
-	&c ( -- )
-		#0f AND DUP #09 GTH #27 MUL ADD [ LIT "0 ] ADD #18 DEO
-		JMP2r
+(
+@|theme )
+
+@<load-theme> ( -- )
+	;&path .File/name DEO2
+	#0002 .File/length DEO2
+	[ LIT2 -System/debug -System/r ]
+	&l ( -- )
+		;&buf .File/read DEO2
+		.File/success DEI2 #0000 EQU2 ?{
+			STHk [ LIT2 &buf $2 ] STHr DEO2
+			INC INC NEQk ?&l }
+	POP2 JMP2r
+	&path ".theme $1
 
 (
 @|assets )
