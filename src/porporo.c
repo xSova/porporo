@@ -32,7 +32,7 @@ typedef struct {
 } Point2d;
 
 static Uint8 *ram, cursor_icn[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
-static Uint32 *pixels, theme[] = {0xffb545, 0x72DEC2, 0x000000, 0xffffff, 0xeeeeee};
+static Uint32 *pixels, theme[] = {0xeeeeee, 0x000000, 0x72DEC2, 0xffb545};
 static int WIDTH, HEIGHT, reqdraw, olen;
 static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *wallpaper, *focused;
 static Point2d camera, drag, cursor;
@@ -118,7 +118,7 @@ drawvarvara(Varvara *p)
 	Screen *scr = &p->screen;
 	int x, y, row, relrow, x2, y2, w = scr->w, h = scr->h, x1 = p->x, y1 = p->y;
 	if(!p->lock) {
-		x1 += camera.x, y1 += camera.y, color = theme[2 - action];
+		x1 += camera.x, y1 += camera.y, color = theme[1 + action];
 		drawborders(x1, y1, x1 + w, y1 + h, color);
 		if(p->clen) drawconnections(p, color);
 	}
@@ -135,9 +135,9 @@ static void
 redraw(void)
 {
 	int i;
-	if(reqdraw & 2 && !wallpaper->live) drawclear(theme[4]);
+	if(reqdraw & 2 && !wallpaper->live) drawclear(theme[0]);
 	for(i = 0; i < olen; i++) drawvarvara(order[i]);
-	if(cursor.mode) drawicn(cursor.x, cursor.y, cursor_icn, theme[cursor.mode]);
+	if(cursor.mode) drawicn(cursor.x, cursor.y, cursor_icn, theme[1 + action]);
 	reqdraw = 0;
 }
 
@@ -362,7 +362,7 @@ on_mouse_move(int x, int y)
 {
 	Uxn *u;
 	int relx = x - camera.x, rely = y - camera.y;
-	cursor.x = x, cursor.y = y, cursor.mode = 2, reqdraw |= 2;
+	cursor.x = x, cursor.y = y, cursor.mode = 1, reqdraw |= 2;
 	if(action == DRAW)
 		return;
 	if(!drag.mode)
@@ -574,7 +574,7 @@ init(void)
 	if(pixels == NULL)
 		return error("Pixels", "Failed to allocate memory");
 	SDL_ShowCursor(0);
-	drawclear(theme[4]);
+	drawclear(theme[0]);
 	return 1;
 }
 
