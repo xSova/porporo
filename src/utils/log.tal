@@ -4,6 +4,10 @@
 |90 @Mouse &vector $2 &x $2 &y $2 &state $1 &chord $1 &pad $4 &scrolly &scrolly-hb $1 &scrolly-lb $1
 |a0 @File &vector $2 &success $2 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
 
+|0000
+
+	@hexadecimal $1
+
 |0100
 
 @on-reset ( -> )
@@ -43,7 +47,7 @@
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
 	[ LIT &last $1 ] .Mouse/state DEI #00 NEQ DUP ,&last STR
-	DUP2 #0100 NEQ2 ?{ #10 ;on-screen/reqdraw STA }
+	DUP2 #0100 NEQ2 ?{ #08 ;on-screen/reqdraw STA }
 	POP2 .Mouse/state DEI ?{ BRK }
 	.Mouse/x DEI2 #0010 LTH2 ?on-touch-sidebar
 	BRK
@@ -54,10 +58,12 @@
 	BRK
 
 @do-clear ( -- )
+	.Mouse/state DEI #02 LTH ?{
+		.hexadecimal LDZ #00 EQU .hexadecimal STZ }
 	#0000 ;buf STA2
 	#0000 .Screen/x DEO2
 	#0000 .Screen/y DEO2
-	#04 ;clear-icn !<draw-icon>
+	#04 !<draw-icon>
 
 @<redraw> ( -- )
 	.Screen/height DEI2 #04 SFT2 NIP ;buf count-lines EQUk ?{
@@ -70,7 +76,7 @@
 	#0000 .Screen/y DEO2
 	[ LIT2 80 -Screen/pixel ] DEO
 	&resume <draw-sidebar>
-	;buf
+	;buf .hexadecimal LDZ ?<draw-hex>
 	( >> )
 
 @<draw-text> ( str* -- )
@@ -85,10 +91,31 @@
 			}
 		LDAk #0a NEQ ?{ <draw-lb>
 			!&res }
-		( ) LDAk #20 SUB #00 SWP #40 SFT2 ;font-icn ADD2 .Screen/addr DEO2
-		[ LIT2 0a -Screen/sprite ] DEO
+		( ) LDAk <draw-char>
 		&res INC2 LDAk ?&w
 	POP2 JMP2r
+
+@<draw-hex> ( str* -- )
+	#0014 .Screen/x DEO2
+	#0004 .Screen/y DEO2
+	#15 .Screen/auto DEO
+	&w ( -- )
+		LDAk <draw-byte>
+		.Screen/x DEI2k #0008 ADD2 ROT DEO2
+		INC2 LDAk ?&w
+	POP2 JMP2r
+	JMP2r
+
+@<draw-byte> ( byte -- )
+	DUP #04 SFT <draw-hex>
+
+@<draw-hex> ( byte -- )
+	#0f AND DUP #09 GTH #07 MUL ADD #30 ADD
+
+@<draw-char> ( char -- )
+	#20 SUB #00 SWP #40 SFT2 ;font-icn ADD2 .Screen/addr DEO2
+	[ LIT2 &color 01 -Screen/sprite ] DEO
+	JMP2r
 
 @count-lines ( buf* -- lines )
 	[ LITr 00 ]
@@ -129,12 +156,12 @@
 	( | icon )
 	#0000 .Screen/x DEO2
 	#0000 .Screen/y DEO2
-	#01 ;clear-icn <draw-icon>
+	#01 <draw-icon>
 	JMP2r
 
-@<draw-icon> ( addr* color -- )
+@<draw-icon> ( color -- )
 	#16 .Screen/auto DEO
-	.Screen/addr DEO2
+	;ascii-icn #00 .hexadecimal LDZ #50 SFT2 ADD2 .Screen/addr DEO2
 	.Screen/sprite DEOk DEO
 	JMP2r
 
@@ -183,9 +210,13 @@
 
 @halftone-icn [ aa55 aa55 aa55 aa55 ]
 
-@clear-icn [
+@ascii-icn [
 	aa55 805f 9051 9357 aa55 02f9 0a89 cae9
 	9753 9150 9f40 aa55 eac9 8a09 fa01 aa55 ]
+
+@hex-icn [
+	aa55 805f 9057 9455 aa55 02f9 0ae9 2aa9
+	9554 9750 9f40 aa55 aa29 ea09 fa01 aa55 ]
 
 ~src/utils/log.assets.tal
 
