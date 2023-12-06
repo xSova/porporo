@@ -188,11 +188,10 @@ push(Varvara *p, int x, int y, int lock)
 static void
 pop(Varvara *p)
 {
-	if(p) {
-		p->clen = 0, p->live = 0, reqdraw |= 2;
-		raise(p);
-		olen--;
-	}
+	if(!p) return;
+	p->clen = 0, p->live = 0, reqdraw |= 2;
+	raise(p);
+	olen--;
 }
 
 static void
@@ -248,12 +247,12 @@ within(Varvara *p, int x, int y)
 }
 
 static Varvara *
-pick(int x, int y)
+pick(int x, int y, int force)
 {
 	int i;
 	for(i = olen - 1; i > -1; --i) {
 		Varvara *p = order[i];
-		if(!p->lock && within(p, x, y))
+		if((!p->lock || force) && within(p, x, y))
 			return p;
 	}
 	return 0;
@@ -262,40 +261,33 @@ pick(int x, int y)
 static void
 center(Varvara *v)
 {
-	if(v) {
-		v->x = -camera.x + WIDTH / 2 - v->screen.w / 2;
-		v->y = -camera.y + HEIGHT / 2 - v->screen.h / 2;
-		reqdraw |= 2;
-	}
+	if(!v) return;
+	v->x = -camera.x + WIDTH / 2 - v->screen.w / 2;
+	v->y = -camera.y + HEIGHT / 2 - v->screen.h / 2;
+	reqdraw |= 2;
 }
 
 static void
 lock(Varvara *v)
 {
-	if(v && !v->lock) {
+	if(!v) return;
+	if(!v->lock) {
 		v->lock = 1, focused = 0;
 		v->x += camera.x, v->y += camera.y;
 	} else {
-		int i;
-		for(i = olen - 1; i > -1; i--) {
-			Varvara *a = order[i];
-			if(a->lock) {
-				a->lock = 0;
-				a->x -= camera.x, a->y -= camera.y;
-				break;
-			}
-		}
+		v->lock = 0;
+		v->x -= camera.x, v->y -= camera.y;
 	}
 	reqdraw |= 2;
 }
 
 static void
-pickfocus(int x, int y)
+pickfocus(int x, int y, int force)
 {
 	int i;
 	for(i = olen - 1; i > -1; --i) {
 		Varvara *p = order[i];
-		if(within(p, x, y) && !p->lock) {
+		if(within(p, x, y) && (!p->lock || force)) {
 			focus(p);
 			return;
 		}
@@ -321,13 +313,12 @@ connect(Varvara *a, Varvara *b)
 static void
 restart(Varvara *v)
 {
-	if(v) {
-		screen_wipe(&v->screen);
-		system_boot(&v->u, 1);
-		system_load(&v->u, focused->rom);
-		uxn_eval(&v->u, PAGE_PROGRAM);
-		reqdraw |= 1;
-	}
+	if(!v) return;
+	screen_wipe(&v->screen);
+	system_boot(&v->u, 1);
+	system_load(&v->u, focused->rom);
+	uxn_eval(&v->u, PAGE_PROGRAM);
+	reqdraw |= 1;
 }
 
 /* = COMMAND ===================================== */
@@ -366,7 +357,7 @@ on_mouse_move(int x, int y)
 	if(action == DRAW)
 		return;
 	if(!drag.mode)
-		pickfocus(relx, rely);
+		pickfocus(relx, rely, 0);
 	if(!focused) {
 		if(drag.mode) {
 			camera.x += x - drag.x, camera.y += y - drag.y;
@@ -410,8 +401,8 @@ on_mouse_up(int button, int x, int y)
 	Uxn *u;
 	if(!focused || action) {
 		if(action == DRAW) {
-			Varvara *a = pick(drag.x - camera.x, drag.y - camera.y);
-			Varvara *b = pick(x - camera.x, y - camera.y);
+			Varvara *a = pick(drag.x - camera.x, drag.y - camera.y, 0);
+			Varvara *b = pick(x - camera.x, y - camera.y, 0);
 			connect(a, b);
 		}
 		drag.mode = 0;
@@ -486,11 +477,14 @@ get_key(SDL_Event *e)
 static void
 on_controller_special(char c, Uint8 fkey)
 {
-	switch(fkey) {
-	case 1: lock(focused); return;
-	case 2: center(focused); return;
-	case 4: pop(focused); return;
-	case 5: restart(focused); return;
+	Varvara *v = pick(cursor.x, cursor.y, 1);
+	if(v) {
+		switch(fkey) {
+		case 1: lock(v); return;
+		case 2: center(v); return;
+		case 4: pop(v); return;
+		case 5: restart(v); return;
+		}
 	}
 	switch(c) {
 	case 0x1b: action = NORMAL, reqdraw |= 1; return;
