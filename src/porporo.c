@@ -311,20 +311,34 @@ connect(Varvara *a, Varvara *b)
 }
 
 static void
+load_theme(void)
+{
+	Uint8 buf[6];
+	FILE *f = fopen(".theme", "rb");
+	if(f) {
+		fread(&buf, 1, 6, f);
+		screen_palette(palette, buf);
+		fclose(f);
+	}
+}
+
+static void
 restart(Varvara *v)
 {
 	if(!v) return;
+	if(v == wallpaper)
+		load_theme();
 	screen_wipe(&v->screen);
 	system_boot(&v->u, 1);
 	system_load(&v->u, v->rom);
-	
+
 	/* TODO ARGHHH */
 	screen_resize(&v->screen, 0x10, 0x10);
 	v->u.dev[0x22] = WIDTH >> 8;
 	v->u.dev[0x23] = WIDTH;
 	v->u.dev[0x24] = HEIGHT >> 8;
 	v->u.dev[0x25] = HEIGHT;
-	
+
 	uxn_eval(&v->u, PAGE_PROGRAM);
 	reqdraw |= 1;
 }
@@ -623,7 +637,7 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	case 0x00:
 		if(p > 0x7 && p < 0xe) {
 			screen_palette(prg->screen.palette, &u->dev[0x8]);
-			screen_change(&prg->screen, 0, 0, prg->screen.h, prg->screen.h);
+			screen_change(&prg->screen, 0, 0, prg->screen.w, prg->screen.h);
 		}
 		if(p == 0xf) pop(prg);
 		break;
@@ -631,18 +645,6 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	case 0x20: screen_deo(prg, u->ram, &u->dev[d], p); break;
 	case 0xa0: file_deo(0, u->ram, &u->dev[d], p); break;
 	case 0xb0: file_deo(1, u->ram, &u->dev[d], p); break;
-	}
-}
-
-static void
-load_theme(void)
-{
-	Uint8 buf[6];
-	FILE *f = fopen(".theme", "rb");
-	if(f) {
-		fread(&buf, 1, 6, f);
-		screen_palette(palette, buf);
-		fclose(f);
 	}
 }
 
