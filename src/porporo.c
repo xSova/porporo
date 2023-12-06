@@ -32,7 +32,7 @@ typedef struct {
 } Point2d;
 
 static Uint8 *ram, cursor_icn[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
-static Uint32 *pixels, theme[] = {0xeeeeee, 0x000000, 0x72DEC2, 0xffb545};
+static Uint32 *pixels, palette[] = {0xeeeeee, 0x000000, 0x72DEC2, 0xffb545};
 static int WIDTH, HEIGHT, reqdraw, olen;
 static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *wallpaper, *focused;
 static Point2d camera, drag, cursor;
@@ -118,7 +118,7 @@ drawvarvara(Varvara *p)
 	Screen *scr = &p->screen;
 	int x, y, row, relrow, x2, y2, w = scr->w, h = scr->h, x1 = p->x, y1 = p->y;
 	if(!p->lock) {
-		x1 += camera.x, y1 += camera.y, color = theme[1 + action];
+		x1 += camera.x, y1 += camera.y, color = palette[1 + action];
 		drawborders(x1, y1, x1 + w, y1 + h, color);
 		if(p->clen) drawconnections(p, color);
 	}
@@ -135,9 +135,9 @@ static void
 redraw(void)
 {
 	int i;
-	if(reqdraw & 2 && !wallpaper->live) drawclear(theme[0]);
+	if(reqdraw & 2 && !wallpaper->live) drawclear(palette[0]);
 	for(i = 0; i < olen; i++) drawvarvara(order[i]);
-	if(cursor.mode) drawicn(cursor.x, cursor.y, cursor_icn, theme[1 + action]);
+	if(cursor.mode) drawicn(cursor.x, cursor.y, cursor_icn, palette[1 + action]);
 	reqdraw = 0;
 }
 
@@ -574,7 +574,7 @@ init(void)
 	if(pixels == NULL)
 		return error("Pixels", "Failed to allocate memory");
 	SDL_ShowCursor(0);
-	drawclear(theme[0]);
+	drawclear(palette[0]);
 	return 1;
 }
 
@@ -619,13 +619,28 @@ emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 	u->dev[addr] = value;
 	switch(d) {
 	case 0x00:
-		if(p > 0x7 && p < 0xe) screen_palette(&prg->screen, &u->dev[0x8]);
+		if(p > 0x7 && p < 0xe) {
+			screen_palette(prg->screen.palette, &u->dev[0x8]);
+			screen_change(&prg->screen, 0, 0, prg->screen.h, prg->screen.h);
+		}
 		if(p == 0xf) pop(prg);
 		break;
 	case 0x10: graph_deo(prg, addr, value); break;
 	case 0x20: screen_deo(prg, u->ram, &u->dev[d], p); break;
 	case 0xa0: file_deo(0, u->ram, &u->dev[d], p); break;
 	case 0xb0: file_deo(1, u->ram, &u->dev[d], p); break;
+	}
+}
+
+static void
+load_theme(void)
+{
+	Uint8 buf[6];
+	FILE *f = fopen(".theme", "rb");
+	if(f) {
+		fread(&buf, 1, 6, f);
+		screen_palette(palette, buf);
+		fclose(f);
 	}
 }
 
@@ -639,6 +654,7 @@ main(int argc, char **argv)
 	if(!init())
 		return error("Init", "Failure");
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
+	load_theme();
 	menu = spawn(0, "bin/menu.rom", 0);
 	wallpaper = push(spawn(1, "bin/wallpaper.rom", 1), 0, 0, 1);
 	/* load from arguments */

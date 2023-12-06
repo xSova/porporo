@@ -97,21 +97,6 @@ screen_1bpp(Screen *scr, Uint8 *layer, Uint8 *addr, Uint16 x1, Uint16 y1, Uint16
 }
 
 void
-screen_palette(Screen *scr, Uint8 *addr)
-{
-	int i, shift;
-	for(i = 0, shift = 4; i < 4; ++i, shift ^= 4) {
-		Uint8
-			r = (addr[0 + i / 2] >> shift) & 0xf,
-			g = (addr[2 + i / 2] >> shift) & 0xf,
-			b = (addr[4 + i / 2] >> shift) & 0xf;
-		scr->palette[i] = 0x0f000000 | r << 16 | g << 8 | b;
-		scr->palette[i] |= scr->palette[i] << 4;
-	}
-	screen_change(scr, 0, 0, scr->h, scr->h);
-}
-
-void
 screen_resize(Screen *scr, Uint16 width, Uint16 height)
 {
 	Uint8 *bg, *fg;
@@ -149,6 +134,20 @@ screen_redraw(Screen *scr)
 	for(y = y1; y < y2; y++)
 		for(o = y * w, i = x1 + o, j = x2 + o; i < j; i++)
 			pixels[i] = palette[fg[i] << 2 | bg[i]];
+}
+
+void
+screen_palette(Uint32 *palette, Uint8 *addr)
+{
+	int i, shift;
+	for(i = 0, shift = 4; i < 4; ++i, shift ^= 4) {
+		Uint8
+			r = (addr[0 + i / 2] >> shift) & 0xf,
+			g = (addr[2 + i / 2] >> shift) & 0xf,
+			b = (addr[4 + i / 2] >> shift) & 0xf;
+		palette[i] = 0x0f000000 | r << 16 | g << 8 | b;
+		palette[i] |= palette[i] << 4;
+	}
 }
 
 Uint8
