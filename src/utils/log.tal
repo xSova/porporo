@@ -61,7 +61,7 @@
 
 @<redraw> ( -- )
 	.Screen/height DEI2 #04 SFT2 NIP ;buf count-lines EQUk ?{
-		( min ) #02 GTHk [ JMP SWP POP ]
+		( min ) #03 GTHk [ JMP SWP POP ]
 		( scale ) #00 SWP #40 SFT2 #0008 ADD2 .Screen/height DEO2
 		POP }
 	POP2
