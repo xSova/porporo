@@ -1,4 +1,3 @@
-
 |00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
 |10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
 |20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
@@ -117,9 +116,18 @@
 	#0f AND DUP #09 GTH #07 MUL ADD #30 ADD
 
 @<draw-char> ( char -- )
-	#20 SUB #00 SWP #40 SFT2 ;font-icn ADD2 .Screen/addr DEO2
+	get-glyph .Screen/addr DEO2
 	[ LIT2 &color 01 -Screen/sprite ] DEO
 	JMP2r
+
+@get-glyph ( char -- addr* )
+	DUP #0a EQU ?&blank
+	DUP #09 EQU ?&blank
+	DUP #20 LTH ?&unknown
+	DUP #7e GTH ?&unknown
+	#20 SUB #00 SWP #40 SFT2 ;font-icn ADD2 JMP2r
+	&unknown POP ;halftone-icn JMP2r
+	&blank POP ;blank-icn JMP2r
 
 @count-lines ( buf* -- lines )
 	.hexadecimal LDZ ?&hex
@@ -221,7 +229,10 @@
 
 @fill-icn [ ffff ffff ffff ffff ]
 
-@halftone-icn [ aa55 aa55 aa55 aa55 ]
+@blank-icn [ $10 ]
+
+@halftone-icn [
+	aa55 aa55 aa55 aa55 aa55 aa55 aa55 aa55 ]
 
 @ascii-icn [
 	aa55 805f 9051 9357 aa55 02f9 0a89 cae9
