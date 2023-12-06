@@ -17,7 +17,7 @@
 	#f006 .System/g DEO2
 	#f002 .System/b DEO2
 	( | size )
-	#0200 .Screen/width DEO2
+	#0190 .Screen/width DEO2
 	#0028 .Screen/height DEO2
 	<redraw>
 	;on-mouse .Mouse/vector DEO2
@@ -76,7 +76,7 @@
 	#0000 .Screen/y DEO2
 	[ LIT2 80 -Screen/pixel ] DEO
 	&resume <draw-sidebar>
-	;buf .hexadecimal LDZ ?<draw-hex>
+	;buf .hexadecimal LDZ ?<draw-binary>
 	( >> )
 
 @<draw-text> ( str* -- )
@@ -95,13 +95,15 @@
 		&res INC2 LDAk ?&w
 	POP2 JMP2r
 
-@<draw-hex> ( str* -- )
+@<draw-binary> ( str* -- )
 	#0014 .Screen/x DEO2
 	#0004 .Screen/y DEO2
 	#15 .Screen/auto DEO
+	[ LITr 00 ]
 	&w ( -- )
 		LDAk <draw-byte>
 		.Screen/x DEI2k #0008 ADD2 ROT DEO2
+		INCr STHkr #0f AND ?{ <draw-lb> }
 		INC2 LDAk ?&w
 	POP2 JMP2r
 	JMP2r
@@ -118,6 +120,7 @@
 	JMP2r
 
 @count-lines ( buf* -- lines )
+	.hexadecimal LDZ ?&hex
 	[ LITr 00 ]
 	&w ( -- )
 		LDAk #20 GTH ?{
@@ -126,6 +129,7 @@
 		LDAk #0a NEQ ?{ INCr !&res }
 		&res INC2 LDAk ?&w
 	POP2 STHr INC JMP2r
+	&hex ;buf scap/ ;buf SUB2 #04 SFT2 NIP INC JMP2r
 
 @word-fits ( str* -- f )
 	.Screen/x DEI2 #0008 ADD2 STH2
