@@ -389,11 +389,13 @@ castmsg(Varvara *dest, Uint8 type, Uint8 value)
 		sendcmd(value, dest);
 		return;
 	}
-	address = &dest->u.dev[0x10];
-	vector = PEEK2(address);
-	dest->u.dev[0x12] = value;
-	if(vector)
-		uxn_eval(&dest->u, vector);
+	if(dest) {
+		address = &dest->u.dev[0x10];
+		vector = PEEK2(address);
+		dest->u.dev[0x12] = value;
+		if(vector)
+			uxn_eval(&dest->u, vector);
+	}
 }
 
 /* = MOUSE ======================================= */
