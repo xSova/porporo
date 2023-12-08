@@ -323,13 +323,13 @@ load_theme(void)
 }
 
 static void
-restart(Varvara *v)
+restart(Varvara *v, int soft)
 {
 	if(!v) return;
 	if(v == wallpaper)
 		load_theme();
 	screen_wipe(&v->screen);
-	system_boot(&v->u, 1);
+	system_boot(&v->u, soft);
 	system_load(&v->u, v->rom);
 
 	/* TODO ARGHHH */
@@ -354,7 +354,16 @@ sendcmd(char c, Varvara *dest)
 	int i;
 	if(c < 0x20) {
 		if(dest) {
-			printf("!!!\n");
+			system_init(dest, &dest->u, dest->u.ram, cmd);
+			/* TODO ARGHHH */
+			screen_resize(&dest->screen, 0x10, 0x10);
+			dest->u.dev[0x22] = WIDTH >> 8;
+			dest->u.dev[0x23] = WIDTH;
+			dest->u.dev[0x24] = HEIGHT >> 8;
+			dest->u.dev[0x25] = HEIGHT;
+
+			uxn_eval(&dest->u, PAGE_PROGRAM);
+			reqdraw |= 1;
 		} else {
 			focused = push(spawn(alloc(), cmd, 0), menu->x, menu->y, 0);
 			for(i = 0; i < menu->clen; i++)
@@ -524,7 +533,7 @@ on_controller_special(char c, Uint8 fkey)
 		case 1: lock(v); return;
 		case 2: center(v); return;
 		case 4: pop(v); return;
-		case 5: restart(v); return;
+		case 5: restart(v, 1); return;
 		}
 	}
 	switch(c) {
