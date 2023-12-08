@@ -349,27 +349,14 @@ static int cmdlen;
 static char cmd[0x40];
 
 static void
-sendcmd(char c, Varvara *dest)
+sendcmd(Varvara *dest, char c)
 {
 	int i;
 	if(c < 0x20) {
-		if(dest) {
-			system_init(dest, &dest->u, dest->u.ram, cmd);
-			/* TODO ARGHHH */
-			screen_resize(&dest->screen, 0x10, 0x10);
-			dest->u.dev[0x22] = WIDTH >> 8;
-			dest->u.dev[0x23] = WIDTH;
-			dest->u.dev[0x24] = HEIGHT >> 8;
-			dest->u.dev[0x25] = HEIGHT;
-
-			uxn_eval(&dest->u, PAGE_PROGRAM);
-			reqdraw |= 1;
-		} else {
-			focused = push(spawn(alloc(), cmd, 0), menu->x, menu->y, 0);
-			for(i = 0; i < menu->clen; i++)
-				connect(focused, menu->routes[i]);
-			uxn_eval(&focused->u, 0x100);
-		}
+		focused = push(spawn(alloc(), cmd, 0), menu->x, menu->y, 0);
+		for(i = 0; i < menu->clen; i++)
+			connect(focused, menu->routes[i]);
+		uxn_eval(&focused->u, 0x100);
 		cmdlen = 0;
 		return;
 	}
@@ -386,7 +373,7 @@ castmsg(Varvara *dest, Uint8 type, Uint8 value)
 	Uint8 *address;
 	Uint16 vector;
 	if(type == 0xff) {
-		sendcmd(value, dest);
+		sendcmd(dest, value);
 		return;
 	}
 	if(dest) {
@@ -628,7 +615,7 @@ void
 graph_deo(Varvara *a, Uint8 addr, Uint8 value)
 {
 	int i;
-	if(addr == 0x18 || addr == 0x19) {
+	if(addr == 0x18) {
 		if(!a->clen)
 			castmsg(0, a->u.dev[0x17], value);
 		else
