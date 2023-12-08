@@ -1,3 +1,4 @@
+
 |00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
 |10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
 |20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
@@ -30,11 +31,10 @@
 	( name ) "Log(Porporo) 0a
 	( desc ) "Log 20 "Viewer 0a
 	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
-	( date ) "5 20 "Dec 20 "2023 $1
+	( date ) "7 20 "Dec 20 "2023 $1
 	( exts ) 00
 
 @on-console ( -> )
-	( | append )
 	.Console/read DEI #00 ;buf scap/ STA2
 	#01 ;on-screen/reqdraw STA
 	BRK
@@ -58,6 +58,9 @@
 	POP #00 .Mouse/state DEO
 	BRK
 
+(
+@|core )
+
 @do-clear ( -- )
 	.Mouse/state DEI #02 LTH ?{
 		.hexadecimal LDZ #00 EQU .hexadecimal STZ }
@@ -76,7 +79,7 @@
 	#0014 .Screen/x DEO2
 	#0000 .Screen/y DEO2
 	[ LIT2 80 -Screen/pixel ] DEO
-	&resume <draw-sidebar>
+	<draw-sidebar>
 	;buf .hexadecimal LDZ ?<draw-binary>
 	( >> )
 
@@ -85,6 +88,7 @@
 	#0004 .Screen/y DEO2
 	#15 .Screen/auto DEO
 	&w ( -- )
+		LDAk ?{ POP2 JMP2r }
 		( | handle wrap )
 		LDAk #20 GTH ?{
 			INC2k word-fits ?{ <draw-lb>
@@ -93,8 +97,7 @@
 		LDAk #0a NEQ ?{ <draw-lb>
 			!&res }
 		( ) LDAk <draw-char>
-		&res INC2 LDAk ?&w
-	POP2 JMP2r
+		&res INC2 !&w
 
 @<draw-binary> ( str* -- )
 	#0014 .Screen/x DEO2

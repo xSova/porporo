@@ -30,7 +30,7 @@
 	( name ) "Menu(Porporo) 0a
 	( desc ) "File 20 "Browser 0a
 	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
-	( date ) "4 20 "Dec 20 "2023 $1
+	( date ) "7 20 "Dec 20 "2023 $1
 	( exts ) 00
 
 @on-mouse ( -> )
@@ -38,7 +38,7 @@
 	.Mouse/y DEI2 <y-id>
 	.Mouse/state DEI ?{ <select>
 		BRK }
-	#1819 .Mouse/state DEI #01 GTH [ JMP SWP POP ] ;<write>/port STA
+	#01ff .Mouse/state DEI #01 GTH [ JMP SWP POP ] #17 DEO
 	<pick>
 	#00 .Mouse/state DEO
 	BRK
@@ -143,19 +143,15 @@
 @<send-file> ( file* -- )
 	;path <write-str>
 	<write-str>/
-	#0a <write>
+	#0a18 DEO
 	.Mouse/state DEI #01 EQU ?<exit>
 	JMP2r
 
 @<write-str> ( str* -- )
 	&w ( -- )
-		LDAk <write>
+		LDAk #18 DEO
 		INC2 & LDAk ?&w
 	POP2 JMP2r
-
-@<write> ( byte -- )
-	[ LIT &port 18 ] DEO
-	JMP2r
 
 @<enter> ( folder* -- )
 	push-path !<refresh-dir>

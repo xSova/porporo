@@ -598,13 +598,9 @@ void
 graph_deo(Varvara *a, Uint8 addr, Uint8 value)
 {
 	int i;
-	if(a == menu) {
-		if(addr == 0x19) {
-			sendcmd(value);
-			return;
-		}
-	}
-	if(addr == 0x18) {
+	if(addr == 0x18 && a->u.dev[0x17] == 0xff){
+		sendcmd(value); return; }
+	if(addr == 0x18 || addr == 0x19) {
 		for(i = 0; i < a->clen; i++) {
 			Varvara *b = a->routes[i];
 			if(b) {
