@@ -349,15 +349,18 @@ static int cmdlen;
 static char cmd[0x40];
 
 static void
-sendcmd(char c)
+sendcmd(char c, Varvara *dest)
 {
 	int i;
 	if(c < 0x20) {
-		/* TODO: Handle invalid rom */
-		focused = push(spawn(alloc(), cmd, 0), menu->x, menu->y, 0);
-		for(i = 0; i < menu->clen; i++)
-			connect(focused, menu->routes[i]);
-		uxn_eval(&focused->u, 0x100);
+		if(dest) {
+			printf("!!!\n");
+		} else {
+			focused = push(spawn(alloc(), cmd, 0), menu->x, menu->y, 0);
+			for(i = 0; i < menu->clen; i++)
+				connect(focused, menu->routes[i]);
+			uxn_eval(&focused->u, 0x100);
+		}
 		cmdlen = 0;
 		return;
 	}
@@ -366,6 +369,22 @@ sendcmd(char c)
 		return;
 	}
 	cmd[cmdlen++] = c, cmd[cmdlen] = 0;
+}
+
+void
+castmsg(Varvara *dest, Uint8 type, Uint8 value)
+{
+	Uint8 *address;
+	Uint16 vector;
+	if(type == 0xff) {
+		sendcmd(value, dest);
+		return;
+	}
+	address = &dest->u.dev[0x10];
+	vector = PEEK2(address);
+	dest->u.dev[0x12] = value;
+	if(vector)
+		uxn_eval(&dest->u, vector);
 }
 
 /* = MOUSE ======================================= */
@@ -598,19 +617,12 @@ void
 graph_deo(Varvara *a, Uint8 addr, Uint8 value)
 {
 	int i;
-	if(addr == 0x18 && a->u.dev[0x17] == 0xff){
-		sendcmd(value); return; }
 	if(addr == 0x18 || addr == 0x19) {
-		for(i = 0; i < a->clen; i++) {
-			Varvara *b = a->routes[i];
-			if(b) {
-				Uint8 *address = &b->u.dev[0x10];
-				Uint16 vector = PEEK2(address);
-				b->u.dev[0x12] = value;
-				if(vector)
-					uxn_eval(&b->u, vector);
-			}
-		}
+		if(!a->clen)
+			castmsg(0, a->u.dev[0x17], value);
+		else
+			for(i = 0; i < a->clen; i++)
+				castmsg(a->routes[i], a->u.dev[0x17], value);
 	}
 }
 
