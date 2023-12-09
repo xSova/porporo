@@ -17,6 +17,10 @@
 	#16ae .System/g DEO2
 	#16ae .System/b DEO2
 	<load-theme>
+	( | fill screen )
+	.Screen/width DEI2 #03 SFT2 NIP
+	( ) .Screen/height DEI2 #03 SFT2 NIP <set-size>
+	( ) #83 .Screen/pixel DEO
 	( | default file )
 	.Console/type DEI ?{ <load-default> }
 	;await-src .Console/vector DEO2
@@ -43,9 +47,6 @@
 	#0020 .File/length DEO2
 	;stat .File/stat DEO2
 	.File/success DEI2 ORA ?{ JMP2r }
-	( | fill screen )
-	.Screen/width DEI2 #03 SFT2 NIP
-	( ) .Screen/height DEI2 #03 SFT2 NIP <set-size>
 	;dict/default !<draw-wallpaper>
 
 @read-size ( 00x00* -- )
