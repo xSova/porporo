@@ -68,6 +68,7 @@
 	.File/name DEO2
 	#0000 DUP2 .Screen/x DEO2
 	.Screen/y DEO2
+	#80 .Screen/pixel DEO
 	#05 .Screen/auto DEO
 	#0c ;<draw-row>/blend STA
 	#00 .size/w LDZ #30 SFT2 DUP2 .1bpp LDZ ?{
