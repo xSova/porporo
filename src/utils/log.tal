@@ -41,9 +41,13 @@
 	BRK
 
 @<append> ( byte type -- )
+	( | forward )
+	DUP .Console/type DEO
+	OVR .Console/write DEO
+	( | push )
 	#00 ;mem/type .ptr LDZ2 STH2k ADD2 STA2
 	#00 ;mem/data STH2kr ADD2 STA2
-	STH2r INC2 .ptr STZ2
+	STH2r INC2 #0fff AND2 .ptr STZ2
 	JMP2r
 
 @on-screen ( -> )
