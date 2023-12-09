@@ -8,6 +8,7 @@
 |0000
 
 	@hexadecimal $1
+	@ptr $2
 
 |0100
 
@@ -25,6 +26,7 @@
 	;on-mouse .Mouse/vector DEO2
 	;on-console .Console/vector DEO2
 	;on-screen .Screen/vector DEO2
+	#0000 .ptr STZ2
 	BRK
 
 @meta $1
@@ -35,9 +37,14 @@
 	( exts ) 00
 
 @on-console ( -> )
-	.Console/read DEI #00 ;buf scap/ STA2
-	#01 ;on-screen/reqdraw STA
+	.Console/read DEI .Console/type DEI append #01 ;on-screen/reqdraw STA
 	BRK
+
+@append ( byte type -- )
+	#00 ;mem/type .ptr LDZ2 STH2k ADD2 STA2
+	#00 ;mem/data STH2kr ADD2 STA2
+	STH2r INC2 .ptr STZ2
+	JMP2r
 
 @on-screen ( -> )
 	[ LIT &reqdraw $1 ] DUP ?{ POP BRK }
@@ -64,13 +71,13 @@
 @do-clear ( -- )
 	.Mouse/state DEI #02 LTH ?{
 		.hexadecimal LDZ #00 EQU .hexadecimal STZ }
-	#0000 ;buf STA2
+	#0000 ;mem/data STA2
 	#0000 .Screen/x DEO2
 	#0000 .Screen/y DEO2
 	#04 !<draw-icon>
 
 @<redraw> ( -- )
-	.Screen/height DEI2 #04 SFT2 NIP ;buf count-lines EQUk ?{
+	.Screen/height DEI2 #04 SFT2 NIP ;mem/data count-lines EQUk ?{
 		( min ) #03 GTHk [ JMP SWP POP ]
 		( scale ) #00 SWP #40 SFT2 #0008 ADD2 .Screen/height DEO2
 		POP }
@@ -80,7 +87,7 @@
 	#0000 .Screen/y DEO2
 	[ LIT2 80 -Screen/pixel ] DEO
 	<draw-sidebar>
-	;buf .hexadecimal LDZ ?<draw-binary>
+	;mem/data .hexadecimal LDZ ?<draw-binary>
 	( >> )
 
 @<draw-text> ( str* -- )
@@ -142,7 +149,7 @@
 		LDAk #0a NEQ ?{ INCr !&res }
 		&res INC2 LDAk ?&w
 	POP2 STHr INC JMP2r
-	&hex ;buf scap/ ;buf SUB2 #04 SFT2 NIP INC JMP2r
+	&hex ;mem/data scap/ ;mem/data SUB2 #04 SFT2 NIP INC JMP2r
 
 @word-fits ( str* -- f )
 	.Screen/x DEI2 #0008 ADD2 STH2
