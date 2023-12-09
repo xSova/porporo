@@ -105,7 +105,9 @@ drawconnections(Varvara *a, Uint32 color)
 		Varvara *b = a->routes[i];
 		if(b && b->live) {
 			x1 = a->x + 1 + camera.x + a->screen.w, y1 = a->y - 2 + camera.y;
-			x2 = b->x - 2 + camera.x, y2 = b->y - 2 + camera.y;
+			x2 = b->x - 2 + camera.x, y2 = b->y + b->screen.h + 1 + camera.y;
+			if(a->y < b->y)
+				y1 = a->y + a->screen.h + 1 + camera.y, y2 = b->y - 2 + camera.y;
 			drawline(x1, y1, x2, y2, color);
 		}
 	}
