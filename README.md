@@ -1,6 +1,6 @@
 # Porporo
 
-Porporo is a [Varvara](https://wiki.xxiivv.com/site/varvara.html) operating system, written in ANSI C.
+Porporo is an experimental operating system specification for [Varvara](https://wiki.xxiivv.com/site/varvara.html), written in TAL and ANSI C. This is a work in progress, for more details [follow the development during december](https://rabbits.srht.site/decadv/).
 
 ## Build
 
@@ -32,3 +32,9 @@ make run
 
 - `tab`, see all files.
 - `esc`, exit.
+- `mouse1`, or `enter`, run file.
+- `mouse2`m or `shift+enter`, send filename.
+
+## Wallpaper
+
+The wallpaper rom expects a file named `.wallpaper` in the [chr format](https://wiki.xxiivv.com/site/chr_format.html) that is large enough to fill the screen.
