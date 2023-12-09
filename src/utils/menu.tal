@@ -8,7 +8,7 @@
 |0000
 
 	@misc $1
-	@selection $1
+	@selection $1 &mod $1
 	@path $2 &null $80
 	@lines &folders $1 &roms $1 &misc $1
 
@@ -30,15 +30,15 @@
 	( name ) "Menu(Porporo) 0a
 	( desc ) "File 20 "Browser 0a
 	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
-	( date ) "7 20 "Dec 20 "2023 $1
+	( date ) "9 20 "Dec 20 "2023 $1
 	( exts ) 00
 
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
 	.Mouse/y DEI2 <y-id>
-	.Mouse/state DEI ?{ <select>
+	.Mouse/state DEI DUP ?{ POP <select>
 		BRK }
-	#01ff .Mouse/state DEI #01 GTH [ JMP SWP POP ] #17 DEO
+	#01 GTH .selection/mod STZ
 	<pick>
 	#00 .Mouse/state DEO
 	BRK
@@ -59,11 +59,13 @@
 		POP2 #ff JMP2r
 
 @on-control ( -> )
+	( | mod )
+	.Controller/button DEI #04 AND #00 NEQ .selection/mod STZ
 	( | key )
 	.Controller/key DEI
 	( esc ) DUP #1b NEQ ?{ <escape> }
 	( tab ) DUP #09 NEQ ?{ <toggle-misc> }
-	( tab ) DUP #0d NEQ ?{ .selection LDZ <pick> }
+	( enter ) DUP #0d NEQ ?{ .selection LDZ <pick> }
 	POP
 	( | button )
 	.Controller/button DEI
@@ -128,33 +130,59 @@
 	.selection STZ
 	!<redraw>
 
-@<pick> ( id -- )
+@<pick> ( alt id -- )
 	DUP .lines/folders LDZ LTH ?&folder
 	.lines/folders LDZ SUB DUP .lines/roms LDZ LTH ?&roms
 	.lines/roms LDZ SUB DUP .lines/misc LDZ LTH ?&misc
 	POP JMP2r
 	&roms ( id -- )
-		#00 SWP #40 SFT2 ;mem/roms ADD2 !<send-file>
+		#00 SWP #40 SFT2 ;mem/roms ADD2 !<send-path>
 	&misc ( id -- )
 		#00 SWP #40 SFT2 ;mem/misc ADD2 !<send-file>
 	&folder ( id -- )
 		#00 SWP #40 SFT2 ;mem/folders ADD2 !<enter>
 
-@<send-file> ( file* -- )
-	;path <write-str>
-	<write-str>/
+@<send-path> ( file* -- )
+	.selection/mod LDZ ?&special
+	#ff .Console/type DEO
+	;path <pstr>
+	<pstr>/
 	#0a18 DEO
-	.Mouse/state DEI #01 EQU ?<exit>
-	JMP2r
+	!<exit>
+	&special ( file* -- )
+		#01 .Console/type DEO
+		;path <pstr>
+		<pstr>/
+		#0a18 DEO
+		JMP2r
 
-@<write-str> ( str* -- )
-	&w ( -- )
-		LDAk #18 DEO
-		INC2 & LDAk ?&w
-	POP2 JMP2r
+@<send-file> ( file* -- )
+	.selection/mod LDZ ?&special
+	#01 .Console/type DEO
+	;path ;mem/filepath STH2k <scpy>
+	STH2kr scap/ <scpy>
+	STH2r .File/name DEO2
+	#0001 .File/length DEO2
+	&s ( -- )
+		;&b .File/read DEO2
+		[ LIT2 &b $1 18 ] DEO
+		.File/success DEI2 NIP ?&s
+	JMP2r
+	&special ( file* -- )
+		#01 .Console/type DEO
+		;path <pstr>
+		<pstr>/
+		#0a18 DEO
+		JMP2r
 
 @<enter> ( folder* -- )
+	.selection/mod LDZ ?&special
 	push-path !<refresh-dir>
+	&special ( folder* -- )
+		;path <pstr>
+		<pstr>/
+		#0a18 DEO
+		JMP2r
 
 @<leave> ( -- )
 	pop-path !<refresh-dir>
@@ -182,6 +210,11 @@
 	( ) .misc LDZ #00 EQU ?{
 		.lines/misc LDZ #00 NEQ ORA }
 	AND JMP2r
+
+@get-cat ( id -- color )
+	INC .lines/folders LDZ GTHk ?{ POP2 #03 JMP2r }
+	SUB .lines/roms LDZ GTH ?{ #02 JMP2r }
+	#01 JMP2r
 
 @is-folder ( line* -- line* f )
 	DUP2 lcap/ #0001 SUB2 LDA [ LIT "/ ] EQU JMP2r
@@ -250,13 +283,8 @@
 	has-spacer #00 EQU ?{
 		#00 STHkr INC .lines/folders LDZ GTH #30 SFT2 ADD2 }
 	( padding ) #0003 ADD2 .Screen/y DEO2
-	STHr get-bg .Screen/sprite DEOk DEO
+	STHr get-cat .Screen/sprite DEOk DEO
 	JMP2r
-
-@get-bg ( id -- color )
-	INC .lines/folders LDZ GTHk ?{ POP2 #03 JMP2r }
-	SUB .lines/roms LDZ GTH ?{ #02 JMP2r }
-	#01 JMP2r
 
 @<draw-list> ( addr* length color -- )
 	,&color STR
@@ -330,6 +358,12 @@
 		LDAk #00 STH2kr STA2
 		INC2r INC2 LDAk ?&w
 	POP2 POP2r JMP2r
+
+@<pstr> ( str* -- )
+	&w ( -- )
+		LDAk #18 DEO
+		INC2 & LDAk ?&w
+	POP2 JMP2r
 
 (
 @|theme )
