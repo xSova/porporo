@@ -1,4 +1,3 @@
-
 |00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
 |10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
 |20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
@@ -15,9 +14,9 @@
 @on-reset ( -> )
 	;meta #06 DEO2
 	( | theme )
-	#f00f .System/r DEO2
-	#f006 .System/g DEO2
-	#f002 .System/b DEO2
+	#f07f .System/r DEO2
+	#f0d6 .System/g DEO2
+	#f0c2 .System/b DEO2
 	<load-theme>
 	( | size )
 	#0190 .Screen/width DEO2
@@ -33,14 +32,15 @@
 	( name ) "Log(Porporo) 0a
 	( desc ) "Log 20 "Viewer 0a
 	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
-	( date ) "7 20 "Dec 20 "2023 $1
+	( date ) "9 20 "Dec 20 "2023 $1
 	( exts ) 00
 
 @on-console ( -> )
-	.Console/read DEI .Console/type DEI append #01 ;on-screen/reqdraw STA
+	.Console/read DEI .Console/type DEI <append>
+	#01 ;on-screen/reqdraw STA
 	BRK
 
-@append ( byte type -- )
+@<append> ( byte type -- )
 	#00 ;mem/type .ptr LDZ2 STH2k ADD2 STA2
 	#00 ;mem/data STH2kr ADD2 STA2
 	STH2r INC2 .ptr STZ2
@@ -103,6 +103,7 @@
 			}
 		LDAk #0a NEQ ?{ <draw-lb>
 			!&res }
+		colorize
 		( ) LDAk <draw-char>
 		&res INC2 !&w
 
@@ -112,7 +113,7 @@
 	#15 .Screen/auto DEO
 	[ LITr 00 ]
 	&w ( -- )
-		LDAk <draw-byte>
+		colorize LDAk <draw-byte>
 		.Screen/x DEI2k #0008 ADD2 ROT DEO2
 		INCr STHkr #0f AND ?{ <draw-lb> }
 		INC2 LDAk ?&w
@@ -128,6 +129,10 @@
 @<draw-char> ( char -- )
 	get-glyph .Screen/addr DEO2
 	[ LIT2 &color 01 -Screen/sprite ] DEO
+	JMP2r
+
+@colorize ( addr* -- addr* )
+	DUP2 #1000 ADD2 LDA DUP #00 EQU ADD ;<draw-char>/color STA
 	JMP2r
 
 @get-glyph ( char -- addr* )

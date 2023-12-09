@@ -380,6 +380,7 @@ castmsg(Varvara *dest, Uint8 type, Uint8 value)
 		address = &dest->u.dev[0x10];
 		vector = PEEK2(address);
 		dest->u.dev[0x12] = value;
+		dest->u.dev[0x17] = type;
 		if(vector)
 			uxn_eval(&dest->u, vector);
 	}
