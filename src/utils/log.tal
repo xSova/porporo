@@ -40,16 +40,6 @@
 	#01 ;on-screen/reqdraw STA
 	BRK
 
-@<append> ( byte type -- )
-	( | forward )
-	DUP .Console/type DEO
-	OVR .Console/write DEO
-	( | push )
-	#00 ;mem/type .ptr LDZ2 STH2k ADD2 STA2
-	#00 ;mem/data STH2kr ADD2 STA2
-	STH2r INC2 #0fff AND2 .ptr STZ2
-	JMP2r
-
 @on-screen ( -> )
 	[ LIT &reqdraw $1 ] DUP ?{ POP BRK }
 	DUP #01 NEQ ?{ <redraw> }
@@ -71,6 +61,28 @@
 
 (
 @|core )
+
+@<append> ( byte type -- )
+	( | forward )
+	DUP .Console/type DEO
+	OVR <send-byte>
+	( | push )
+	#00 ;mem/type .ptr LDZ2 STH2k ADD2 STA2
+	#00 ;mem/data STH2kr ADD2 STA2
+	STH2r INC2 #0fff AND2 .ptr STZ2
+	JMP2r
+
+@<send-byte> ( byte -- )
+	.hexadecimal LDZ ?&hex
+	.Console/write DEO
+	JMP2r
+	&hex ( byte -- )
+		<phex>/b
+		[ LIT &count 00 ] INC DUP ,&count STR
+		#0f AND ?{ #0a18 DEO
+			JMP2r }
+		#2018 DEO
+		JMP2r
 
 @do-clear ( -- )
 	.Mouse/state DEI #02 LTH ?{
@@ -129,7 +141,7 @@
 	DUP #04 SFT <draw-hex>
 
 @<draw-hex> ( byte -- )
-	#0f AND DUP #09 GTH #07 MUL ADD #30 ADD
+	#0f AND #00 SWP ;base16-lut ADD2 LDA
 
 @<draw-char> ( char -- )
 	get-glyph .Screen/addr DEO2
@@ -228,6 +240,14 @@
 		INC2 LDAk #20 GTH ?&w
 	POP2 JMP2r
 
+@<phex> ( short* -- )
+	SWP <phex>/b
+	&b ( -- )
+		DUP #04 SFT <phex>/c
+	&c ( -- )
+		#0f AND DUP #09 GTH #27 MUL ADD [ LIT "0 ] ADD #18 DEO
+		JMP2r
+
 (
 @|theme )
 
@@ -245,6 +265,8 @@
 
 (
 @|assets )
+
+@base16-lut [ "0123456789abcdef ]
 
 @cursor-icn [ 80c0 e0f0 f8e0 1000 ]
 
