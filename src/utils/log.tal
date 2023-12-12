@@ -112,7 +112,11 @@
 	#0004 .Screen/y DEO2
 	#15 .Screen/auto DEO
 	&w ( -- )
-		LDAk ?{ POP2 JMP2r }
+		LDAk ?{ POP2 <draw-caret>
+			JMP2r }
+		( | handle backspace )
+		LDAk #08 NEQ ?{ <draw-bs>
+			!&res }
 		( | handle wrap )
 		LDAk #20 GTH ?{
 			INC2k word-fits ?{ <draw-lb>
@@ -144,13 +148,17 @@
 	#0f AND #00 SWP ;base16-lut ADD2 LDA
 
 @<draw-char> ( char -- )
-	get-glyph .Screen/addr DEO2
+	get-glyph
+	( >> )
+
+@<draw-glyph> ( addr* -- )
+	.Screen/addr DEO2
 	[ LIT2 &color 01 -Screen/sprite ] DEO
 	JMP2r
 
 @colorize ( addr* -- addr* )
 	DUP2 #1000 ADD2 LDA #0f AND
-	( ) DUP #00 EQU ADD ;<draw-char>/color STA
+	( ) DUP #00 EQU ADD ;<draw-glyph>/color STA
 	JMP2r
 
 @get-glyph ( char -- addr* )
@@ -188,6 +196,16 @@
 	.Screen/y DEI2k #0010 ADD2 ROT DEO2
 	#0014 .Screen/x DEO2
 	JMP2r
+
+@<draw-bs> ( -- )
+	.Screen/x DEI2k #0008 SUB2 ROT DEO2
+	#20 <draw-char>
+	.Screen/x DEI2k #0008 SUB2 ROT DEO2
+	JMP2r
+
+@<draw-caret> ( -- )
+	#02 ;<draw-glyph>/color STA
+	;caret-icn !<draw-glyph>
 
 @<draw-sidebar> ( -- )
 	#0000 DUP2 .Screen/x DEO2
@@ -271,6 +289,9 @@
 @cursor-icn [ 80c0 e0f0 f8e0 1000 ]
 
 @fill-icn [ ffff ffff ffff ffff ]
+
+@caret-icn [
+	4040 4040 4040 4040 4040 4040 4040 4040 ]
 
 @blank-icn [ $10 ]
 
