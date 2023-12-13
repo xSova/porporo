@@ -128,13 +128,6 @@ draw_window(Varvara *p)
 
 /* = OPTIONS ===================================== */
 
-static int
-por_error(char *msg, const char *err)
-{
-	printf("Error %s: %s\n", msg, err);
-	return 0;
-}
-
 static void
 por_focus(Varvara *a)
 {
@@ -179,15 +172,19 @@ por_pop(Varvara *p)
 	olen--;
 }
 
-static void
-por_boot(Varvara *v, int eval)
+static int
+por_boot(Varvara *v, char *rom, int soft, int eval)
 {
+	system_boot(&v->u, soft);
+	if(!system_load(v, &v->u, rom))
+		return 0;
 	screen_resize(&v->screen, 0x10, 0x10);
 	POKE2(&v->u.dev[0x22], WIDTH)
 	POKE2(&v->u.dev[0x24], HEIGHT)
 	if(eval)
-		uxn_eval(&v->u, 0x100);
+		uxn_eval(&v->u, PAGE_PROGRAM);
 	reqdraw |= 1;
+	return 1;
 }
 
 static Varvara *
@@ -197,10 +194,7 @@ por_spawn(int id, char *rom, int eval)
 	if(id == -1 || id > RAM_PAGES) return 0;
 	p = &varvaras[id];
 	p->u.id = id, p->u.ram = ram + id * 0x10000;
-	if(!system_init(p, &p->u, p->u.ram, rom))
-		return 0;
-	/* TODO ARGHHH */
-	por_boot(p, eval);
+	por_boot(p, rom, 0, eval);
 	return p;
 }
 
@@ -268,13 +262,8 @@ por_connect(Varvara *a, Varvara *b)
 static void
 por_restart(Varvara *v, int soft)
 {
-	if(!v) return;
-	screen_wipe(&v->screen);
-	system_boot(&v->u, soft);
-	if(!system_load(&v->u, v->rom))
-		return;
-	/* TODO ARGHHH */
-	por_boot(v, 1);
+	if(v)
+		por_boot(v, v->rom, soft, 1);
 }
 
 static void
@@ -313,7 +302,7 @@ por_menu(int x, int y)
 	if(menu->live)
 		por_pop(menu);
 	menu->u.dev[0x0f] = 0;
-	uxn_eval(&menu->u, 0x100);
+	uxn_eval(&menu->u, PAGE_PROGRAM);
 	action = NORMAL, drag.mode = 0;
 	por_push(menu, x, y, 0);
 }
@@ -343,7 +332,7 @@ sendcmd(Varvara *dest, char c)
 		focused = por_push(por_spawn(por_alloc(), cmd, 0), menu->x, menu->y, 0);
 		for(i = 0; i < menu->clen; i++)
 			por_connect(focused, menu->routes[i]);
-		uxn_eval(&focused->u, 0x100);
+		uxn_eval(&focused->u, PAGE_PROGRAM);
 		cmdlen = 0;
 		return;
 	}
@@ -577,23 +566,23 @@ static int
 init(void)
 {
 	if(SDL_Init(SDL_INIT_VIDEO) < 0)
-		return por_error("Init", SDL_GetError());
+		return system_error("Init", SDL_GetError());
 	SDL_GetCurrentDisplayMode(0, &DM);
 	WIDTH = (DM.w >> 3 << 3) - 0x20;
 	HEIGHT = (DM.h >> 3 << 3) - 0x80;
 	printf("%dx%d[%02xx%02x]\n", WIDTH, HEIGHT, WIDTH >> 3, HEIGHT >> 3);
 	gWindow = SDL_CreateWindow("Porporo", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
 	if(gWindow == NULL)
-		return por_error("Window", SDL_GetError());
+		return system_error("Window", SDL_GetError());
 	gRenderer = SDL_CreateRenderer(gWindow, -1, 0);
 	if(gRenderer == NULL)
-		return por_error("Renderer", SDL_GetError());
+		return system_error("Renderer", SDL_GetError());
 	gTexture = SDL_CreateTexture(gRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, WIDTH, HEIGHT);
 	if(gTexture == NULL)
-		return por_error("Texture", SDL_GetError());
+		return system_error("Texture", SDL_GetError());
 	pixels = (Uint32 *)malloc(WIDTH * HEIGHT * sizeof(Uint32));
 	if(pixels == NULL)
-		return por_error("Pixels", "Failed to allocate memory");
+		return system_error("Pixels", "Failed to allocate memory");
 	SDL_ShowCursor(0);
 	return 1;
 }
@@ -649,7 +638,7 @@ main(int argc, char **argv)
 	if(argc == 2 && argv[1][0] == '-' && argv[1][1] == 'v')
 		return !fprintf(stdout, "Porporo - Varvara Multiplexer, 13 Dec 2023.\n");
 	if(!init())
-		return por_error("Init", "Failure");
+		return system_error("Init", "Failure");
 	/* prepare boot */
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
 	load_theme();

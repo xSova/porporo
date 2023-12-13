@@ -39,20 +39,6 @@ system_print(Stack *s, char *name)
 }
 
 int
-system_load(Uxn *u, char *filename)
-{
-	int l, i = 0;
-	FILE *f = fopen(filename, "rb");
-	if(!f)
-		return 0;
-	l = fread(&u->ram[PAGE_PROGRAM], 0x10000 - PAGE_PROGRAM, 1, f);
-	while(l && ++i < RAM_PAGES)
-		l = fread(u->ram + 0x10000 * i, 0x10000, 1, f);
-	fclose(f);
-	return 1;
-}
-
-int
 system_error(char *msg, const char *err)
 {
 	fprintf(stderr, "%s: %s\n", msg, err);
@@ -60,11 +46,19 @@ system_error(char *msg, const char *err)
 	return 0;
 }
 
-void
-system_inspect(Uxn *u)
+int
+system_load(Varvara *v, Uxn *u, char *filename)
 {
-	system_print(&u->wst, "wst");
-	system_print(&u->rst, "rst");
+	int l, i = 0;
+	FILE *f = fopen(filename, "rb");
+	if(!f)
+		return system_error("Init", "Failed to load rom.");
+	l = fread(&u->ram[PAGE_PROGRAM], 0x10000 - PAGE_PROGRAM, 1, f);
+	while(l && ++i < RAM_PAGES)
+		l = fread(u->ram + 0x10000 * i, 0x10000, 1, f);
+	fclose(f);
+	scpy(filename, v->rom, 0x40);
+	return 1;
 }
 
 void
@@ -79,15 +73,11 @@ system_boot(Uxn *u, int soft)
 	u->rst.ptr = 0;
 }
 
-int
-system_init(Varvara *v, Uxn *u, Uint8 *ram, char *rom)
+void
+system_inspect(Uxn *u)
 {
-	u->ram = ram;
-	system_boot(u, 0);
-	if(!system_load(u, rom))
-		return system_error("Init", "Failed to load rom.");
-	scpy(rom, v->rom, 0x40);
-	return 1;
+	system_print(&u->wst, "wst");
+	system_print(&u->rst, "rst");
 }
 
 /* IO */
