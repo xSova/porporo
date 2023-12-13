@@ -179,6 +179,17 @@ por_pop(Varvara *p)
 	olen--;
 }
 
+static void
+por_boot(Varvara *v, int eval)
+{
+	screen_resize(&v->screen, 0x10, 0x10);
+	POKE2(&v->u.dev[0x22], WIDTH)
+	POKE2(&v->u.dev[0x24], HEIGHT)
+	if(eval)
+		uxn_eval(&v->u, 0x100);
+	reqdraw |= 1;
+}
+
 static Varvara *
 por_spawn(int id, char *rom, int eval)
 {
@@ -188,16 +199,8 @@ por_spawn(int id, char *rom, int eval)
 	p->u.id = id, p->u.ram = ram + id * 0x10000;
 	if(!system_init(p, &p->u, p->u.ram, rom))
 		return 0;
-	/* write size of porporo */
-	/* TODO: write in memory during screen_resize(&p->screen, 640, 320); */
 	/* TODO ARGHHH */
-	screen_resize(&p->screen, 0x10, 0x10);
-	p->u.dev[0x22] = WIDTH >> 8;
-	p->u.dev[0x23] = WIDTH;
-	p->u.dev[0x24] = HEIGHT >> 8;
-	p->u.dev[0x25] = HEIGHT;
-	if(eval)
-		uxn_eval(&p->u, 0x100);
+	por_boot(p, eval);
 	return p;
 }
 
@@ -268,17 +271,10 @@ por_restart(Varvara *v, int soft)
 	if(!v) return;
 	screen_wipe(&v->screen);
 	system_boot(&v->u, soft);
-	system_load(&v->u, v->rom);
-
+	if(!system_load(&v->u, v->rom))
+		return;
 	/* TODO ARGHHH */
-	screen_resize(&v->screen, 0x10, 0x10);
-	v->u.dev[0x22] = WIDTH >> 8;
-	v->u.dev[0x23] = WIDTH;
-	v->u.dev[0x24] = HEIGHT >> 8;
-	v->u.dev[0x25] = HEIGHT;
-
-	uxn_eval(&v->u, PAGE_PROGRAM);
-	reqdraw |= 1;
+	por_boot(v, 1);
 }
 
 static void
@@ -305,7 +301,8 @@ por_center(Varvara *v)
 }
 
 static void
-por_close(Varvara *v) {
+por_close(Varvara *v)
+{
 	if(!v || v == wallpaper || v == menu) return;
 	por_pop(v);
 }
