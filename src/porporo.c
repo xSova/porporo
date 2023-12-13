@@ -190,6 +190,7 @@ por_spawn(int id, char *rom, int eval)
 		return 0;
 	/* write size of porporo */
 	/* TODO: write in memory during screen_resize(&p->screen, 640, 320); */
+	/* TODO ARGHHH */
 	screen_resize(&p->screen, 0x10, 0x10);
 	p->u.dev[0x22] = WIDTH >> 8;
 	p->u.dev[0x23] = WIDTH;
@@ -230,29 +231,6 @@ por_pick(int x, int y, int force)
 			return p;
 	}
 	return 0;
-}
-
-static void
-por_center(Varvara *v)
-{
-	if(!v) return;
-	v->x = -camera.x + WIDTH / 2 - v->screen.w / 2;
-	v->y = -camera.y + HEIGHT / 2 - v->screen.h / 2;
-	reqdraw |= 2;
-}
-
-static void
-por_lock(Varvara *v)
-{
-	if(!v) return;
-	if(!v->lock) {
-		v->lock = 1, focused = 0;
-		v->x += camera.x, v->y += camera.y;
-	} else {
-		v->lock = 0;
-		v->x -= camera.x, v->y -= camera.y;
-	}
-	reqdraw |= 2;
 }
 
 static void
@@ -301,6 +279,35 @@ por_restart(Varvara *v, int soft)
 
 	uxn_eval(&v->u, PAGE_PROGRAM);
 	reqdraw |= 1;
+}
+
+static void
+por_lock(Varvara *v)
+{
+	if(!v || v == wallpaper || v == menu) return;
+	if(!v->lock) {
+		v->lock = 1, focused = 0;
+		v->x += camera.x, v->y += camera.y;
+	} else {
+		v->lock = 0;
+		v->x -= camera.x, v->y -= camera.y;
+	}
+	reqdraw |= 2;
+}
+
+static void
+por_center(Varvara *v)
+{
+	if(!v) return;
+	v->x = -camera.x + WIDTH / 2 - v->screen.w / 2;
+	v->y = -camera.y + HEIGHT / 2 - v->screen.h / 2;
+	reqdraw |= 2;
+}
+
+static void
+por_close(Varvara *v) {
+	if(!v || v == wallpaper || v == menu) return;
+	por_pop(v);
 }
 
 static void
@@ -505,7 +512,7 @@ on_controller_special(char c, Uint8 fkey)
 		switch(fkey) {
 		case 1: por_lock(v); return;
 		case 2: por_center(v); return;
-		case 4: por_pop(v); return;
+		case 4: por_close(v); return;
 		case 5: por_restart(v, 1); return;
 		}
 	}
