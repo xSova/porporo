@@ -45,13 +45,6 @@ static SDL_Texture *gTexture = NULL;
 /* = DRAWING ===================================== */
 
 static void
-draw_clear(Uint32 color)
-{
-	int i, l = WIDTH * HEIGHT;
-	for(i = 0; i < l; i++) pixels[i] = color;
-}
-
-static void
 draw_pixel(int x, int y, Uint32 color)
 {
 	if(x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT)
@@ -114,7 +107,7 @@ draw_connections(Varvara *a, Uint32 color)
 }
 
 static void
-draw_varvara(Varvara *p)
+draw_window(Varvara *p)
 {
 	Uint32 color;
 	Screen *scr = &p->screen;
@@ -598,7 +591,6 @@ init(void)
 	if(pixels == NULL)
 		return por_error("Pixels", "Failed to allocate memory");
 	SDL_ShowCursor(0);
-	draw_clear(palette[0]);
 	return 1;
 }
 
@@ -654,6 +646,7 @@ main(int argc, char **argv)
 		return !fprintf(stdout, "Porporo - Varvara Multiplexer, 13 Dec 2023.\n");
 	if(!init())
 		return por_error("Init", "Failure");
+	/* prepare boot */
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
 	load_theme();
 	menu = por_spawn(0, "bin/menu.rom", 0);
@@ -682,9 +675,7 @@ main(int argc, char **argv)
 			case SDL_TEXTINPUT: on_controller_input(e.text.text[0]); break;
 			case SDL_KEYDOWN: on_controller_down(get_key(&e), get_button(&e), get_fkey(&e)); break;
 			case SDL_KEYUP: on_controller_up(get_button(&e)); break;
-			case SDL_WINDOWEVENT:
-				if(e.window.event == SDL_WINDOWEVENT_EXPOSED) reqdraw |= 1;
-				break;
+			case SDL_WINDOWEVENT: reqdraw |= 1; break;
 			}
 		}
 		/* screen vector */
@@ -702,8 +693,7 @@ main(int argc, char **argv)
 		}
 		/* draw */
 		if(reqdraw) {
-			if(reqdraw & 2 && !wallpaper->live) draw_clear(palette[0]);
-			for(i = 0; i < olen; i++) draw_varvara(order[i]);
+			for(i = 0; i < olen; i++) draw_window(order[i]);
 			if(cursor.mode) draw_icn(cursor.x, cursor.y, cursor_icn, palette[1 + action]);
 			SDL_UpdateTexture(gTexture, NULL, pixels, WIDTH * sizeof(Uint32));
 			SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
