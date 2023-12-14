@@ -32,7 +32,7 @@ typedef struct {
 
 static enum Action action;
 static Uint8 *ram, cursor_icn[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
-static Uint32 *pixels, palette[] = {0xeeeeee, 0x000000, 0x72DEC2, 0xffb545};
+static Uint32 *pixels, palette[] = {0xeeeeee, 0x000000, 0x77ddcc, 0xffbb44};
 static int WIDTH, HEIGHT, reqdraw, olen;
 static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *wallpaper, *menu, *focused, *potato;
 static Point2d camera, drag, cursor;
@@ -362,6 +362,10 @@ send_msg(Varvara *dest, Uint8 type, Uint8 value)
 		send_cmd(dest, value);
 		return;
 	}
+	if(type == 0xfe) {
+		por_setaction(value);
+		return;
+	}
 	if(dest) {
 		address = &dest->u.dev[0x10];
 		vector = PEEK2(address);
@@ -657,7 +661,7 @@ main(int argc, char **argv)
 	potato = por_push(por_spawn(2, "bin/potato.rom", 1), 0x10, 0x10, 1);
 	/* load from arguments */
 	for(i = 1; i < argc; i++) {
-		Varvara *a = por_push(por_spawn(i + 2, argv[i], 1), anchor + 0x10, 0x10, 0);
+		Varvara *a = por_push(por_spawn(i + 2, argv[i], 1), anchor + 0x12, 0x38, 0);
 		anchor += a->screen.w + 0x10;
 	}
 	/* event loop */

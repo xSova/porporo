@@ -6,15 +6,16 @@
 |a0 @File &vector $2 &success $2 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
 
 |0000
-@action &vector $2 &value $1
+
+	@action &vector $2 &value $1
 
 |0100
 
 @on-reset ( -> )
 	;meta #06 DEO2
-	#f17a .System/r DEO2
-	#f1da .System/g DEO2
-	#f1ba .System/b DEO2
+	#f17f .System/r DEO2
+	#f1db .System/g DEO2
+	#f1c4 .System/b DEO2
 	<load-theme>
 	.Screen/width DEI2 #0020 SUB2 .Screen/width DEO2
 	#0018 .Screen/height DEO2
@@ -34,7 +35,15 @@
 
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
+	.Mouse/state DEI ?&on-touch
 	BRK
+	&on-touch ( -> )
+		#fe .Console/type DEO
+		.Mouse/x DEI2 #04 SFT2 NIP .Console/write DEO
+		#00 .Console/type DEO
+		#00 .Mouse/state DEO
+		#40 ;fill-icn <update-cursor>
+		BRK
 
 @on-control ( -> )
 	BRK
@@ -44,7 +53,6 @@
 
 @on-action ( -> )
 	<redraw>
-	LIT "a #18 DEO
 	BRK
 
 (
@@ -54,15 +62,22 @@
 @|drawing )
 
 @<redraw> ( -- )
-	#0006 .Screen/x DEO2
-	#0006 .Screen/y DEO2
+	#0000 .Screen/x DEO2
+	#0000 .Screen/y DEO2
 	#80 .Screen/pixel DEO
-
-	#0006 .Screen/x DEO2
+	( | draw buttons )
+	#00 .action/value LDZ #40 SFT2 .Screen/x DEO2
+	<draw-button>
+	#0040 .Screen/x DEO2
 	#0006 .Screen/y DEO2
 	[ LIT2 00 -action/value ] LDZ DUP ADD ;actions-lut ADD2 LDA2 #01 <draw-uf2>
 	JMP2r
-	@test "Hello $1
+
+@<draw-button> ( color -- )
+	;fill-icn .Screen/addr DEO2
+	#21 .Screen/auto DEO
+	.action/value LDZ INC .Screen/sprite DEOk DEO
+	JMP2r
 
 @<draw-uf2> ( addr* color -- )
 	,&color STR
@@ -98,6 +113,14 @@
 		LDAk #18 DEO
 		INC2 & LDAk ?&w
 	POP2 JMP2r
+
+@<phex> ( short* -- )
+	SWP <phex>/b
+	&b ( -- )
+		DUP #04 SFT <phex>/c
+	&c ( -- )
+		#0f AND DUP #09 GTH #27 MUL ADD [ LIT "0 ] ADD #18 DEO
+		JMP2r
 
 (
 @|theme )
