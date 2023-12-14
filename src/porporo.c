@@ -25,18 +25,17 @@ enum Action {
 	MOVE,
 	DRAW
 };
-enum Action action;
 
 typedef struct {
 	int x, y, mode;
 } Point2d;
 
+static enum Action action;
 static Uint8 *ram, cursor_icn[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
 static Uint32 *pixels, palette[] = {0xeeeeee, 0x000000, 0x72DEC2, 0xffb545};
 static int WIDTH, HEIGHT, reqdraw, olen;
 static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *wallpaper, *focused;
 static Point2d camera, drag, cursor;
-
 static SDL_DisplayMode DM;
 static SDL_Window *gWindow = NULL;
 static SDL_Renderer *gRenderer = NULL;
@@ -325,7 +324,7 @@ static int cmdlen;
 static char cmd[0x40];
 
 static void
-sendcmd(Varvara *dest, char c)
+send_cmd(Varvara *dest, char c)
 {
 	int i;
 	if(c < 0x20) {
@@ -344,12 +343,12 @@ sendcmd(Varvara *dest, char c)
 }
 
 void
-castmsg(Varvara *dest, Uint8 type, Uint8 value)
+send_msg(Varvara *dest, Uint8 type, Uint8 value)
 {
 	Uint8 *address;
 	Uint16 vector;
 	if(type == 0xff) {
-		sendcmd(dest, value);
+		send_cmd(dest, value);
 		return;
 	}
 	if(dest) {
@@ -593,10 +592,10 @@ graph_deo(Varvara *a, Uint8 addr, Uint8 value)
 	int i;
 	if(addr == 0x18) {
 		if(!a->clen)
-			castmsg(0, a->u.dev[0x17], value);
+			send_msg(0, a->u.dev[0x17], value);
 		else
 			for(i = 0; i < a->clen; i++)
-				castmsg(a->routes[i], a->u.dev[0x17], value);
+				send_msg(a->routes[i], a->u.dev[0x17], value);
 	}
 }
 
