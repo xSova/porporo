@@ -1,3 +1,4 @@
+
 |00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
 |10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
 |20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
@@ -72,9 +73,23 @@
 	#0000 .Screen/x DEO2
 	#0000 .Screen/y DEO2
 	#80 .Screen/pixel DEO
-	( | draw buttons )
-	#00 .action/value LDZ #40 SFT2 .Screen/x DEO2
-	<draw-button>
+	( | frame )
+	#0004 .Screen/y DEO2
+	#0004 #00 .action/value LDZ #40 SFT2 ADD2 .Screen/x DEO2
+	#11 .Screen/auto DEO
+	;fill-icn .Screen/addr DEO2
+	.action/value LDZ INC #05 MUL .Screen/sprite DEOk DEO
+	( | icons )
+	#04 .Screen/auto DEO
+	#0008 .Screen/y DEO2
+	;actions-icn .Screen/addr DEO2
+	#0008 .Screen/x DEO2
+	#05 .action/value LDZ #00 NEQ MUL .Screen/sprite DEO
+	#0018 .Screen/x DEO2
+	#05 .Screen/sprite DEO
+	#0028 .Screen/x DEO2
+	#05 .Screen/sprite DEO
+	( | misc )
 	#0040 .Screen/x DEO2
 	#0006 .Screen/y DEO2
 	[ LIT2 00 -action/value ] LDZ DUP ADD ;actions-lut ADD2 LDA2 <draw-uf2>
@@ -112,8 +127,7 @@
 	( | minute )
 	.DateTime/minute DEI
 	( ) DUP #0a DIV <draw-num>
-	( ) #0a DIVk MUL SUB <draw-num>
-	JMP2r
+	( ) #0a DIVk MUL SUB !<draw-num>
 
 @<draw-ws> ( -- )
 	.Screen/x DEI2 #00 ;font-uf2 LDA ADD2 .Screen/x DEO2
@@ -198,6 +212,11 @@
 @cursor-icn [ 80c0 e0f0 f8e0 1000 ]
 
 @fill-icn [ ffff ffff ffff ffff ]
+
+
+@actions-icn [
+	fefc f8f8 fcce 8702 ffff c3c3 c3c3 ffff
+	1818 18ff ff18 1818 ]
 
 @week-txt
 	"Sun $1

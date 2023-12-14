@@ -20,26 +20,25 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 WITH REGARD TO THIS SOFTWARE.
 */
 
-enum Action {
-	NORMAL,
-	MOVE,
-	DRAW
-};
+/* clang-format off */
 
-typedef struct {
-	int x, y, mode;
-} Point2d;
-
-static enum Action action;
-static Uint8 *ram, cursor_icn[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
+enum Action { NORMAL, MOVE, DRAW };
+typedef struct { int x, y, mode; } Point2d;
+static Uint8 *ram, cursor_icn[] = {
+	0xfe, 0xfc, 0xf8, 0xf8, 0xfc, 0xce, 0x87, 0x02, 
+	0xff, 0xff, 0xc3, 0xc3, 0xc3, 0xc3, 0xff, 0xff, 
+	0x18, 0x18, 0x18, 0xff, 0xff, 0x18, 0x18, 0x18};
 static Uint32 *pixels, palette[] = {0xeeeeee, 0x000000, 0x77ddcc, 0xffbb44};
 static int WIDTH, HEIGHT, reqdraw, olen;
 static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *wallpaper, *menu, *focused, *potato;
 static Point2d camera, drag, cursor;
+static enum Action action;
 static SDL_DisplayMode DM;
 static SDL_Window *gWindow = NULL;
 static SDL_Renderer *gRenderer = NULL;
 static SDL_Texture *gTexture = NULL;
+
+/* clang-format on */
 
 /* = DRAWING ===================================== */
 
@@ -702,7 +701,7 @@ main(int argc, char **argv)
 		/* draw */
 		if(reqdraw) {
 			for(i = 0; i < olen; i++) draw_window(order[i]);
-			if(cursor.mode) draw_icn(cursor.x, cursor.y, cursor_icn, palette[1 + action]);
+			if(cursor.mode) draw_icn(cursor.x, cursor.y, &cursor_icn[action * 8], palette[1 + action]);
 			SDL_UpdateTexture(gTexture, NULL, pixels, WIDTH * sizeof(Uint32));
 			SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
 			SDL_RenderPresent(gRenderer);
