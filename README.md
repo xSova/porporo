@@ -37,7 +37,7 @@ make run
 
 ## Wallpaper
 
-The wallpaper rom expects a file named `.wallpaper` in the [chr format](https://wiki.xxiivv.com/site/chr_format.html) that is large enough to fill the screen. The way I do it is by, first getting the screen size, let's say `1328x640` and creating a `wallpaper.tga` image at that size. Convert the tga with [tgachr](https://git.sr.ht/~rabbits/uxn-utils/tree/main/item/cli/tgachr/tgachr.tal), generating a file named `wallpapera6x50.chr`, renaming it to `.wallpaper`. Voila!
+The wallpaper rom expects a file named `.wallpaper` in the [chr format](https://wiki.xxiivv.com/site/chr_format.html) that is large enough to fill the screen. The way I do it is by, first getting the screen size(let's say `1328x640`), creating a `wallpaper.tga` image at that size, converting it with [tgachr](https://git.sr.ht/~rabbits/uxn-utils/tree/main/item/cli/tgachr/tgachr.tal), generating a file named `wallpapera6x50.chr`, and finally renaming it to `.wallpaper`. Voila!
 
 ```
 uxncli ~/roms/tgachr.rom wallpaper.tga
