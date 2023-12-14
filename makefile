@@ -5,7 +5,7 @@ ASM=bin/uxnasm
 
 .PHONY: all dest run install uninstall format clean
 
-all: dest bin/uxnasm bin/porporo bin/menu.rom bin/wallpaper.rom bin/log.rom
+all: dest bin/uxnasm bin/porporo bin/menu.rom bin/potato.rom bin/wallpaper.rom bin/log.rom
 
 dest:
 	@ mkdir -p bin
@@ -27,6 +27,8 @@ bin/porporo: ${SRC} src/porporo.c
 
 bin/menu.rom: src/utils/menu.tal src/utils/menu.assets.tal
 	@ ${ASM} src/utils/menu.tal bin/menu.rom
+bin/potato.rom: src/utils/potato.tal src/utils/potato.assets.tal
+	@ ${ASM} src/utils/potato.tal bin/potato.rom
 bin/wallpaper.rom: src/utils/wallpaper.tal
 	@ ${ASM} src/utils/wallpaper.tal bin/wallpaper.rom
 bin/log.rom: src/utils/log.tal src/utils/log.assets.tal

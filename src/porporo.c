@@ -34,7 +34,7 @@ static enum Action action;
 static Uint8 *ram, cursor_icn[] = {0xff, 0xfe, 0xfc, 0xf8, 0xfc, 0xee, 0xc7, 0x82};
 static Uint32 *pixels, palette[] = {0xeeeeee, 0x000000, 0x72DEC2, 0xffb545};
 static int WIDTH, HEIGHT, reqdraw, olen;
-static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *menu, *wallpaper, *focused;
+static Varvara varvaras[RAM_PAGES], *order[RAM_PAGES], *wallpaper, *menu, *focused, *potato;
 static Point2d camera, drag, cursor;
 static SDL_DisplayMode DM;
 static SDL_Window *gWindow = NULL;
@@ -296,13 +296,23 @@ por_close(Varvara *v)
 }
 
 static void
+por_setaction(enum Action a)
+{
+	Uint16 vector = PEEK2(&potato->u.ram[0x0000]);
+	action = a, reqdraw |= 1;
+	potato->u.ram[0x0002] = a;
+	uxn_eval(&potato->u, vector);
+}
+
+static void
 por_menu(int x, int y)
 {
 	if(menu->live)
 		por_pop(menu);
 	menu->u.dev[0x0f] = 0;
 	uxn_eval(&menu->u, PAGE_PROGRAM);
-	action = NORMAL, drag.mode = 0;
+	por_setaction(NORMAL);
+	drag.mode = 0;
 	por_push(menu, x, y, 0);
 }
 
@@ -503,9 +513,9 @@ on_controller_special(char c, Uint8 fkey)
 		}
 	}
 	switch(c) {
-	case 0x1b: action = NORMAL, reqdraw |= 1; return;
-	case 'd': action = action == DRAW ? NORMAL : DRAW, reqdraw |= 1; return;
-	case 'm': action = action == MOVE ? NORMAL : MOVE, reqdraw |= 1; return;
+	case 0x1b: por_setaction(NORMAL); return;
+	case 'd': por_setaction(action == DRAW ? NORMAL : DRAW); return;
+	case 'm': por_setaction(action == MOVE ? NORMAL : MOVE); return;
 	}
 }
 
@@ -644,9 +654,10 @@ main(int argc, char **argv)
 	load_theme();
 	menu = por_spawn(0, "bin/menu.rom", 0);
 	wallpaper = por_push(por_spawn(1, "bin/wallpaper.rom", 1), 0, 0, 1);
+	potato = por_push(por_spawn(2, "bin/potato.rom", 1), 0x10, 0x10, 1);
 	/* load from arguments */
 	for(i = 1; i < argc; i++) {
-		Varvara *a = por_push(por_spawn(i + 1, argv[i], 1), anchor + 0x10, 0x10, 0);
+		Varvara *a = por_push(por_spawn(i + 2, argv[i], 1), anchor + 0x10, 0x10, 0);
 		anchor += a->screen.w + 0x10;
 	}
 	/* event loop */
