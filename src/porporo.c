@@ -331,7 +331,8 @@ send_cmd(Varvara *dest, char c)
 		focused = por_push(por_spawn(por_alloc(), cmd, 0), menu->x, menu->y, 0);
 		for(i = 0; i < menu->clen; i++)
 			por_connect(focused, menu->routes[i]);
-		uxn_eval(&focused->u, PAGE_PROGRAM);
+		if(focused)
+			uxn_eval(&focused->u, PAGE_PROGRAM);
 		cmdlen = 0;
 		return;
 	}
