@@ -22,6 +22,7 @@
 	#0018 .Screen/height DEO2
 	;on-mouse .Mouse/vector DEO2
 	;on-control .Controller/vector DEO2
+	;on-screen .Screen/vector DEO2
 	<redraw>
 	( | register routines )
 	;on-action .action/vector STZ2
@@ -33,6 +34,11 @@
 	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
 	( date ) "13 20 "Dec 20 "2023 $1
 	( exts ) 00
+
+@on-screen ( -> )
+	[ LIT &last $1 ] .DateTime/minute DEI DUP ,&last STR
+	EQU ?{ <draw-time> }
+	BRK
 
 @on-mouse ( -> )
 	[ LIT2 00 -Mouse/state ] DEI NEQ #41 ADD ;cursor-icn <update-cursor>
@@ -83,7 +89,8 @@
 	JMP2r
 
 @<draw-date> ( -- )
-	#00c0 .Screen/x DEO2
+	#01 ;<draw-char>/color STA
+	.Screen/width DEI2 #01 SFT2 .Screen/x DEO2
 	[ #00 .DateTime/dotw DEI #20 SFT ] ;week-txt ADD2 <draw-uf2>
 	[ LIT ", ] <draw-char>
 	<draw-ws>
@@ -95,7 +102,8 @@
 	JMP2r
 
 @<draw-time> ( -- )
-	#0200 .Screen/x DEO2
+	#01 ;<draw-char>/color STA
+	.Screen/width DEI2 #0030 SUB2 .Screen/x DEO2
 	( | hour )
 	.DateTime/hour DEI
 	( ) DUP #0a DIV <draw-num>
