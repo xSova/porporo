@@ -1,4 +1,3 @@
-
 |00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
 |10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
 |20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
@@ -46,12 +45,18 @@
 	.Mouse/state DEI ?&on-touch
 	BRK
 	&on-touch ( -> )
-		#fe .Console/type DEO
-		.Mouse/x DEI2 #04 SFT2 NIP .Console/write DEO
-		#00 .Console/type DEO
 		#00 .Mouse/state DEO
-		#40 ;fill-icn <update-cursor>
-		BRK
+		.Mouse/x DEI2 #0004 SUB2 #04 SFT2 NIP
+		( ) DUP #02 GTH ?{ <set-action>
+			BRK }
+		POP BRK
+
+@<set-action> ( action -- )
+	#fe .Console/type DEO
+	#03 AND .Console/write DEO
+	#00 .Console/type DEO
+	#40 ;fill-icn <update-cursor>
+	JMP2r
 
 @on-control ( -> )
 	BRK
@@ -212,7 +217,6 @@
 @cursor-icn [ 80c0 e0f0 f8e0 1000 ]
 
 @fill-icn [ ffff ffff ffff ffff ]
-
 
 @actions-icn [
 	fefc f8f8 fcce 8702 ffff c3c3 c3c3 ffff

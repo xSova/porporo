@@ -43,3 +43,18 @@ The wallpaper rom expects a file named `.wallpaper` in the [chr format](https://
 uxncli ~/roms/tgachr.rom wallpaper.tga
 mv wallpapera6x50.chr .wallpaper
 ```
+
+## Messages
+
+Porporo listens special console messages types:
+
+- `0xff` run command
+- `0xfe` set action type
+
+## Potato
+
+Potato is the menubar rom that holds some of the state of porporo in its zero-page:
+
+- `0x00*` action vector
+- `0x02` action value 
+
