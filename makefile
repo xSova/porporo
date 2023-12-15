@@ -1,11 +1,11 @@
-SRC=src/uxn.c src/devices/system.c src/devices/screen.c src/devices/controller.c src/devices/mouse.c src/devices/file.c src/devices/datetime.c
+SRC=src/uxn.c src/devices/system.c src/devices/console.c src/devices/screen.c src/devices/controller.c src/devices/mouse.c src/devices/file.c src/devices/datetime.c
 RELEASE_flags=-std=c89 -Os -DNDEBUG -g0 -s -Wall -Wno-unknown-pragmas
 DEBUG_flags=-std=c89 -DDEBUG -Wall -Wno-unknown-pragmas -Wpedantic -Wshadow -Wextra -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=int-conversion -Wvla -g -Og -fsanitize=address -fsanitize=undefined
 ASM=bin/uxnasm
 
 .PHONY: all dest run install uninstall format clean
 
-all: dest bin/uxnasm bin/porporo bin/menu.rom bin/potato.rom bin/wallpaper.rom bin/log.rom
+all: dest bin/uxnasm bin/uxncli bin/porporo bin/menu.rom bin/potato.rom bin/wallpaper.rom bin/log.rom
 
 dest:
 	@ mkdir -p bin
@@ -20,8 +20,10 @@ format:
 clean:
 	@ rm -f bin/*
 
-bin/uxnasm: etc/uxnasm.c
-	@ cc ${RELEASE_flags} etc/uxnasm.c -o bin/uxnasm
+bin/uxnasm: src/uxnasm.c
+	@ cc ${RELEASE_flags} src/uxnasm.c -o bin/uxnasm
+bin/uxncli: src/uxncli.c
+	@ cc ${RELEASE_flags} ${SRC} src/uxncli.c -o bin/uxncli
 bin/porporo: ${SRC} src/porporo.c
 	@ cc ${DEBUG_flags} ${SRC} src/porporo.c -L/usr/local/lib -lSDL2 -o bin/porporo
 
