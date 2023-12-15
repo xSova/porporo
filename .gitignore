@@ -3,20 +3,17 @@
 *png~
 *gif~
 *bmp~
-/bin
-*io.bit
-*.bak
-/*-test
+
 *.bmp
 *.rom
 *.rom.sym
 *.tga
 *.chr
 
+/bin
+/tmp
+
 .wallpaper
 .notepad
-
-*snarf
-*theme
-
-*.[o0125678vqki]
+.snarf
+.theme

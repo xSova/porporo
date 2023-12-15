@@ -19,6 +19,8 @@ To build Porporo and the required roms:
 make run
 ```
 
+Since parts of Porporo are built with uxn itself, we need to have a partial implementation of the varvara ecosystem(`src/uxncli`), and an assembler(`src/uxnasm`). Building porporo begins by building these two tools.
+
 ## Controls
 
 - `F1`, lock varvara.

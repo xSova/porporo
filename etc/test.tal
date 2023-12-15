@@ -1,9 +1,0 @@
-
-|0100
-
-	#ff17 DEO
-	{ "nasu.rom 0a $1 } STH2r &w LDAk #18 DEO INC2 LDAk ?&w POP2
-	#800f DEO
-	BRK
-
-
