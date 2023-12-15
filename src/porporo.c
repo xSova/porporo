@@ -283,7 +283,7 @@ por_lock(Varvara *v)
 static void
 por_center(Varvara *v)
 {
-	if(!v) return;
+	if(!v || v->lock) return;
 	v->x = -camera.x + WIDTH / 2 - v->screen.w / 2;
 	v->y = -camera.y + HEIGHT / 2 - v->screen.h / 2;
 	reqdraw |= 2;
@@ -386,7 +386,7 @@ on_mouse_move(int x, int y)
 	int relx = x - camera.x, rely = y - camera.y;
 	cursor.x = x, cursor.y = y, cursor.mode = 1, reqdraw |= 2;
 	if(focused == potato) {
-		mouse_move(u, &potato->u.dev[0x90], x - potato->x, y - potato->y);
+		mouse_move(&potato->u, &potato->u.dev[0x90], x - potato->x, y - potato->y);
 		cursor.mode = 0;
 		por_pickfocus(relx, rely);
 		return;
