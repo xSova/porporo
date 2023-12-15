@@ -13,13 +13,13 @@ sudo xbps-install SDL2-devel     # Void Linux
 brew install sdl2                # OS X
 ```
 
+Since parts of Porporo are built with uxn itself, we need to have a partial implementation of the varvara ecosystem(`src/uxncli`), and an assembler(`src/uxnasm`). Compiling porporo begins by building these two tools, then assembling the roms required by porporo(`menu.rom`, `wallpaper.rom`, `potato.rom`). These 3 roms then needs to be converted to C style arrays with `format-c.rom` rom. When this is ready we can finally compile porporo.
+
 To build Porporo and the required roms:
 
 ```
 make run
 ```
-
-Since parts of Porporo are built with uxn itself, we need to have a partial implementation of the varvara ecosystem(`src/uxncli`), and an assembler(`src/uxnasm`). Building porporo begins by building these two tools.
 
 ## Controls
 
