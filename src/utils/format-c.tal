@@ -96,7 +96,7 @@
 		INC2 & LDAk ?&w
 	POP2 JMP2r
 
-@dict &a "unsigned 20 "char 20 $1
+@dict &a "Uint8 20 $1
 	&b "_rom[] 20 "= 20 "{ 0a 09 $1
 	&c "}; 0a 00
 

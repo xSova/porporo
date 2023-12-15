@@ -8,6 +8,9 @@
 #include "devices/mouse.h"
 #include "devices/file.h"
 #include "devices/datetime.h"
+#include "roms/menu.c"
+#include "roms/wallpaper.c"
+#include "roms/potato.c"
 
 /*
 Copyright (c) 2023 Devine Lu Linvega
@@ -194,6 +197,23 @@ por_spawn(int id, char *rom, int eval)
 	p->u.id = id, p->u.ram = ram + id * 0x10000;
 	por_boot(p, rom, 0, eval);
 	return p;
+}
+
+static Varvara *
+por_prefab(int id, Uint8 *rom, int length, int eval)
+{
+	Varvara *v;
+	if(id == -1 || id > RAM_PAGES) return 0;
+	v = &varvaras[id];
+	v->u.id = id, v->u.ram = ram + id * 0x10000;
+	memcpy(v->u.ram + 0x0100, rom, length);
+	screen_resize(&v->screen, 0x10, 0x10);
+	POKE2(&v->u.dev[0x22], WIDTH)
+	POKE2(&v->u.dev[0x24], HEIGHT)
+	if(eval)
+		uxn_eval(&v->u, PAGE_PROGRAM);
+	reqdraw |= 1;
+	return v;
 }
 
 static int
@@ -668,9 +688,9 @@ main(int argc, char **argv)
 	/* prepare boot */
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
 	load_theme();
-	menu = por_spawn(0, "bin/menu.rom", 0);
-	wallpaper = por_push(por_spawn(1, "bin/wallpaper.rom", 1), 0, 0, 1);
-	potato = por_push(por_spawn(2, "bin/potato.rom", 1), 0x10, 0x10, 1);
+	menu = por_prefab(0, menu_rom, sizeof(menu_rom), 0);
+	wallpaper = por_push(por_prefab(1, wallpaper_rom, sizeof(wallpaper_rom), 1), 0, 0, 1);
+	potato = por_push(por_prefab(2, potato_rom, sizeof(potato_rom), 1), 0x10, 0x10, 1);
 	/* load from arguments */
 	for(i = 1; i < argc; i++) {
 		Varvara *a = por_push(por_spawn(i + 2, argv[i], 1), anchor + 0x12, 0x38, 0);

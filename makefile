@@ -39,8 +39,8 @@ roms: ${ASM} ${CLI} bin/format-c.rom bin/menu.rom bin/potato.rom bin/wallpaper.r
 	@ ${CLI} bin/format-c.rom bin/menu.rom > src/roms/menu.c
 	@ ${CLI} bin/format-c.rom bin/potato.rom > src/roms/potato.c
 	@ ${CLI} bin/format-c.rom bin/wallpaper.rom > src/roms/wallpaper.c
-bin/porporo: roms ${SRC} ${TMP} src/porporo.c
-	@ cc ${RELEASE_flags} ${SRC} ${TMP} src/porporo.c -L/usr/local/lib -lSDL2 -o bin/porporo
+bin/porporo: roms ${SRC} src/porporo.c
+	@ cc ${RELEASE_flags} ${SRC} src/porporo.c -L/usr/local/lib -lSDL2 -o bin/porporo
 bin/log.rom: src/utils/log.tal src/utils/log.assets.tal
 	@ ${ASM} src/utils/log.tal bin/log.rom
 	
