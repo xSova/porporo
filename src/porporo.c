@@ -213,6 +213,8 @@ por_within(Varvara *p, int x, int y)
 {
 	Screen *s = &p->screen;
 	int x1 = p->x, y1 = p->y;
+	if(p->lock)
+		x1 -= camera.x, y1 -= camera.y;
 	return p->live && x > x1 && x < x1 + s->w && y > y1 && y < y1 + s->h;
 }
 
@@ -386,8 +388,10 @@ on_mouse_move(int x, int y)
 	/* potato override */
 	if(focused == potato) {
 		u = &focused->u;
-		mouse_move(u, &u->dev[0x90], relx - focused->x, rely - focused->y);
+		mouse_move(u, &u->dev[0x90], x - potato->x, y - potato->y);
 		cursor.mode = 0;
+		por_pickfocus(relx, rely);
+		return;
 	} else if(action == DRAW)
 		return;
 	if(!drag.mode)
@@ -418,7 +422,8 @@ on_mouse_down(int button, int x, int y)
 	Uxn *u;
 	if((!focused || action) && focused != potato) {
 		if(button > 1) {
-			por_menu(x - camera.x, y - camera.y);
+			if(action) por_setaction(NORMAL);
+			else por_menu(x - camera.x, y - camera.y);
 			return;
 		}
 		drag.mode = 1, drag.x = x, drag.y = y;
