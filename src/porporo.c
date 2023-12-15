@@ -385,10 +385,8 @@ on_mouse_move(int x, int y)
 	Uxn *u;
 	int relx = x - camera.x, rely = y - camera.y;
 	cursor.x = x, cursor.y = y, cursor.mode = 1, reqdraw |= 2;
-	/* potato override */
 	if(focused == potato) {
-		u = &focused->u;
-		mouse_move(u, &u->dev[0x90], x - potato->x, y - potato->y);
+		mouse_move(u, &potato->u.dev[0x90], x - potato->x, y - potato->y);
 		cursor.mode = 0;
 		por_pickfocus(relx, rely);
 		return;
@@ -411,6 +409,8 @@ on_mouse_move(int x, int y)
 		return;
 	}
 	u = &focused->u;
+	if(focused->lock)
+		relx = x, rely = y;
 	mouse_move(u, &u->dev[0x90], relx - focused->x, rely - focused->y);
 	if(PEEK2(&u->dev[0x90])) /* draw mouse when no mouse vector */
 		cursor.mode = 0;
@@ -422,8 +422,10 @@ on_mouse_down(int button, int x, int y)
 	Uxn *u;
 	if((!focused || action) && focused != potato) {
 		if(button > 1) {
-			if(action) por_setaction(NORMAL);
-			else por_menu(x - camera.x, y - camera.y);
+			if(action)
+				por_setaction(NORMAL);
+			else
+				por_menu(x - camera.x, y - camera.y);
 			return;
 		}
 		drag.mode = 1, drag.x = x, drag.y = y;
