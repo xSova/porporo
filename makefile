@@ -1,5 +1,5 @@
 SRC=src/uxn.c src/devices/system.c src/devices/console.c src/devices/screen.c src/devices/controller.c src/devices/mouse.c src/devices/file.c src/devices/datetime.c
-TMP=tmp/menu.c tmp/potato.c tmp/wallpaper.c
+TMP=src/roms/menu.c src/roms/potato.c src/roms/wallpaper.c
 RELEASE_flags=-std=c89 -Os -DNDEBUG -g0 -s -Wall -Wno-unknown-pragmas
 DEBUG_flags=-std=c89 -DDEBUG -Wall -Wno-unknown-pragmas -Wpedantic -Wshadow -Wextra -Werror=implicit-int -Werror=incompatible-pointer-types -Werror=int-conversion -Wvla -g -Og -fsanitize=address -fsanitize=undefined
 ASM=bin/uxnasm
@@ -19,7 +19,7 @@ format:
 	@ clang-format -i src/porporo.c src/devices/*
 clean:
 	@ rm -f bin/*
-	@ rm -f tmp/*
+	@ rm -f src/roms/*
 
 bin/uxnasm: src/uxnasm.c
 	@ mkdir -p bin
@@ -35,10 +35,10 @@ bin/wallpaper.rom: src/utils/wallpaper.tal
 bin/uxncli: src/uxncli.c
 	@ cc ${RELEASE_flags} ${SRC} src/uxncli.c -o ${CLI}
 roms: ${ASM} ${CLI} bin/format-c.rom bin/menu.rom bin/potato.rom bin/wallpaper.rom
-	@ mkdir -p tmp
-	@ ${CLI} bin/format-c.rom bin/menu.rom > tmp/menu.c
-	@ ${CLI} bin/format-c.rom bin/potato.rom > tmp/potato.c
-	@ ${CLI} bin/format-c.rom bin/wallpaper.rom > tmp/wallpaper.c
+	@ mkdir -p src/roms
+	@ ${CLI} bin/format-c.rom bin/menu.rom > src/roms/menu.c
+	@ ${CLI} bin/format-c.rom bin/potato.rom > src/roms/potato.c
+	@ ${CLI} bin/format-c.rom bin/wallpaper.rom > src/roms/wallpaper.c
 bin/porporo: roms ${SRC} ${TMP} src/porporo.c
 	@ cc ${RELEASE_flags} ${SRC} ${TMP} src/porporo.c -L/usr/local/lib -lSDL2 -o bin/porporo
 bin/log.rom: src/utils/log.tal src/utils/log.assets.tal
