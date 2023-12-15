@@ -277,6 +277,7 @@ por_lock(Varvara *v)
 		v->lock = 0;
 		v->x -= camera.x, v->y -= camera.y;
 	}
+	mouse_move(&v->u, &v->u.dev[0x90], 0x8000, 0x8000);
 	reqdraw |= 2;
 }
 
