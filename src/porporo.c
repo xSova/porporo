@@ -111,7 +111,7 @@ draw_window(Varvara *p)
 	Screen *scr = &p->screen;
 	int x, y, row, relrow, x2, y2, w = scr->w, h = scr->h, x1 = p->x, y1 = p->y;
 	if(!p->lock) {
-		x1 += camera.x, y1 += camera.y, color = palette[1 + action];
+		x1 += camera.x, y1 += camera.y, color = palette[(1 + action) & 0x3];
 		draw_borders(x1, y1, x1 + w, y1 + h, color);
 		if(p->clen) draw_connections(p, color);
 	}
@@ -229,12 +229,12 @@ por_pick(int x, int y, int force)
 }
 
 static void
-por_pickfocus(int x, int y, int force)
+por_pickfocus(int x, int y)
 {
 	int i;
 	for(i = olen - 1; i > -1; --i) {
 		Varvara *p = order[i];
-		if(por_within(p, x, y) && (!p->lock || force)) {
+		if(por_within(p, x, y) && (!p->lock || p == potato)) {
 			por_focus(p);
 			return;
 		}
@@ -298,7 +298,7 @@ static void
 por_setaction(enum Action a)
 {
 	Uint16 vector = PEEK2(&potato->u.ram[0x0000]);
-	action = a, reqdraw |= 1;
+	action = a & 0x3, reqdraw |= 1;
 	potato->u.ram[0x0002] = a;
 	uxn_eval(&potato->u, vector);
 }
@@ -383,10 +383,15 @@ on_mouse_move(int x, int y)
 	Uxn *u;
 	int relx = x - camera.x, rely = y - camera.y;
 	cursor.x = x, cursor.y = y, cursor.mode = 1, reqdraw |= 2;
-	if(action == DRAW)
+	/* potato override */
+	if(focused == potato) {
+		u = &focused->u;
+		mouse_move(u, &u->dev[0x90], relx - focused->x, rely - focused->y);
+		cursor.mode = 0;
+	} else if(action == DRAW)
 		return;
 	if(!drag.mode)
-		por_pickfocus(relx, rely, 0);
+		por_pickfocus(relx, rely);
 	if(!focused) {
 		if(drag.mode) {
 			camera.x += x - drag.x, camera.y += y - drag.y;
@@ -411,7 +416,7 @@ static void
 on_mouse_down(int button, int x, int y)
 {
 	Uxn *u;
-	if(!focused || action) {
+	if((!focused || action) && focused != potato) {
 		if(button > 1) {
 			por_menu(x - camera.x, y - camera.y);
 			return;
@@ -428,7 +433,7 @@ static void
 on_mouse_up(int button, int x, int y)
 {
 	Uxn *u;
-	if(!focused || action) {
+	if((!focused || action) && focused != potato) {
 		if(action == DRAW) {
 			Varvara *a = por_pick(drag.x - camera.x, drag.y - camera.y, 0);
 			Varvara *b = por_pick(x - camera.x, y - camera.y, 0);
