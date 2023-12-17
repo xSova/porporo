@@ -173,30 +173,28 @@ por_pop(Varvara *p)
 	olen--;
 }
 
-static int
-por_boot(Varvara *v, char *rom, int soft, int eval)
+static Varvara *
+por_init(Varvara *v, int eval)
 {
-	system_boot(&v->u, soft);
-	if(!system_load(v, &v->u, rom))
-		return 0;
 	screen_resize(&v->screen, 0x10, 0x10);
 	POKE2(&v->u.dev[0x22], WIDTH)
 	POKE2(&v->u.dev[0x24], HEIGHT)
 	if(eval)
 		uxn_eval(&v->u, PAGE_PROGRAM);
 	reqdraw |= 1;
-	return 1;
+	return v;
 }
 
 static Varvara *
 por_spawn(int id, char *rom, int eval)
 {
-	Varvara *p;
+	Varvara *v;
 	if(id == -1 || id > RAM_PAGES) return 0;
-	p = &varvaras[id];
-	p->u.id = id, p->u.ram = ram + id * 0x10000;
-	por_boot(p, rom, 0, eval);
-	return p;
+	v = &varvaras[id];
+	v->u.id = id, v->u.ram = ram + id * 0x10000;
+	system_boot(&v->u, 0);
+	system_load(v, &v->u, rom);
+	return por_init(v, eval);
 }
 
 static Varvara *
@@ -206,14 +204,9 @@ por_prefab(int id, Uint8 *rom, int length, int eval)
 	if(id == -1 || id > RAM_PAGES) return 0;
 	v = &varvaras[id];
 	v->u.id = id, v->u.ram = ram + id * 0x10000;
+	system_boot(&v->u, 0);
 	memcpy(v->u.ram + 0x0100, rom, length);
-	screen_resize(&v->screen, 0x10, 0x10);
-	POKE2(&v->u.dev[0x22], WIDTH)
-	POKE2(&v->u.dev[0x24], HEIGHT)
-	if(eval)
-		uxn_eval(&v->u, PAGE_PROGRAM);
-	reqdraw |= 1;
-	return v;
+	return por_init(v, eval);
 }
 
 static int
@@ -282,8 +275,11 @@ por_connect(Varvara *a, Varvara *b)
 static void
 por_restart(Varvara *v, int soft)
 {
-	if(v)
-		por_boot(v, v->rom, soft, 1);
+	if(v) {
+		system_boot(&v->u, soft);
+		system_load(v, &v->u, v->rom);
+		por_init(v, 1);
+	}
 }
 
 static void
