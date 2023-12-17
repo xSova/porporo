@@ -251,5 +251,5 @@
 
 @actions-lut [ =dict/default =dict/move =dict/draw ]
 
-~src/utils/potato.assets.tal
+~src/core/potato.assets.tal
 

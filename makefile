@@ -22,41 +22,41 @@ format:
 	@ clang-format -i src/porporo.c src/devices/*
 
 lint:
-	@ ${CLI} ~/roms/uxnlin.rom src/utils/menu.tal
-	@ ${CLI} ~/roms/uxnlin.rom src/utils/wallpaper.tal
-	@ ${CLI} ~/roms/uxnlin.rom src/utils/potato.tal
-	@ ${CLI} ~/roms/uxnlin.rom src/utils/log.tal
+	@ ${CLI} ~/roms/uxnlin.rom src/core/menu.tal
+	@ ${CLI} ~/roms/uxnlin.rom src/core/wallpaper.tal
+	@ ${CLI} ~/roms/uxnlin.rom src/core/potato.tal
+	@ ${CLI} ~/roms/uxnlin.rom src/core/log.tal
 
 clean:
 	@ rm -f bin/*
 	@ rm -f src/roms/*
 
-bin/uxnasm: src/uxnasm.c
+bin/uxnasm: src/utils/uxnasm.c
 	@ mkdir -p bin
-	@ cc ${RELEASE_flags} src/uxnasm.c -o ${ASM}
-
+	@ cc ${RELEASE_flags} src/utils/uxnasm.c -o ${ASM}
+	
 bin/uxncli: src/uxncli.c
 	@ mkdir -p src/roms
 	@ cc ${RELEASE_flags} ${SRC} src/uxncli.c -o ${CLI}
 
 bin/format-c.rom: src/utils/format-c.tal
 	@ ${ASM} src/utils/format-c.tal bin/format-c.rom
-
-src/roms/menu.c: bin/format-c.rom src/utils/menu.tal src/utils/menu.assets.tal
-	@ ${ASM} src/utils/menu.tal bin/menu.rom
+	
+src/roms/menu.c: bin/format-c.rom src/core/menu.tal src/core/menu.assets.tal
+	@ ${ASM} src/core/menu.tal bin/menu.rom
 	@ ${CLI} bin/format-c.rom bin/menu.rom > src/roms/menu.c
-
-src/roms/potato.c: bin/format-c.rom src/utils/potato.tal src/utils/potato.assets.tal
-	@ ${ASM} src/utils/potato.tal bin/potato.rom
+	
+src/roms/potato.c: bin/format-c.rom src/core/potato.tal src/core/potato.assets.tal
+	@ ${ASM} src/core/potato.tal bin/potato.rom
 	@ ${CLI} bin/format-c.rom bin/potato.rom > src/roms/potato.c
-
-src/roms/wallpaper.c: bin/format-c.rom src/utils/wallpaper.tal
-	@ ${ASM} src/utils/wallpaper.tal bin/wallpaper.rom
+	
+src/roms/wallpaper.c: bin/format-c.rom src/core/wallpaper.tal
+	@ ${ASM} src/core/wallpaper.tal bin/wallpaper.rom
 	@ ${CLI} bin/format-c.rom bin/wallpaper.rom > src/roms/wallpaper.c
-
+	
 bin/porporo: ${SRC} ${TMP} src/porporo.c
 	@ cc ${RELEASE_flags} ${SRC} src/porporo.c -L/usr/local/lib -lSDL2 -o bin/porporo
-
-bin/log.rom: src/utils/log.tal src/utils/log.assets.tal
-	@ ${ASM} src/utils/log.tal bin/log.rom
+	
+bin/log.rom: src/core/log.tal src/core/log.assets.tal
+	@ ${ASM} src/core/log.tal bin/log.rom
 	

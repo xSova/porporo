@@ -393,5 +393,5 @@
 	&rom-ext "rom $1
 	&empty "(empty) $1
 
-~src/utils/menu.assets.tal
+~src/core/menu.assets.tal
 
