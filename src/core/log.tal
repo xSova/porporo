@@ -1,3 +1,4 @@
+
 |00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
 |10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
 |20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
@@ -32,7 +33,7 @@
 	( name ) "Log(Porporo) 0a
 	( desc ) "Log 20 "Viewer 0a
 	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
-	( date ) "9 20 "Dec 20 "2023 $1
+	( date ) "17 20 "Dec 20 "2023 $1
 	( exts ) 00
 
 @on-console ( -> )
@@ -55,7 +56,7 @@
 	BRK
 
 @on-touch-sidebar ( -> )
-	.Mouse/y DEI2 #04 SFT2 NIP DUP #00 NEQ ?{ do-clear }
+	.Mouse/y DEI2 #04 SFT2 NIP DUP ?{ do-clear }
 	POP #00 .Mouse/state DEO
 	BRK
 
@@ -139,7 +140,6 @@
 		INCr STHkr #0f AND ?{ <draw-lb> }
 		INC2 LDAk ?&w
 	POP2 JMP2r
-	JMP2r
 
 @<draw-byte> ( byte -- )
 	DUP #04 SFT <draw-hex>
@@ -189,7 +189,6 @@
 		LDAk #20 GTH ?{
 			POP2 POP2r #01 JMP2r }
 		[ LIT2r 0008 ADD2r ] INC2 !&w
-	JMP2r
 	&fail POP2 POP2r #00 JMP2r
 
 @<draw-lb> ( -- )
