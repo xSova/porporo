@@ -133,7 +133,8 @@ static void
 por_focus(Varvara *a)
 {
 	if(focused == a) return;
-	if(focused) mouse_move(&focused->u, &focused->u.dev[0x90], 0x8000, 0x8000);
+	if(focused)
+		mouse_move(&focused->u, &focused->u.dev[0x90], 0x8000, 0x8000);
 	focused = a;
 }
 
@@ -148,7 +149,7 @@ por_raise(Varvara *v)
 		if(v == order[i]) {
 			a = order[i], b = order[last];
 			order[i] = b, order[last] = a;
-			reqdraw |= 1;
+			reqdraw = 1;
 			return;
 		}
 	}
@@ -158,7 +159,7 @@ static Varvara *
 por_push(Varvara *p, int x, int y, int lock)
 {
 	if(p) {
-		p->x = x, p->y = y, p->lock = lock, p->live = 1, reqdraw |= 1;
+		p->x = x, p->y = y, p->lock = lock, p->live = 1, reqdraw = 1;
 		order[olen++] = p;
 	}
 	return p;
@@ -168,7 +169,7 @@ static void
 por_pop(Varvara *p)
 {
 	if(!p) return;
-	p->clen = 0, p->live = 0, reqdraw |= 2;
+	p->clen = 0, p->live = 0, reqdraw = 1;
 	por_raise(p);
 	olen--;
 }
@@ -181,7 +182,7 @@ por_init(Varvara *v, int eval)
 	POKE2(&v->u.dev[0x24], HEIGHT)
 	if(eval)
 		uxn_eval(&v->u, PAGE_PROGRAM);
-	reqdraw |= 1;
+	reqdraw = 1;
 	return v;
 }
 
@@ -260,7 +261,7 @@ por_connect(Varvara *a, Varvara *b)
 {
 	int i;
 	if(a && b && a != b) {
-		reqdraw |= 2;
+		reqdraw = 1;
 		for(i = 0; i < a->clen; i++)
 			if(b == a->routes[i]) {
 				a->clen = 0;
@@ -291,7 +292,7 @@ por_lock(Varvara *v)
 		v->x -= camera.x, v->y -= camera.y;
 	}
 	mouse_move(&v->u, &v->u.dev[0x90], 0x8000, 0x8000);
-	reqdraw |= 2;
+	reqdraw = 1;
 }
 
 static void
@@ -300,7 +301,7 @@ por_center(Varvara *v)
 	if(!v || v->lock) return;
 	v->x = -camera.x + WIDTH / 2 - v->screen.w / 2;
 	v->y = -camera.y + HEIGHT / 2 - v->screen.h / 2;
-	reqdraw |= 2;
+	reqdraw = 1;
 }
 
 static void
@@ -314,7 +315,7 @@ static void
 por_setaction(enum Action a)
 {
 	Uint16 vector = PEEK2(&potato->u.ram[0x0000]);
-	action = a & 0x3, reqdraw |= 1;
+	action = a & 0x3, reqdraw = 1;
 	potato->u.ram[0x0002] = a;
 	uxn_eval(&potato->u, vector);
 }
@@ -398,7 +399,7 @@ on_mouse_move(int x, int y)
 {
 	Uxn *u;
 	int relx = x - camera.x, rely = y - camera.y;
-	cursor.x = x, cursor.y = y, cursor.mode = 1, reqdraw |= 2;
+	cursor.x = x, cursor.y = y, cursor.mode = 1, reqdraw = 1;
 	if(focused == potato) {
 		mouse_move(&potato->u, &potato->u.dev[0x90], x - potato->x, y - potato->y);
 		cursor.mode = 0;
@@ -472,7 +473,7 @@ on_mouse_wheel(int x, int y)
 {
 	Uxn *u;
 	if(!focused) {
-		camera.x += x << 4, camera.y -= y << 4, reqdraw |= 2;
+		camera.x += x << 4, camera.y -= y << 4, reqdraw = 1;
 		return;
 	}
 	u = &focused->u;
@@ -591,9 +592,9 @@ on_controller_up(Uint8 button)
 /* =============================================== */
 
 static void
-quit(void)
+emu_end(void)
 {
-	free(pixels);
+	free(ram), free(pixels);
 	SDL_DestroyTexture(gTexture), gTexture = NULL;
 	SDL_DestroyRenderer(gRenderer), gRenderer = NULL;
 	SDL_DestroyWindow(gWindow), gWindow = NULL;
@@ -674,22 +675,22 @@ main(int argc, char **argv)
 {
 	int i, anchor = 0;
 	Uint32 begintime = 0, endtime = 0, delta = 0;
+	/* Read flags */
 	if(argc == 2 && argv[1][0] == '-' && argv[1][1] == 'v')
-		return !fprintf(stdout, "Porporo - Varvara Multiplexer, 13 Dec 2023.\n");
+		return !fprintf(stdout, "Porporo - Varvara Multiplexer, 17 Dec 2023.\n");
 	if(!init())
 		return system_error("Init", "Failure");
-	/* prepare boot */
+	/* Boot */
 	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, 1);
 	load_theme();
 	menu = por_prefab(0, menu_rom, sizeof(menu_rom), 0);
 	wallpaper = por_push(por_prefab(1, wallpaper_rom, sizeof(wallpaper_rom), 1), 0, 0, 1);
 	potato = por_push(por_prefab(2, potato_rom, sizeof(potato_rom), 1), 0x10, 0x10, 1);
-	/* load from arguments */
 	for(i = 1; i < argc; i++) {
 		Varvara *a = por_push(por_spawn(i + 2, argv[i], 1), anchor + 0x12, 0x38, 0);
 		anchor += a->screen.w + 0x10;
 	}
-	/* event loop */
+	/* Game Loop */
 	while(1) {
 		SDL_Event e;
 		if(!begintime)
@@ -700,7 +701,7 @@ main(int argc, char **argv)
 			SDL_Delay(30 - delta);
 		while(SDL_PollEvent(&e) != 0) {
 			switch(e.type) {
-			case SDL_QUIT: quit(); break;
+			case SDL_QUIT: emu_end(); break;
 			case SDL_MOUSEWHEEL: on_mouse_wheel(e.wheel.x, e.wheel.y); break;
 			case SDL_MOUSEMOTION: on_mouse_move(e.motion.x, e.motion.y); break;
 			case SDL_MOUSEBUTTONDOWN: on_mouse_down(SDL_BUTTON(e.button.button), e.motion.x, e.motion.y); break;
@@ -708,10 +709,10 @@ main(int argc, char **argv)
 			case SDL_TEXTINPUT: on_controller_input(e.text.text[0]); break;
 			case SDL_KEYDOWN: on_controller_down(get_key(&e), get_button(&e), get_fkey(&e)); break;
 			case SDL_KEYUP: on_controller_up(get_button(&e)); break;
-			case SDL_WINDOWEVENT: reqdraw |= 1; break;
+			case SDL_WINDOWEVENT: reqdraw = 1; break;
 			}
 		}
-		/* screen vector */
+		/* Screen Vector */
 		for(i = 0; i < olen; i++) {
 			Varvara *v = order[i];
 			Uxn *u = &v->u;
@@ -721,13 +722,15 @@ main(int argc, char **argv)
 				uxn_eval(u, vector);
 			if(v->screen.x2) {
 				screen_redraw(&v->screen);
-				reqdraw |= 1;
+				reqdraw = 1;
 			}
 		}
-		/* draw */
+		/* Draw */
 		if(reqdraw) {
-			for(i = 0; i < olen; i++) draw_window(order[i]);
-			if(cursor.mode) draw_icn(cursor.x, cursor.y, &cursor_icn[action * 8], palette[1 + action]);
+			for(i = 0; i < olen; i++)
+				draw_window(order[i]);
+			if(cursor.mode)
+				draw_icn(cursor.x, cursor.y, &cursor_icn[action * 8], palette[1 + action]);
 			SDL_UpdateTexture(gTexture, NULL, pixels, WIDTH * sizeof(Uint32));
 			SDL_RenderCopy(gRenderer, gTexture, NULL, NULL);
 			SDL_RenderPresent(gRenderer);
@@ -736,6 +739,6 @@ main(int argc, char **argv)
 		begintime = endtime;
 		endtime = SDL_GetTicks();
 	}
-	quit();
+	emu_end();
 	return 0;
 }

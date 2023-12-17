@@ -19,7 +19,8 @@ static char *
 scpy(char *src, char *dst, int len)
 {
 	int i = 0;
-	while((dst[i] = src[i]) && i < len - 2) i++;
+	while((dst[i] = src[i]) && i < len - 2)
+		i++;
 	dst[i] = 0;
 	return dst;
 }
@@ -81,7 +82,7 @@ system_boot_rom(Varvara *v, Uxn *u, char *filename, int soft)
 	FILE *f = fopen(filename, "rb");
 	system_zero(u, soft);
 	if(!f)
-		return system_error("Init", "Failed to load rom.");
+		return system_error("Boot failed", filename);
 	l = fread(&u->ram[PAGE_PROGRAM], 0x10000 - PAGE_PROGRAM, 1, f);
 	while(l && ++i < RAM_PAGES)
 		l = fread(u->ram + 0x10000 * i, 0x10000, 1, f);

@@ -71,7 +71,8 @@ main(int argc, char **argv)
 		return system_error("usage", "uxncli [-v] file.rom [args..]");
 	/* Read flags */
 	if(argv[i][0] == '-' && argv[i][1] == 'v')
-		return !fprintf(stdout, "Porporo - Console Varvara Emulator, 15 Dec 2023.\n");
+		return !fprintf(stdout, "Uxncli - Varvara Emulator(Porporo ver.), 17 Dec 2023.\n");
+	/* Boot */
 	v.u.ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, 1);
 	if(!system_boot_rom(&v, &v.u, argv[i++], 0))
 		return system_error("Init", "Failed to initialize uxn.");
