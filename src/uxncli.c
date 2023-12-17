@@ -18,7 +18,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
 WITH REGARD TO THIS SOFTWARE.
 */
 
-static Varvara varvara;
+static Varvara v;
 
 Uint8
 emu_dei(Uxn *u, Uint8 addr)
@@ -33,13 +33,13 @@ emu_dei(Uxn *u, Uint8 addr)
 void
 emu_deo(Uxn *u, Uint8 addr, Uint8 value)
 {
-	Uint8 p = addr & 0x0f, d = addr & 0xf0;
+	Uint8 d = addr & 0xf0;
 	u->dev[addr] = value;
 	switch(d) {
-	case 0x00: system_deo(u, &u->dev[d], p); break;
-	case 0x10: console_deo(&u->dev[d], p); break;
-	case 0xa0: file_deo(0, u->ram, &u->dev[d], p); break;
-	case 0xb0: file_deo(1, u->ram, &u->dev[d], p); break;
+	case 0x00: system_deo(u, &u->dev[d], addr & 0x0f); break;
+	case 0x10: console_deo(&u->dev[d], addr & 0x0f); break;
+	case 0xa0: file_deo(0, u->ram, &u->dev[d], addr & 0x0f); break;
+	case 0xb0: file_deo(1, u->ram, &u->dev[d], addr & 0x0f); break;
 	}
 }
 
@@ -72,15 +72,14 @@ main(int argc, char **argv)
 	/* Read flags */
 	if(argv[i][0] == '-' && argv[i][1] == 'v')
 		return !fprintf(stdout, "Porporo - Console Varvara Emulator, 15 Dec 2023.\n");
-	varvara.u.ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
-	system_boot(&varvara.u, 0);
-	if(!system_load(&varvara, &varvara.u, argv[i++]))
+	v.u.ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, 1);
+	if(!system_boot_rom(&v, &v.u, argv[i++], 0))
 		return system_error("Init", "Failed to initialize uxn.");
 	/* Game Loop */
-	varvara.u.dev[0x17] = argc - i;
-	if(uxn_eval(&varvara.u, PAGE_PROGRAM)) {
-		console_listen(&varvara.u, i, argc, argv);
-		emu_run(&varvara.u);
+	v.u.dev[0x17] = argc - i;
+	if(uxn_eval(&v.u, PAGE_PROGRAM)) {
+		console_listen(&v.u, i, argc, argv);
+		emu_run(&v.u);
 	}
-	return emu_end(&varvara.u);
+	return emu_end(&v.u);
 }

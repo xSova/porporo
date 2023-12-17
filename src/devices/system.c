@@ -38,6 +38,13 @@ system_print(Stack *s, char *name)
 	fprintf(stderr, "\n");
 }
 
+void
+system_inspect(Uxn *u)
+{
+	system_print(&u->wst, "wst");
+	system_print(&u->rst, "rst");
+}
+
 int
 system_error(char *msg, const char *err)
 {
@@ -46,11 +53,33 @@ system_error(char *msg, const char *err)
 	return 0;
 }
 
+static void
+system_zero(Uxn *u, int soft)
+{
+	int i;
+	for(i = PAGE_PROGRAM * soft; i < 0x10000; i++)
+		u->ram[i] = 0;
+	for(i = 0x0; i < 0x100; i++)
+		u->dev[i] = 0;
+	u->wst.ptr = u->rst.ptr = 0;
+}
+
 int
-system_load(Varvara *v, Uxn *u, char *filename)
+system_boot_img(Uxn *u, Uint8 *img, int length, int soft)
+{
+	int i;
+	system_zero(u, soft);
+	for(i = 0; i < length; i++)
+		u->ram[i + PAGE_PROGRAM] = img[i];
+	return 1;
+}
+
+int
+system_boot_rom(Varvara *v, Uxn *u, char *filename, int soft)
 {
 	int l, i = 0;
 	FILE *f = fopen(filename, "rb");
+	system_zero(u, soft);
 	if(!f)
 		return system_error("Init", "Failed to load rom.");
 	l = fread(&u->ram[PAGE_PROGRAM], 0x10000 - PAGE_PROGRAM, 1, f);
@@ -59,25 +88,6 @@ system_load(Varvara *v, Uxn *u, char *filename)
 	fclose(f);
 	scpy(filename, v->rom, 0x40);
 	return 1;
-}
-
-void
-system_boot(Uxn *u, int soft)
-{
-	int i;
-	for(i = 0x100 * soft; i < 0x10000; i++)
-		u->ram[i] = 0;
-	for(i = 0x0; i < 0x100; i++)
-		u->dev[i] = 0;
-	u->wst.ptr = 0;
-	u->rst.ptr = 0;
-}
-
-void
-system_inspect(Uxn *u)
-{
-	system_print(&u->wst, "wst");
-	system_print(&u->rst, "rst");
 }
 
 /* IO */

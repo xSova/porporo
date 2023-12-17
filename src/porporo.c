@@ -192,8 +192,7 @@ por_spawn(int id, char *rom, int eval)
 	if(id == -1 || id > RAM_PAGES) return 0;
 	v = &varvaras[id];
 	v->u.id = id, v->u.ram = ram + id * 0x10000;
-	system_boot(&v->u, 0);
-	system_load(v, &v->u, rom);
+	system_boot_rom(v, &v->u, rom, 0);
 	return por_init(v, eval);
 }
 
@@ -204,8 +203,7 @@ por_prefab(int id, Uint8 *rom, int length, int eval)
 	if(id == -1 || id > RAM_PAGES) return 0;
 	v = &varvaras[id];
 	v->u.id = id, v->u.ram = ram + id * 0x10000;
-	system_boot(&v->u, 0);
-	memcpy(v->u.ram + 0x0100, rom, length);
+	system_boot_img(&v->u, rom, length, 0);
 	return por_init(v, eval);
 }
 
@@ -276,8 +274,7 @@ static void
 por_restart(Varvara *v, int soft)
 {
 	if(v) {
-		system_boot(&v->u, soft);
-		system_load(v, &v->u, v->rom);
+		system_boot_rom(v, &v->u, v->rom, soft);
 		por_init(v, 1);
 	}
 }
@@ -682,7 +679,7 @@ main(int argc, char **argv)
 	if(!init())
 		return system_error("Init", "Failure");
 	/* prepare boot */
-	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, sizeof(Uint8));
+	ram = (Uint8 *)calloc(0x10000 * RAM_PAGES, 1);
 	load_theme();
 	menu = por_prefab(0, menu_rom, sizeof(menu_rom), 0);
 	wallpaper = por_push(por_prefab(1, wallpaper_rom, sizeof(wallpaper_rom), 1), 0, 0, 1);

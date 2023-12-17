@@ -15,10 +15,10 @@ WITH REGARD TO THIS SOFTWARE.
 
 #define RAM_PAGES 0x10
 
-int system_error(char *msg, const char *err);
-int system_load(Varvara *v, Uxn *u, char *filename);
-void system_boot(Uxn *u, int soft);
 void system_inspect(Uxn *u);
+int system_error(char *msg, const char *err);
+int system_boot_img(Uxn *u, Uint8 *img, int length, int soft);
+int system_boot_rom(Varvara *v, Uxn *u, char *filename, int soft);
 
 Uint8 system_dei(Uxn *u, Uint8 addr);
 void system_deo(Uxn *u, Uint8 *d, Uint8 port);
