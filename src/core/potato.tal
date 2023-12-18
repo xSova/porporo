@@ -45,16 +45,16 @@
 	.Mouse/state DEI ?&on-touch
 	BRK
 	&on-touch ( -> )
-		#00 .Mouse/state DEO
+		[ LIT2 00 -Mouse/state ] DEO
 		.Mouse/x DEI2 #0004 SUB2 #04 SFT2 NIP
 		( ) DUP #02 GTH ?{ <set-action>
 			BRK }
 		POP BRK
 
 @<set-action> ( action -- )
-	#fe .Console/type DEO
+	[ LIT2 fe -Console/type ] DEO
 	#03 AND .Console/write DEO
-	#00 .Console/type DEO
+	[ LIT2 00 -Console/type ] DEO
 	#40 ;fill-icn <update-cursor>
 	JMP2r
 
@@ -75,25 +75,24 @@
 @|drawing )
 
 @<redraw> ( -- )
-	#0000 .Screen/x DEO2
-	#0000 .Screen/y DEO2
-	#80 .Screen/pixel DEO
+	#0000 DUP2 .Screen/x DEO2
+	.Screen/y DEO2
+	[ LIT2 80 -Screen/pixel ] DEO
 	( | frame )
 	#0004 .Screen/y DEO2
-	#0004 #00 .action/value LDZ #40 SFT2 ADD2 .Screen/x DEO2
-	#11 .Screen/auto DEO
+	#0004 [ LIT2 00 -action/value ] LDZ #40 SFT2 ADD2 .Screen/x DEO2
+	[ LIT2 11 -Screen/auto ] DEO
 	;fill-icn .Screen/addr DEO2
 	.action/value LDZ INC #05 MUL .Screen/sprite DEOk DEO
 	( | icons )
-	#04 .Screen/auto DEO
+	[ LIT2 04 -Screen/auto ] DEO
 	#0008 .Screen/y DEO2
 	;actions-icn .Screen/addr DEO2
 	#0008 .Screen/x DEO2
-	#05 .action/value LDZ #00 NEQ MUL .Screen/sprite DEO
+	[ LIT2 05 -action/value ] LDZ #00 NEQ MUL .Screen/sprite DEO
 	#0018 .Screen/x DEO2
-	#05 .Screen/sprite DEO
-	#0028 .Screen/x DEO2
-	#05 .Screen/sprite DEO
+	[ LIT2 05 -Screen/sprite ] DEOk #0028 .Screen/x DEO2
+	DEO
 	( | misc )
 	#0040 .Screen/x DEO2
 	#0006 .Screen/y DEO2
@@ -104,7 +103,7 @@
 
 @<draw-button> ( color -- )
 	;fill-icn .Screen/addr DEO2
-	#21 .Screen/auto DEO
+	[ LIT2 21 -Screen/auto ] DEO
 	.action/value LDZ INC .Screen/sprite DEOk DEO
 	JMP2r
 
@@ -147,7 +146,7 @@
 	POP2r POP2 POP2 JMP2r
 
 @<draw-uf2> ( addr* -- )
-	#15 .Screen/auto DEO
+	[ LIT2 15 -Screen/auto ] DEO
 	&w ( -- )
 		LDAk #1f GTH ?{ POP2 JMP2r }
 		LDAk <draw-char>
@@ -161,7 +160,7 @@
 	#20 SUB #00 SWP
 	( ) DUP2 #50 SFT2 ;font-uf2/glyphs ADD2 .Screen/addr DEO2
 	( ) ;font-uf2 ADD2 LDA #00 SWP .Screen/x DEI2 ADD2
-	( ) [ LIT &color 05 ] .Screen/sprite DEOk DEO
+	( ) [ LIT2 &color 05 -Screen/sprite ] DEOk DEO
 	.Screen/x DEO2
 	JMP2r
 
