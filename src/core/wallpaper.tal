@@ -20,7 +20,7 @@
 	( | fill screen )
 	.Screen/width DEI2 #03 SFT2 NIP
 	( ) .Screen/height DEI2 #03 SFT2 NIP <set-size>
-	( ) #83 .Screen/pixel DEO
+	( ) [ LIT2 83 -Screen/pixel ] DEO
 	( | default file )
 	.Console/type DEI ?{ <load-default> }
 	;await-src .Console/vector DEO2
@@ -30,7 +30,7 @@
 	( name ) "Wallpaper(Porporo) 0a
 	( desc ) "Image 20 "Viewer 0a
 	( auth ) "By 20 "Devine 20 "Lu 20 "Linvega 0a
-	( date ) "1 20 "Dec 20 "2023 $1
+	( date ) "18 20 "Dec 20 "2023 $1
 	( exts ) 00
 
 @await-src ( -> )
@@ -68,10 +68,10 @@
 	.File/name DEO2
 	#0000 DUP2 .Screen/x DEO2
 	.Screen/y DEO2
-	#80 .Screen/pixel DEO
-	#05 .Screen/auto DEO
+	[ LIT2 80 -Screen/pixel ] DEO
+	[ LIT2 05 -Screen/auto ] DEO
 	#0c ;<draw-row>/blend STA
-	#00 .size/w LDZ #30 SFT2 DUP2 .1bpp LDZ ?{
+	[ LIT2 00 -size/w ] LDZ #30 SFT2 DUP2 .1bpp LDZ ?{
 		#85 ;<draw-row>/blend STA
 		#10 SFT2 }
 	.File/length DEO2

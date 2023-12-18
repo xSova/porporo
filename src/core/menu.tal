@@ -3,7 +3,7 @@
 |20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
 |80 @Controller &vector $2 &button $1 &key $1
 |90 @Mouse &vector $2 &x $2 &y $2 &state $1 &chord $1 &pad $4 &scrolly &scrolly-hb $1 &scrolly-lb $1
-|a0 @File &vector $2 &success $2 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
+|a0 @File &vector $2 &success $1 &success-lb $1 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
 
 |0000
 
@@ -24,7 +24,7 @@
 	;dict/home-path set-path <refresh-dir>
 	;on-mouse .Mouse/vector DEO2
 	;on-control .Controller/vector DEO2
-	( #010e DEO ) BRK
+	BRK
 
 @meta $1
 	( name ) "Menu(Porporo) 0a
@@ -40,7 +40,7 @@
 		BRK }
 	#01 GTH .selection/mod STZ
 	<pick>
-	#00 .Mouse/state DEO
+	[ LIT2 00 -Mouse/state ] DEO
 	BRK
 
 @<y-id> ( y* -- id )
@@ -49,8 +49,8 @@
 	DUP2 #8000 GTH2 ?&outside
 	( | spacer )
 	has-spacer #00 EQU ?{
-		DUP2 #00 .lines/folders LDZ #40 SFT2 SUB2 #0008 LTH2 ?&outside
-		DUP2 #00 .lines/folders LDZ #40 SFT2 GTH2 #00 SWP #30 SFT2 SUB2 }
+		DUP2 [ LIT2 00 -lines/folders ] LDZ #40 SFT2 SUB2 #0008 LTH2 ?&outside
+		DUP2 [ LIT2 00 -lines/folders ] LDZ #40 SFT2 GTH2 #00 SWP #30 SFT2 SUB2 }
 	#04 SFT2 NIP
 	( | below )
 	DUP count-lines LTH ?{ POP #ff JMP2r }
@@ -82,9 +82,9 @@
 	#0800 .File/length DEO2
 	;mem/dir .File/read DEO2
 	( | clean )
-	#00 .lines/folders STZ
-	#00 .lines/roms STZ
-	#00 .lines/misc STZ
+	[ LIT2 00 -lines/folders ] STZ
+	[ LIT2 00 -lines/roms ] STZ
+	[ LIT2 00 -lines/misc ] STZ
 	( | parse )
 	;mem/dir
 	&w ( -- )
@@ -104,22 +104,22 @@
 	#0005 ADD2 LDAk [ LIT ". ] EQU ?&hidden
 	is-folder ?&folder
 	is-rom ?&rom
-	;mem/misc #00 .lines/misc LDZ #40 SFT2 ADD2 <lcpy>
+	;mem/misc [ LIT2 00 -lines/misc ] LDZ #40 SFT2 ADD2 <lcpy>
 	.lines/misc LDZ INC .lines/misc STZ
 	JMP2r
 	&folder ( line* -- )
-		;mem/folders #00 .lines/folders LDZ #40 SFT2 ADD2 <lcpy>
+		;mem/folders [ LIT2 00 -lines/folders ] LDZ #40 SFT2 ADD2 <lcpy>
 		.lines/folders LDZ INC .lines/folders STZ
 		JMP2r
 	&rom ( line* -- )
-		;mem/roms #00 .lines/roms LDZ #40 SFT2 ADD2 <lcpy>
+		;mem/roms [ LIT2 00 -lines/roms ] LDZ #40 SFT2 ADD2 <lcpy>
 		.lines/roms LDZ INC .lines/roms STZ
 		JMP2r
 	&hidden ( line* -- )
 		POP2 JMP2r
 
 @<move> ( mod -- )
-	.selection LDZ ADD DUP #ff NEQ ?{
+	.selection LDZ ADD INCk ?{
 		POP count-lines #01 SUB !<select> }
 	count-lines DIVk MUL SUB
 	( >> )
@@ -144,21 +144,21 @@
 
 @<send-path> ( file* -- )
 	.selection/mod LDZ ?&special
-	#ff .Console/type DEO
+	[ LIT2 ff -Console/type ] DEO
 	;path <pstr>
 	<pstr>/
 	#0a18 DEO
 	!<exit>
 	&special ( file* -- )
-		#01 .Console/type DEO
+		[ LIT2 01 -Console/type ] DEO
 		;path <pstr>
 		<pstr>/
 		#0a18 DEO
 		JMP2r
 
 @<send-file> ( file* -- )
+	[ LIT2 01 -Console/type ] DEO
 	.selection/mod LDZ ?&special
-	#01 .Console/type DEO
 	;path ;mem/filepath STH2k <scpy>
 	STH2kr scap/ <scpy>
 	STH2r .File/name DEO2
@@ -166,10 +166,9 @@
 	&s ( -- )
 		;&b .File/read DEO2
 		[ LIT2 &b $1 18 ] DEO
-		.File/success DEI2 NIP ?&s
+		.File/success-lb DEI ?&s
 	JMP2r
 	&special ( file* -- )
-		#01 .Console/type DEO
 		;path <pstr>
 		<pstr>/
 		#0a18 DEO
@@ -248,7 +247,7 @@
 	( | clear )
 	#0000 DUP2 .Screen/x DEO2
 	.Screen/y DEO2
-	#80 .Screen/pixel DEO
+	[ LIT2 80 -Screen/pixel ] DEO
 	( | highlight )
 	.selection LDZ <draw-highlight>
 	( | content )
@@ -268,14 +267,14 @@
 @<draw-spacer> ( -- )
 	#0000 .Screen/x DEO2
 	;dash-icn .Screen/addr DEO2
-	#f2 .Screen/auto DEO
-	#05 .Screen/sprite DEO
+	[ LIT2 f2 -Screen/auto ] DEO
+	[ LIT2 05 -Screen/sprite ] DEO
 	JMP2r
 
 @<draw-highlight> ( id -- )
 	( empty ) count-lines ?{ POP JMP2r }
 	;fill-icn .Screen/addr DEO2
-	#f2 .Screen/auto DEO
+	[ LIT2 f2 -Screen/auto ] DEO
 	#0000 .Screen/x DEO2
 	STH
 	( lines ) #00 STHkr #40 SFT2
@@ -300,7 +299,7 @@
 
 @<draw-uf2> ( addr* color -- )
 	,&color STR
-	#15 .Screen/auto DEO
+	[ LIT2 15 -Screen/auto ] DEO
 	&w ( -- )
 		LDAk #1f GTH ?{ POP2 JMP2r }
 		LDAk #20 SUB #00 SWP
@@ -369,16 +368,20 @@
 @|theme )
 
 @<load-theme> ( -- )
-	;&path .File/name DEO2
+	;&file .File/name DEO2
 	#0002 .File/length DEO2
-	[ LIT2 -System/debug -System/r ]
-	&l ( -- )
-		;&buf .File/read DEO2
-		.File/success DEI2 #0000 EQU2 ?{
-			STHk [ LIT2 &buf $2 ] STHr DEO2
-			INC INC NEQk ?&l }
-	POP2 JMP2r
-	&path ".theme $1
+	;&r .File/read DEO2
+	;&g .File/read DEO2
+	;&b .File/read DEO2
+	.File/success DEI2 ORA ?{ JMP2r }
+	[ LIT2 &r $2 ]
+	.System/r DEO2
+	[ LIT2 &g $2 ]
+	.System/g DEO2
+	[ LIT2 &b $2 ]
+	.System/b DEO2
+	JMP2r
+	&file ".theme $1
 
 (
 @|assets )
