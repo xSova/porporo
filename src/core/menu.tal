@@ -60,7 +60,7 @@
 
 @on-control ( -> )
 	( | mod )
-	.Controller/button DEI #04 AND #00 NEQ .selection/mod STZ
+	[ LIT2 04 -Controller/button ] DEI AND #00 NEQ .selection/mod STZ
 	( | key )
 	.Controller/key DEI
 	( esc ) DUP #1b NEQ ?{ <escape> }
@@ -373,7 +373,7 @@
 	[ LIT2 -System/debug -System/r ]
 	&l ( -- )
 		;&buf .File/read DEO2
-		.File/success-lb DEI #00 EQU ?{
+		[ LIT2 00 -File/success-lb ] DEI EQU ?{
 			[ LIT2r &buf $2 ] STHk DEO2r
 			INC INC NEQk ?&l }
 	POP2 JMP2r

@@ -204,7 +204,7 @@
 	[ LIT2 -System/debug -System/r ]
 	&l ( -- )
 		;&buf .File/read DEO2
-		.File/success-lb DEI #00 EQU ?{
+		[ LIT2 00 -File/success-lb ] DEI EQU ?{
 			[ LIT2r &buf $2 ] STHk DEO2r
 			INC INC NEQk ?&l }
 	POP2 JMP2r
