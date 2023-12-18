@@ -1,7 +1,7 @@
 |00 @System &vector $2 &expansion $2 &wst $1 &rst $1 &metadata $2 &r $2 &g $2 &b $2 &debug $1 &state $1
 |10 @Console &vector $2 &read $1 &pad $4 &type $1 &write $1 &error $1
 |20 @Screen &vector $2 &width $2 &height $2 &auto $1 &pad $1 &x $2 &y $2 &addr $2 &pixel $1 &sprite $1
-|a0 @File &vector $2 &success $2 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
+|a0 @File &vector $2 &success $1 &success-lb $1 &stat $2 &delete $1 &append $1 &name $2 &length $2 &read $2 &write $2
 
 |0000
 
@@ -145,8 +145,9 @@
 	#0002 .File/length DEO2
 	[ LIT2 -System/debug -System/r ]
 	&l ( -- )
-		;&buf feof ?{
-			STHk [ LIT2 &buf $2 ] STHr DEO2
+		;&buf .File/read DEO2
+		.File/success-lb DEI #00 EQU ?{
+			[ LIT2r &buf $2 ] STHk DEO2r
 			INC INC NEQk ?&l }
 	POP2 JMP2r
 	&path ".theme $1
