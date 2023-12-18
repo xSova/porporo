@@ -17,11 +17,12 @@ WITH REGARD TO THIS SOFTWARE.
 
 /* c = !ch ? (color % 5 ? color >> 2 : 0) : color % 4 + ch == 1 ? 0 : (ch - 2 + (color & 3)) % 3 + 1; */
 
-static Uint8 blending[4][16] = {
+static Uint8 blending[][16] = {
 	{0, 0, 0, 0, 1, 0, 1, 1, 2, 2, 0, 2, 3, 3, 3, 0},
 	{0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3},
 	{1, 2, 3, 1, 1, 2, 3, 1, 1, 2, 3, 1, 1, 2, 3, 1},
-	{2, 3, 1, 2, 2, 3, 1, 2, 2, 3, 1, 2, 2, 3, 1, 2}};
+	{2, 3, 1, 2, 2, 3, 1, 2, 2, 3, 1, 2, 2, 3, 1, 2},
+	{1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0}};
 
 void
 screen_change(Screen *scr, Uint16 x1, Uint16 y1, Uint16 x2, Uint16 y2)
@@ -65,15 +66,15 @@ screen_rect(Screen *scr, Uint8 *layer, Uint16 x1, Uint16 y1, Uint16 x2, Uint16 y
 static void
 screen_2bpp(Screen *scr, Uint8 *layer, Uint8 *addr, Uint16 x1, Uint16 y1, Uint16 color, int fx, int fy)
 {
-	int row, w = scr->w, h = scr->h, opaque = (color % 5);
+	int w = scr->w, h = scr->h, opaque = blending[4][color];
 	Uint16 y, ymod = (fy < 0 ? 7 : 0), ymax = y1 + ymod + fy * 8;
 	Uint16 x, xmod = (fx > 0 ? 7 : 0), xmax = x1 + xmod - fx * 8;
 	for(y = y1 + ymod; y != ymax; y += fy) {
-		int c = *addr++ | (*(addr + 7) << 8);
+		int c = *addr++ | (*(addr + 7) << 8), row = y * w;
 		if(y < h)
-			for(x = x1 + xmod, row = y * w; x != xmax; x -= fx, c >>= 1) {
+			for(x = x1 + xmod; x != xmax; x -= fx, c >>= 1) {
 				Uint8 ch = (c & 1) | ((c >> 7) & 2);
-				if((opaque || ch) && x < w)
+				if(x < w && (opaque || ch))
 					layer[x + row] = blending[ch][color];
 			}
 	}
@@ -82,15 +83,15 @@ screen_2bpp(Screen *scr, Uint8 *layer, Uint8 *addr, Uint16 x1, Uint16 y1, Uint16
 static void
 screen_1bpp(Screen *scr, Uint8 *layer, Uint8 *addr, Uint16 x1, Uint16 y1, Uint16 color, int fx, int fy)
 {
-	int row, w = scr->w, h = scr->h, opaque = (color % 5);
+	int w = scr->w, h = scr->h, opaque = blending[4][color];
 	Uint16 y, ymod = (fy < 0 ? 7 : 0), ymax = y1 + ymod + fy * 8;
 	Uint16 x, xmod = (fx > 0 ? 7 : 0), xmax = x1 + xmod - fx * 8;
 	for(y = y1 + ymod; y != ymax; y += fy) {
-		int c = *addr++;
+		int c = *addr++, row = y * w;
 		if(y < h)
-			for(x = x1 + xmod, row = y * w; x != xmax; x -= fx, c >>= 1) {
+			for(x = x1 + xmod; x != xmax; x -= fx, c >>= 1) {
 				Uint8 ch = c & 1;
-				if((opaque || ch) && x < w)
+				if(x < w && (opaque || ch))
 					layer[x + row] = blending[ch][color];
 			}
 	}
