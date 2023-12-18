@@ -55,11 +55,11 @@ draw_pixel(int x, int y, Uint32 color)
 static void
 draw_icn(int x, int y, Uint8 *sprite, Uint32 color)
 {
-	int v, h;
-	for(v = 0; v < 8; v++)
+	int y2 = y + 8, h;
+	for(; y < y2; y++, sprite++)
 		for(h = 0; h < 8; h++)
-			if((sprite[v] >> (7 - h)) & 0x1)
-				draw_pixel(x + h, y + v, color);
+			if(*sprite << h & 0x80)
+				draw_pixel(x + h, y, color);
 }
 
 static void
