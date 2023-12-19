@@ -46,9 +46,9 @@ static SDL_Texture *gTexture = NULL;
 /* = DRAWING ===================================== */
 
 static void
-draw_pixel(int x, int y, Uint32 color)
+draw_pixel(unsigned int x, unsigned int y, Uint32 color)
 {
-	if(x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT)
+	if(x < WIDTH && y < HEIGHT)
 		pixels[y * WIDTH + x] = color;
 }
 
@@ -631,7 +631,7 @@ void
 graph_deo(Varvara *a, Uint8 addr, Uint8 value)
 {
 	int i;
-	if(addr == 0x18) {
+	if(addr == 0x18 || addr == 0x19) {
 		if(!a->clen)
 			send_msg(0, a->u.dev[0x17], value);
 		else
@@ -677,7 +677,7 @@ main(int argc, char **argv)
 	Uint32 begintime = 0, endtime = 0, delta = 0;
 	/* Read flags */
 	if(argc == 2 && argv[1][0] == '-' && argv[1][1] == 'v')
-		return !fprintf(stdout, "Porporo - Varvara Multiplexer, 17 Dec 2023.\n");
+		return !fprintf(stdout, "Porporo - Varvara Multiplexer, 18 Dec 2023.\n");
 	if(!init())
 		return system_error("Init", "Failure");
 	/* Boot */
