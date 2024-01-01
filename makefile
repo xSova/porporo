@@ -5,6 +5,11 @@ DEBUG_flags=-std=c89 -DDEBUG -Wall -Wno-unknown-pragmas -Wpedantic -Wshadow -Wex
 ASM=bin/uxnasm
 CLI=bin/uxncli
 
+ifeq ($(shell uname), Darwin)
+	RELEASE_flags += -D_DARWIN_C_SOURCE
+	DEBUG_flags += -D_DARWIN_C_SOURCE
+endif
+
 .PHONY: all dest run lint install uninstall format clean
 
 all: bin/uxnasm bin/uxncli bin/porporo
