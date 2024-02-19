@@ -291,7 +291,7 @@
 	#0008 .Screen/x DEO2
 	#00 SWP2 ,&t STR2
 	&l ( -- )
-		#00 OVR #40 SFT [ LIT2 &t $2 ] ADD2 [ LIT &color $1 ] <draw-uf2>
+		#00 OVR #40 SFT2 [ LIT2 &t $2 ] ADD2 [ LIT &color $1 ] <draw-uf2>
 		#0008 .Screen/x DEO2
 		.Screen/y DEI2k #0010 ADD2 ROT DEO2
 		INC GTHk ?&l
