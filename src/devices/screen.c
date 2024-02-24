@@ -70,7 +70,7 @@ screen_2bpp(Screen *scr, Uint8 *layer, Uint8 *addr, Uint16 x1, Uint16 y1, Uint16
 	Uint16 y, ymod = (fy < 0 ? 7 : 0), ymax = y1 + ymod + fy * 8;
 	Uint16 x, xmod = (fx > 0 ? 7 : 0), xmax = x1 + xmod - fx * 8;
 	for(y = y1 + ymod; y != ymax; y += fy) {
-		int c = *addr++ | (*(addr + 7) << 8), row = y * w;
+		int c = (addr[8] << 8) | addr[0], row = y * w;
 		if(y < h)
 			for(x = x1 + xmod; x != xmax; x -= fx, c >>= 1) {
 				Uint8 ch = (c & 1) | ((c >> 7) & 2);
